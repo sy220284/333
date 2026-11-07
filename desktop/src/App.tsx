@@ -9,6 +9,7 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import { api, type AppEvent, type Item } from './api'
+import { MarkdownMessage } from './MarkdownMessage'
 import { asObject, itemFromMessage, statusName, type ConversationItem } from './projection'
 
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
@@ -47,6 +48,8 @@ const TITLES:Record<View,[string,string]>={
   history:['历史记录','恢复当前工作区保存在本地的会话。'],
   settings:['设置与权限','控制执行模式、工具授权和工作台偏好。']
 }
+const PREF='yaoyaoche-desktop:'
+function loadPreference(name:string,fallback:boolean){const value=window.localStorage.getItem(PREF+name);return value===null?fallback:value==='true'}
 function dateTime(ts:number){return new Date(ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}
 function obj(v:unknown):Item{return asObject(v)??{}}
 function presentError(v:unknown){return v instanceof Error?v.message:String(v)}
@@ -86,6 +89,8 @@ export function App(){
   const [mcpArguments,setMcpArguments]=useState('')
   const [mcpScope,setMcpScope]=useState<'project'|'user'|'local'>('project')
   const [messages,setMessages]=useState<ConversationItem[]>([])
+  const [visibleMessageCount,setVisibleMessageCount]=useState(120)
+  const [followLatest,setFollowLatest]=useState(true)
   const [draft,setDraft]=useState('')
   const [mode,setMode]=useState<'master'|'super'>('master')
   const [overview,setOverview]=useState<Item>({})
@@ -103,21 +108,25 @@ export function App(){
   const [permissions,setPermissions]=useState<Permission[]>([])
   const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
   const [hostForm,setHostForm]=useState<Record<string,unknown>>({})
-  const [rightOpen,setRightOpen]=useState(true)
+  const [rightOpen,setRightOpen]=useState(()=>loadPreference('inspector',true))
   const [search,setSearch]=useState('')
+  const [paletteOpen,setPaletteOpen]=useState(false)
+  const [paletteIndex,setPaletteIndex]=useState(0)
   const [files,setFiles]=useState<FileEntry[]>([])
+  const [fileTotal,setFileTotal]=useState(0)
   const [folder,setFolder]=useState('')
   const [currentFile,setCurrentFile]=useState('')
   const [fileContent,setFileContent]=useState('')
   const [savedContent,setSavedContent]=useState('')
   const [gitStatus,setGitStatus]=useState('')
   const [gitDiff,setGitDiff]=useState('')
-  const [isDark,setIsDark]=useState(true)
-  const [animate,setAnimate]=useState(true)
+  const [isDark,setIsDark]=useState(()=>loadPreference('dark',true))
+  const [animate,setAnimate]=useState(()=>loadPreference('motion',true))
   const [permissionMode,setPermissionMode]=useState('default')
   const [activity,setActivity]=useState<string[]>([])
   const inputRef=useRef<HTMLTextAreaElement>(null)
   const messagesEnd=useRef<HTMLDivElement>(null)
+  const streamRef=useRef<HTMLDivElement>(null)
   const sessionRef=useRef('')
   const createSessionRef=useRef<()=>Promise<void>>(async()=>{})
   const selectedMissionRef=useRef('')
@@ -273,7 +282,7 @@ export function App(){
       .catch(reason=>{if(live)setError(presentError(reason))})
     return()=>{live=false}
   },[selectedTeam,workspace])
-  useEffect(()=>{if(view==='chat'&&messages.length>0)messagesEnd.current?.scrollIntoView({behavior:'smooth',block:'end'})},[messages,view])
+  useEffect(()=>{if(view==='chat'&&followLatest&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
   useEffect(()=>{
     let valid=true
     if(!selectedMission){setMissionJobs([]);return}
@@ -285,14 +294,15 @@ export function App(){
       .catch(err=>{if(valid)setError(presentError(err))})
     return ()=>{valid=false}
   },[selectedMission])
-  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light'},[isDark])
-  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off'},[animate])
+  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';window.localStorage.setItem(PREF+'dark',String(isDark))},[isDark])
+  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(PREF+'motion',String(animate))},[animate])
+  useEffect(()=>{window.localStorage.setItem(PREF+'inspector',String(rightOpen))},[rightOpen])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
       const mod=event.ctrlKey||event.metaKey
-      if(mod&&event.key.toLowerCase()==='k'){event.preventDefault();document.getElementById('global-search')?.focus()}
+      if(mod&&event.key.toLowerCase()==='k'){event.preventDefault();setPaletteOpen(true);setPaletteIndex(0)}
       if(mod&&event.key.toLowerCase()==='n'){event.preventDefault();void createSessionRef.current()}
-      if(event.key==='Escape')setSearch('')
+      if(event.key==='Escape'){setSearch('');setPaletteOpen(false)}
     }
     window.addEventListener('keydown',onKey)
     return ()=>window.removeEventListener('keydown',onKey)
@@ -304,7 +314,7 @@ export function App(){
   async function createSession(){
     await operation('新建会话',async()=>{
       const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([])
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([]);setVisibleMessageCount(120);setFollowLatest(true)
       setTasks(response.tasks??[])
       setView('chat');await refresh()
     })
@@ -316,16 +326,17 @@ export function App(){
       const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
       const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
       const next=(Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[]
-      setMessages(next);setView('chat');await refreshSession(id)
+      setMessages(next);setVisibleMessageCount(120);setFollowLatest(true);setView('chat');await refreshSession(id)
     })
   }
   async function send(){
     const text=draft.trim()
     if(!text||busy)return
+    setFollowLatest(true)
     if(!sessionId){
       await operation('创建会话',async()=>{
         const response=await invoke<{sessionId:string}>('sessions.open',selectedModel?{model:selectedModel}:{})
-        setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([])
+        setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([]);setVisibleMessageCount(120);setFollowLatest(true)
         await invoke('sessions.send',{sessionId:response.sessionId,message:text})
         setMessages([{id:`local-${Date.now()}`,kind:'user',text,time:Date.now()}])
         setDraft('');setView('chat')
@@ -349,17 +360,20 @@ export function App(){
       const data=await invoke<{workspace:string;changed:boolean;connected?:boolean;error?:string}>('workspace.pick')
       if(!data.changed)return
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
-      setPermissions([]);setHostRequests([]);setTasks([]);setFiles([])
+      setPermissions([]);setHostRequests([]);setTasks([]);setFiles([]);setFileTotal(0)
       setCurrentFile('');setGitStatus('');setGitDiff('')
       setConnected(Boolean(data.connected))
       if(data.error)setError(data.error)
       if(data.connected)await refresh()
     })
   }
-  async function directory(path:string){
+  async function directory(path:string,offset=0){
     await operation('读取目录',async()=>{
-      const data=await invoke<{path:string;entries:FileEntry[]}>('workspace.list',{path})
-      setFolder(data.path);setFiles(data.entries??[])
+      const data=await invoke<{path:string;entries:FileEntry[];total?:number}>('workspace.list',{path,offset,limit:200})
+      const entries=data.entries??[]
+      setFolder(data.path)
+      setFiles(old=>offset>0?[...old,...entries]:entries)
+      setFileTotal(data.total??offset+entries.length)
     })
   }
   async function openFile(path:string){
