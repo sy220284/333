@@ -1,3 +1,16 @@
+test('新 UI 的智能执行与模型自检必须通过 Electron IPC 白名单', () => {
+  const bridge = read('electron/main.ts')
+  const allowed = bridge.match(/const permitted = new Set\(\[([\s\S]*?)\]\)/)?.[1]
+  assert.ok(allowed, '缺少桌面 IPC 白名单')
+  for (const method of ['smart.execute','smart.inspect','smart.history']) {
+    assert.ok(allowed.includes(`'${method}'`), `${method} 未放行到本地 SDK 后端`)
+  }
+  const app = read('src/App.tsx')
+  for (const method of ['smart.execute','smart.inspect','smart.history']) {
+    assert.ok(app.includes(method), `${method} 没有接入新工作台`)
+  }
+})
+
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
