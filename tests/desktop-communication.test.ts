@@ -32,6 +32,7 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
   let lastToolCallback: CanUseTool | undefined
   let lastHostCallback: HostControlRequestHandler | undefined
   let lastControl: Record<string, unknown> | undefined
+  const launchEnvironments: Array<Record<string, string | undefined>> = []
   const transcriptIds = new Set<string>()
   const store = new Map<string, DesktopTask[]>()
   const history: NonNullable<DesktopGatewayOptions['history']> = {
@@ -53,7 +54,8 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
     },
     async write(id: string, tasks: DesktopTask[]) { store.set(id, tasks) },
   }
-  const launch = ((options: { canUseTool?: CanUseTool; onControlRequest?: HostControlRequestHandler }, resume?: string) => {
+  const launch = ((options: { canUseTool?: CanUseTool; onControlRequest?: HostControlRequestHandler; env?: Record<string, string | undefined> }, resume?: string) => {
+    launchEnvironments.push({ ...options.env })
     lastToolCallback = options.canUseTool
     lastHostCallback = options.onControlRequest
     const sessionId = resume ?? randomUUID()
@@ -97,6 +99,7 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
     getToolCallback: () => lastToolCallback,
     getHostCallback: () => lastHostCallback,
     getControl: () => lastControl,
+    getLaunchEnvironments: () => launchEnvironments,
   }
 }
 
@@ -353,6 +356,9 @@ test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长
     expect(dispatched.sessionId).toBeTruthy()
     expect(dispatched.turnId).toBeTruthy()
     expect(dispatched.job.attempt).toBe(1)
+    expect(data.getLaunchEnvironments().at(-1)?.CLAUDE_CODE_COORDINATOR_MODE).toBe('1')
+    expect(process.env.CLAUDE_CODE_COORDINATOR_MODE).toBe(beforeOverride)
+    expect(getConfiguredAgentMode()).toBe(beforeMode)
     await until(() => events.some(event =>
       event.event === 'mission.job.updated' && event.job.id === queued.id && event.job.status === 'review'))
     await expect(gateway.handle(request('missions.jobs.start', {
