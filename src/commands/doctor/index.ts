@@ -5,7 +5,8 @@ const doctor: Command = {
   name: 'doctor',
   description: 'Diagnose and verify your 摇摇车 installation and settings',
   isEnabled: () => !isEnvTruthy(process.env.DISABLE_DOCTOR_COMMAND),
-  type: 'local-jsx',
+  type: 'local',
+  supportsNonInteractive: true,
   load: () => import('./doctor.js'),
 }
 
