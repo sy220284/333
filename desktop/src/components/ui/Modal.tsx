@@ -1,39 +1,156 @@
-import {useEffect,useId,useRef} from 'react'
-import {createPortal} from 'react-dom'
-import {X} from 'lucide-react'
-import {Button} from './Button'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { X } from 'lucide-react'
 
-const focusableSelector='button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
 
-export function Modal({open,onClose,title,children,width='medium'}:{open:boolean;onClose:()=>void;title:string;children:React.ReactNode;width?:'small'|'medium'|'large'}){
-  const titleId=useId()
-  const panelRef=useRef<HTMLDivElement>(null)
-  const previousFocus=useRef<HTMLElement|null>(null)
-  const onCloseRef=useRef(onClose)
-  onCloseRef.current=onClose
-  useEffect(()=>{
-    if(!open)return
-    previousFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null
-    const panel=panelRef.current
-    const focusFirst=()=>panel?.querySelector<HTMLElement>(focusableSelector)?.focus()
-    const frame=requestAnimationFrame(focusFirst)
-    const key=(event:KeyboardEvent)=>{
-      if(event.key==='Escape'){event.preventDefault();onCloseRef.current();return}
-      if(event.key!=='Tab'||!panel)return
-      const elements=Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector)).filter(element=>element.offsetParent!==null)
-      if(elements.length===0){event.preventDefault();panel.focus();return}
-      const first=elements[0]!,last=elements[elements.length-1]!
-      if(event.shiftKey&&(document.activeElement===first||!panel.contains(document.activeElement))){event.preventDefault();last.focus()}
-      else if(!event.shiftKey&&(document.activeElement===last||!panel.contains(document.activeElement))){event.preventDefault();first.focus()}
+type ModalProps = {
+  open: boolean
+  onClose: () => void
+  dismissible?: boolean
+  title?: string
+  children: ReactNode
+  width?: number
+  footer?: ReactNode
+  variant?: 'dialog' | 'media' | 'lightbox'
+  className?: string
+  typography?: 'editorial' | 'interface'
+}
+
+export function Modal({
+  open,
+  onClose,
+  dismissible = true,
+  title,
+  children,
+  width = 560,
+  footer,
+  variant = 'dialog',
+  className = '',
+  typography = 'editorial',
+}: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    const dialog = dialogRef.current
+    const firstFocusable = dialog?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+    ;(firstFocusable ?? dialog)?.focus()
+
+    return () => {
+      if (previousFocus?.isConnected) previousFocus.focus()
     }
-    const focusIn=(event:FocusEvent)=>{if(panel&&!panel.contains(event.target as Node))focusFirst()}
-    document.addEventListener('keydown',key)
-    document.addEventListener('focusin',focusIn)
-    const overflow=document.body.style.overflow
-    document.body.style.overflow='hidden'
-    return()=>{cancelAnimationFrame(frame);document.removeEventListener('keydown',key);document.removeEventListener('focusin',focusIn);document.body.style.overflow=overflow;previousFocus.current?.focus()}
-  },[open])
-  if(!open)return null
-  const widths={small:'max-w-sm',medium:'max-w-lg',large:'max-w-2xl'}
-  return createPortal(<div className="yy-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-[var(--yy-overlay)] p-4 backdrop-blur-sm" onClick={onClose}><div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} className={`yy-modal-panel w-full ${widths[width]} overflow-hidden rounded-xl border border-[var(--yy-border-strong)] bg-[var(--yy-surface)] shadow-2xl`} onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between border-b border-[var(--yy-border)] px-5 py-4"><h2 id={titleId} className="text-sm font-semibold">{title}</h2><Button variant="ghost" size="sm" aria-label="关闭对话框" icon={<X size={16}/>} onClick={onClose}/></div><div className="max-h-[75vh] overflow-y-auto p-5">{children}</div></div></div>,document.body)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (dismissible) onClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+      if (focusable.length === 0) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+
+      const first = focusable[0] as HTMLElement
+      const last = focusable[focusable.length - 1] as HTMLElement
+      const focusOutsideDialog = !dialog.contains(document.activeElement)
+      if (event.shiftKey && (document.activeElement === first || focusOutsideDialog)) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && (document.activeElement === last || focusOutsideDialog)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, onClose, dismissible])
+
+  if (!open) return null
+
+  return createPortal(
+    <div className="fixed inset-0 z-[var(--z-dialog)] flex items-center justify-center">
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-label="关闭对话框"
+        disabled={!dismissible}
+        className={`absolute inset-0 transition-opacity duration-200 ${variant === 'lightbox' ? 'bg-[var(--color-lightbox-scrim)]' : 'bg-[var(--color-modal-scrim)]'}`}
+        onClick={onClose}
+      />
+
+      {/* Modal content */}
+      <div
+        ref={dialogRef}
+        // 24px — the top of the handoff's corner scale, reserved for modals.
+        // `dialog-panel`, not `glass-panel`: the fill has to be opaque on its
+        // own rather than leaning on a blur that may never run.
+        className={(variant === 'lightbox'
+          ? 'relative flex h-dvh w-screen flex-col overflow-hidden text-[var(--color-media-fg)]'
+          : variant === 'media'
+          ? 'relative flex h-[calc(100dvh-24px)] w-[calc(100vw-24px)] flex-col overflow-hidden rounded-[var(--radius-2xl)] bg-[var(--color-media-bg)] text-[var(--color-media-fg)]'
+          : 'dialog-panel relative flex max-h-[85vh] flex-col rounded-[var(--radius-3xl)]') + (className ? ` ${className}` : '')}
+        style={variant === 'lightbox' ? undefined : variant === 'media'
+          ? { maxHeight: 'calc(100dvh - 24px)', maxWidth: 'calc(100vw - 24px)' }
+          : { width, maxWidth: 'calc(100vw - 48px)' }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+      >
+        {title && variant === 'dialog' && (
+          <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-0">
+            <h2
+              // 18px semibold: a dialog title names the task, it is not a page
+              // headline. The old 22px bold out-shouted the dialog's own content.
+              className="text-[18px] font-semibold leading-7 text-[var(--color-text-primary)]"
+              style={{ fontFamily: typography === 'interface' ? 'inherit' : 'var(--font-headline)' }}
+            >
+              {title}
+            </h2>
+            {dismissible && <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close dialog"
+              className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
+            >
+              <X size={16} strokeWidth={1.75} aria-hidden="true" />
+            </button>}
+          </div>
+        )}
+
+        <div className={variant !== 'dialog'
+          ? 'min-h-0 flex-1 overflow-hidden'
+          : 'flex-1 overflow-y-auto px-6 py-4'}>
+          {children}
+        </div>
+
+        {footer && (
+          <div className="px-6 pb-6 pt-0 flex justify-end gap-2">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body,
+  )
 }
