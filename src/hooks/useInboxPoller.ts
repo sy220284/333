@@ -703,6 +703,7 @@ export function useInboxPoller({
         const approvalSentAt = Date.parse(m.timestamp)
         if (
           m.from !== parsed.from ||
+          !teamName ||
           !currentMember ||
           isStaleShutdownApproval(currentMember.joinedAt, m.timestamp)
         ) {
@@ -714,7 +715,7 @@ export function useInboxPoller({
         }
         // The check must also be enforced by the mutator itself, so a member
         // re-added between async reads cannot be removed by an older message.
-        const removed = removeTeammateFromTeamFile(teamName!, {
+        const removed = removeTeammateFromTeamFile(teamName, {
           agentId: teammateId,
           onlyIfJoinedBefore: approvalSentAt,
         })
