@@ -31,3 +31,15 @@ test('桌面系统诊断和清理令牌均由严格协议校验', () => {
   expect(DesktopRequestSchema.safeParse({ id: '3', method: 'data.purge.apply', token: 'invalid' }).success).toBe(false)
   expect(DesktopRequestSchema.safeParse({ id: '4', method: 'data.purge.apply', token: '123e4567-e89b-42d3-a456-426614174000' }).success).toBe(true)
 })
+
+test('远程 MCP 导入保留认证请求头，未知字段明确阻止避免丢失配置', () => {
+  const [server] = parseMcpImportFile({ mcpServers: {
+    remote: { type: 'http', url: 'https://mcp.example.test/mcp', headers: { Authorization: 'Bearer secret' } },
+  } })
+  expect(server?.config).toEqual({ type: 'http', url: 'https://mcp.example.test/mcp', headers: { Authorization: 'Bearer secret' } })
+  expect(DesktopRequestSchema.safeParse({ id: 'remote-1', method: 'mcp.add', name: server?.name,
+    scope: 'user', config: server?.config }).success).toBe(true)
+  expect(() => parseMcpImportFile({ mcpServers: { bad: { type: 'http',
+    url: 'https://mcp.example.test/mcp', randomSetting: 'unsupported' } } })).toThrow('暂不支持的字段')
+  expect(() => parseMcpImportFile({ mcpServers: { bad: { command: 'npx', cwd: '/tmp' } } })).toThrow('暂不支持的字段')
+})

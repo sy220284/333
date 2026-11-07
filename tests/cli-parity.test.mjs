@@ -92,6 +92,7 @@ function verifyBaseAndExtensions(actual, official, commandLine) {
   // 本地产品清退了云端 Ultrareview、企业网关及 Claude 订阅专用的 setup-token。
   // 其他官方 2.1.317 命令仍严格对照，模型凭证由独立的本地模型管理配置。
   const removed = commandLine === '--help' ? ['ultrareview', 'gateway', 'setup-token'] : [];
+  for (const command of removed) assert.equal(actual.commands.includes(command), false, `Retired command remains exposed: ${command}`);
   assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),
     official.commands.filter(name => !removed.includes(name)),
     `2.1.317 original commands changed beyond approved removals: ${commandLine}`);

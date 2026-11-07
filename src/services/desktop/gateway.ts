@@ -81,6 +81,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   const smartActive = new Set<string>()
   const sessions = new Map<string, Entry>()
   let pendingPurge: { token: string; createdAt: number; plan: import('./maintenance.js').LocalPurgePlan } | undefined
+  let purgeRunning = false
   const opening = new Set<string>()
   const ownerKey = randomUUID()
   const executingMissionJobs = new Map<string, { missionId: string; jobId: string; runId: string }>()
@@ -459,6 +460,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
 
   async function handle(request: DesktopRequest): Promise<unknown> {
     if (closed) throw new Error('Desktop gateway is closed')
+    if (purgeRunning) throw new Error('本地项目记录正在清理，请完成当前操作后再试')
     switch (request.method) {
       case 'hello':
         return {
@@ -533,19 +535,22 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!pending || pending.token !== request.token || Date.now() - pending.createdAt > 300000)
           throw new Error('清理预览已失效，请重新检查删除清单')
         pendingPurge = undefined
-        if (smartActive.size || activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
+        if (opening.size || smartActive.size || activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
             [...sessions.values()].some(entry => entry.sending || entry.consuming ||
               [...entry.tasks.values()].some(task => task.status === 'running')))
-          throw new Error('当前仍有执行中的会话、智能体或任务队列。请先停止执行再清理')
-        // Explicit confirmation was received in the Electron main process.
-        // Idle SDK sessions must close before their on-disk transcripts can be removed.
-        for (const sessionId of [...sessions.keys()]) await closeSessionInternal(sessionId)
-        const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
-        const current = await planLocalProjectPurge(cwd, options.dataDir)
-        const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
-        if (signature(current.items) !== signature(pending.plan.items))
-          throw new Error('清理内容已变化，请重新预览后确认')
-        return executeLocalProjectPurge(current.items)
+          throw new Error('当前仍有启动中或执行中的会话、智能体或任务队列。请先停止执行再清理')
+        purgeRunning = true
+        try {
+          const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
+          const current = await planLocalProjectPurge(cwd, options.dataDir)
+          const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
+          if (signature(current.items) !== signature(pending.plan.items))
+            throw new Error('清理内容已变化，请重新预览后确认')
+          for (const sessionId of [...sessions.keys()]) await closeSessionInternal(sessionId)
+          return await executeLocalProjectPurge(current.items)
+        } finally {
+          purgeRunning = false
+        }
       }
       case 'models.list': return models(request.sessionId)
       case 'mcp.list': {

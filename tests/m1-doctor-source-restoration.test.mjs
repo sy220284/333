@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { test } from 'node:test'
 
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('诊断能力保留在共享服务与纯文本 CLI，旧终端医生组件已清理', () => {
   const diagnostic = read('src/utils/doctorDiagnostic.ts')
