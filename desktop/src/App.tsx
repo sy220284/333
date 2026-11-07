@@ -194,6 +194,13 @@ export function App(){
       })
     })
   },[])
+  const syncMissionOverview=useCallback(()=>{
+    // Mission mutations already return authoritative data. Only refresh the
+    // lightweight overview; avoid launching a new SDK model probe and MCP
+    // discovery on every checkpoint or queue update.
+    void api.call<Item>('agents.overview').then(data=>setOverview(data))
+      .catch(error=>setError(`智能体概览刷新失败：${presentError(error)}`))
+  },[])
   const refreshSession=useCallback(async(id:string)=>{
     const [p,h,t]=await Promise.allSettled([
       api.call<Permission[]>('permissions.list',{sessionId:id}),
@@ -467,14 +474,14 @@ export function App(){
       setMissions(previous=>[mission,...previous.filter(item=>missionId(item)!==id)])
       selectedMissionRef.current=id
       setSelectedMission(id);setMissionDraft('')
-      void refresh().catch(error=>setError(presentError(error)))
+      syncMissionOverview()
     })
   }
   async function missionAction(id:string,status:'active'|'paused'|'completed'){
     await operation('更新任务',async()=>{
       const mission=await invoke<Mission>('missions.updateStatus',{missionId:id,status})
       setMissions(previous=>previous.map(item=>missionId(item)===id?mission:item))
-      void refresh().catch(error=>setError(presentError(error)))
+      syncMissionOverview()
     })
   }
   async function refreshJobs(id=selectedMission){
@@ -502,7 +509,7 @@ export function App(){
         setMessages([]);setVisibleMessageCount(120);setFollowLatest(true);setSessionPhase('idle');setTasks([])
       }
       await refreshJobs()
-      void refresh().catch(error=>setError(presentError(error)))
+      syncMissionOverview()
     })
   }
   async function viewJobSession(job:MissionJob){
@@ -580,7 +587,7 @@ export function App(){
       const updated=await invoke<Mission>('missions.checkpoint',{missionId:selectedMission,checkpoint:checkpointDraft.trim()})
       setMissions(previous=>previous.map(item=>missionId(item)===missionId(updated)?updated:item))
       setCheckpointDraft('')
-      void refresh().catch(error=>setError(presentError(error)))
+      syncMissionOverview()
     })
   }
   async function decision(id:string,allow:boolean){
