@@ -262,6 +262,21 @@ export class StructuredIO {
       .map(entry => entry.request)
       .filter(pr => pr.request.subtype === 'can_use_tool')
   }
+  /** Retire only pending callbacks belonging to a replaced SDK hook set.
+   * Their callers receive a real error, so onFailure:'block' remains effective. */
+  retireSdkHookCallbackRequests(callbackIds: ReadonlySet<string>): number {
+    let retired = 0
+    for (const [requestId, pending] of this.pendingRequests) {
+      if (pending.request.request.subtype !== 'hook_callback' ||
+        !callbackIds.has(pending.request.request.callback_id)) continue
+      this.pendingRequests.delete(requestId)
+      this.outbound.enqueue({ type: 'control_cancel_request', request_id: requestId })
+      pending.reject(new Error('SDK hook callback retired by a newer initialize'))
+      retired++
+    }
+    return retired
+  }
+
 
   setUnexpectedResponseCallback(
     callback: (response: SDKControlResponse) => Promise<void>,
