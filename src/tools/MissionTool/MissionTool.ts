@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { isSuperAgentMode } from '../../utils/agentMode.js'
+import { resolveAssignedAgentRole } from '../../services/agentCenter/agentRegistry.js'
 import { enqueueMissionJob, listMissionJobs, cancelMissionJob, missionJobAssignmentId } from '../../services/agentCenter/missionJobs.js'
 import {
   getSelectedMissionId, getMission, listMissions, formatMission,
@@ -18,6 +19,8 @@ const inputSchema = lazySchema(() => z.strictObject({
   kind: z.enum(['agent', 'workflow', 'team']).optional(),
   title: z.string().optional(),
   instruction: z.string().optional(),
+  agent_profile_id: z.string().uuid().optional(),
+  role_id: z.string().uuid().optional(),
   assignment_status: z.enum(['running', 'completed', 'failed', 'killed']).optional(),
   mission_status: z.enum(['active', 'paused', 'completed']).optional(),
 }))
@@ -54,7 +57,15 @@ async function execute(input: Input): Promise<string> {
     if (mission.status !== 'active') throw new Error('请先恢复长期任务后再规划工作项')
     const title = required(input.title, 'title')
     const instruction = required(input.instruction, 'instruction')
-    const job = await enqueueMissionJob(id, getMissionExecutionProjectDir(), title, instruction)
+    if (Boolean(input.agent_profile_id)!==Boolean(input.role_id))
+      throw new Error('长期身份与角色编号需同时指定')
+    if (input.agent_profile_id && input.role_id)
+      await resolveAssignedAgentRole(getMissionExecutionProjectDir(),
+        input.agent_profile_id,input.role_id,id)
+    const job = await enqueueMissionJob(id, getMissionExecutionProjectDir(), title, instruction,
+      undefined, input.agent_profile_id ? {
+        agentProfileId:input.agent_profile_id,roleId:input.role_id,
+      } : undefined)
     try {
       await linkMissionAssignment(id, missionJobAssignmentId(job.id), 'agent', job.title)
     } catch (error) {

@@ -25,6 +25,8 @@ const jobSchema = z.object({
   title: z.string().min(1).max(200),
   instruction: z.string().min(1).max(6000),
   model: z.string().min(1).max(300).optional(),
+  agentProfileId: z.string().uuid().optional(),
+  roleId: z.string().uuid().optional(),
   permissionMode: z.enum(['default','plan','dontAsk']).optional(),
   status: z.enum(['queued', 'running', 'review', 'completed', 'failed', 'interrupted', 'cancelled']),
   attempt: z.number().int().min(0).max(20),
@@ -152,10 +154,12 @@ async function mutate(
 export function enqueueMissionJob(
   missionId: string, projectDir: string, title: string, instruction: string,
   root?: string,
-  execution?: { model?: string; permissionMode?: 'default'|'plan'|'dontAsk' },
+  execution?: { model?: string; permissionMode?: 'default'|'plan'|'dontAsk'; agentProfileId?: string; roleId?: string },
 ): Promise<MissionJob> {
   const trimmedTitle = title.trim()
   const trimmedInstruction = instruction.trim()
+  if (Boolean(execution?.agentProfileId)!==Boolean(execution?.roleId))
+    throw new Error('智能体身份与职责必须一起指定')
   if (!trimmedTitle || trimmedTitle.length > 200 || !trimmedInstruction || trimmedInstruction.length > 6000)
     throw new Error('执行任务需提供 1–200 字标题及 1–6000 字指令')
   return mutate(missionId, projectDir, doc => {
@@ -165,6 +169,7 @@ export function enqueueMissionJob(
       id: `job_${randomUUID().replaceAll('-', '').slice(0, 16)}`,
       title: trimmedTitle, instruction: trimmedInstruction, status: 'queued',
       ...(execution?.model?{model:execution.model}:{}),
+      ...(execution?.agentProfileId?{agentProfileId:execution.agentProfileId,roleId:execution.roleId}:{}),
       ...(execution?.permissionMode && execution.permissionMode!=='default'
         ?{permissionMode:execution.permissionMode}:{}),
       attempt: 0, createdAt: time, updatedAt: time, history: [],

@@ -223,3 +223,18 @@ export async function bindAgentProfileSession(
     }
   })
 }
+
+/** Confirm that the permanent identity and its mission-specific role are still authorized. */
+export async function resolveAssignedAgentRole(
+  projectDir: string, agentId: string, roleId: string, missionId?: string,
+  root = getClaudeConfigHomeDir(),
+): Promise<{ profile: AgentProfile; role: AgentRole }> {
+  const profile = (await listAgentProfiles(projectDir, root)).find(item => item.id === agentId)
+  if (!profile || profile.status !== 'available')
+    throw new Error('指定的长期智能体不存在或当前不可用')
+  const role = profile.roles.find(item => item.id === roleId && item.state === 'active')
+  if (!role) throw new Error('指定的长期职责已解除或不存在')
+  if (role.missionId && role.missionId !== missionId)
+    throw new Error('指定的长期职责属于另一任务')
+  return { profile, role }
+}

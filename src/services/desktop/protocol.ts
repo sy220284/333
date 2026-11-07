@@ -142,6 +142,8 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
     missionId, title:z.string().trim().min(1).max(200),
     instruction:z.string().trim().min(1).max(6000),
     model:z.string().min(1).max(300).optional(),
+    agentProfileId:z.string().uuid().optional(),
+    roleId:z.string().uuid().optional(),
     permissionMode:z.enum(['default','plan','dontAsk']).optional(),
   }),
   request('missions.jobs.start', { missionId, jobId }),

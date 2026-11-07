@@ -1074,10 +1074,17 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'missions.jobs.enqueue': {
         const mission = await getScopedMission(request.missionId)
         if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        if (Boolean(request.agentProfileId)!==Boolean(request.roleId))
+          throw new Error('长期工作项需要同时指定身份和角色')
+        if (request.agentProfileId && request.roleId) {
+          const { resolveAssignedAgentRole } = await import('../agentCenter/agentRegistry.js')
+          await resolveAssignedAgentRole(cwd,request.agentProfileId,request.roleId,mission.id,options.dataDir)
+        }
         const job = await enqueueMissionJob(
           mission.id, cwd, request.title, request.instruction, options.missionRoot,
           { ...(request.model?{model:request.model}:{}),
-            ...(request.permissionMode?{permissionMode:request.permissionMode}:{}) },
+            ...(request.permissionMode?{permissionMode:request.permissionMode}:{}),
+            ...(request.agentProfileId?{agentProfileId:request.agentProfileId,roleId:request.roleId}:{}) },
         )
         try {
           await linkMissionAssignment(
@@ -1123,6 +1130,15 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           }, workspace.cwd,
           claimed.permissionMode?{permissionMode:claimed.permissionMode}:{})
           openedSession = opened.sessionId
+          let assignedRole: { name:string; role:string; purpose:string; domains:string[] } | undefined
+          if (claimed.agentProfileId && claimed.roleId) {
+            const { bindAgentProfileSession, resolveAssignedAgentRole } =
+              await import('../agentCenter/agentRegistry.js')
+            const {profile,role} = await resolveAssignedAgentRole(cwd,
+              claimed.agentProfileId,claimed.roleId,mission.id,options.dataDir)
+            await bindAgentProfileSession(cwd,profile.id,role.id,openedSession,options.dataDir)
+            assignedRole={name:profile.name,role:role.role,purpose:role.purpose,domains:profile.domains}
+          }
           await bindMissionJobTurn(
             mission.id, cwd, claimed.id, runId, openedSession,
             undefined, options.missionRoot,
@@ -1130,8 +1146,20 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           executingMissionJobs.set(openedSession, {
             missionId: mission.id, jobId: claimed.id, runId: runId,
           })
+          const { findRelevantExperiences } = await import('../agentCenter/experienceMemory.js')
+          const knownRules=(await findRelevantExperiences(
+            cwd,[claimed.title,claimed.instruction].join(' '),options.dataDir)).slice(0,3)
+          const normativeContext=knownRules.map(rule=>[
+            rule.title,rule.principle,rule.procedure.join('；'),rule.invalidWhen
+          ].join('；')).join('\n')
+          const identityContext=assignedRole?[
+            assignedRole.name,assignedRole.domains.join('、'),
+            assignedRole.role,assignedRole.purpose
+          ].join('；') : undefined
           const instruction = [
             '执行已授权的超级智能体工作项；保持项目目录与工具审批边界。',
+            ...(identityContext?[identityContext]:[]),
+            ...(normativeContext?[normativeContext]:[]),
             `长期任务：${mission.id}。目标：${mission.objective}`,
             `前次已核实的任务检查点：${mission.checkpoint || '暂无'}`,
             `本工作项的既往执行结果：${(claimed.history.slice(-3)
