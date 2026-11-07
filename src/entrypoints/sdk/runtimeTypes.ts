@@ -156,6 +156,10 @@ export type Options = {
   forkSession?: boolean
   resumeSessionAt?: string
   includePartialMessages?: boolean
+  /** Ask the CLI to emit next-turn prompt suggestions on successful turns. */
+  promptSuggestions?: boolean
+  /** Ask the CLI to emit background agent progress summaries. */
+  agentProgressSummaries?: boolean
   replayUserMessages?: boolean
   outputFormat?: { type: 'json_schema'; schema: Record<string, unknown> }
   additionalDirectories?: string[]
