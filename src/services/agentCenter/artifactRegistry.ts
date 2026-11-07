@@ -115,7 +115,7 @@ export async function registerProjectArtifact(
   const {sha256,byteSize}=await digest(file)
   return modify(projectDir,root,doc=>{
     const previous=doc.artifacts.filter(item=>item.path===rel)
-    const duplicate=previous.find(item=>item.sha256===sha256&&
+    const duplicate=previous.find(item=>item.status!=='superseded'&&item.sha256===sha256&&
       item.title===checked.title&&item.kind===checked.kind)
     if(duplicate)return {doc,item:duplicate}
     if(doc.artifacts.length>=1500)throw new Error('成果目录已满，请归档历史成果')
