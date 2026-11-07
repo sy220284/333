@@ -339,6 +339,52 @@ test('capability probe reports failure when follow-up does not finish', async ()
   assert.equal(count, 2)
 })
 
+test('all approved providers reject redirecting credentialed requests across domains', async () => {
+  const models = [
+    'openai/gpt-6.1-sol', 'chatgpt/gpt-6.1-sol',
+    'deepseek/deepseek-chat', 'qwen/qwen3.8-max',
+    'kimi/kimi-k2.7-code', 'zhipu/glm-5.3',
+    'minimax/MiniMax-M3.1',
+  ]
+  for (const id of models) {
+    const route = requireRoute(id)
+    let sent = 0
+    const upstream = async (_url: RequestInfo | URL, options?: RequestInit) => {
+      sent++
+      assert.equal(options?.redirect, 'error',
+        `${id} must never forward an authenticated model payload on HTTP 30x`)
+      assert.equal(new Headers(options?.headers).get('authorization'), 'Bearer fake-credential')
+      return new Response('test-only upstream status', { status: 429 })
+    }
+    const client = makeIndependentFetch(route, 'fake-credential', upstream as typeof fetch)
+    const request = new Request('https://yaoyaoche-model-bridge.invalid/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...body, model: id, stream: true }),
+    })
+    assert.equal((await client(request)).status, 429)
+    assert.equal(sent, 1, `${id} must send only to the configured endpoint`)
+  }
+})
+
+test('all model-catalog discovery requests reject HTTP redirects before sending credentials', async () => {
+  const providers = Object.keys(PROVIDERS) as Array<keyof typeof PROVIDERS>
+  for (const provider of providers) {
+    let requests = 0
+    await discoverIndependentModels(provider, 'catalog-secret', (async (_url, options) => {
+      requests++
+      assert.equal(options?.redirect, 'error', `Model catalog redirect blocked for ${provider}`)
+      assert.equal(new Headers(options?.headers).get('authorization'), 'Bearer catalog-secret')
+      return new Response(JSON.stringify(provider === 'chatgpt'
+        ? { models: [{ slug: 'test-model', visibility: 'list' }] }
+        : { data: [{ id: 'test-model' }] }), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      })
+    }) as typeof fetch)
+    assert.equal(requests, 1)
+  }
+})
+
 test('ChatGPT plan model catalog rejects API-key responses lacking visibility authorization', async () => {
   const seen: string[] = []
   const fetcher = (async (url: RequestInfo | URL) => {
