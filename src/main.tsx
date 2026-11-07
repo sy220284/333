@@ -155,7 +155,7 @@ import { peekForStdinData, writeToStderr } from 'src/utils/process.js';
 import { type ProcessedResume, processResumedConversation } from 'src/utils/sessionRestore.js';
 import { parseSettingSourcesFlag } from 'src/utils/settings/constants.js';
 import { plural } from 'src/utils/stringUtils.js';
-import { type ChannelEntry, getInitialMainLoopModel, getIsNonInteractiveSession, getSdkBetas, getSessionId, getUserMsgOptIn, setAllowedChannels, setAllowedSettingSources, setClientType, setFlagSettingsPath, setInitialMainLoopModel, setInlinePlugins, setIsInteractive, setQuestionPreviewFormat, setSdkBetas, setSessionBypassPermissionsMode, setSessionPersistenceDisabled, setSessionSource, setUserMsgOptIn } from './bootstrap/state.js';
+import { type ChannelEntry, getInitialMainLoopModel, getIsNonInteractiveSession, getSdkBetas, getSessionId, getUserMsgOptIn, setAllowedChannels, setAllowedSettingSources, setClientType, setFlagSettingsPath, setInitialMainLoopModel, setInlinePlugins, setInlinePluginsWithoutMcp, setIsInteractive, setQuestionPreviewFormat, setSdkBetas, setSessionBypassPermissionsMode, setSessionPersistenceDisabled, setSessionSource, setUserMsgOptIn } from './bootstrap/state.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER') ? require('./utils/permissions/autoModeState.js') as typeof import('./utils/permissions/autoModeState.js') : null;
@@ -710,15 +710,20 @@ async function run(): Promise<CommanderCommand> {
     // builds the type as options are added. Narrow with a runtime guard;
     // the collect accumulator + [] default guarantee string[] in practice.
     const pluginDir = thisCommand.getOptionValue('pluginDir');
+    const pluginDirNoMcp = thisCommand.getOptionValue('pluginDirNoMcp');
     const pluginUrl = thisCommand.getOptionValue('pluginUrl');
     if (!process.argv.includes('--safe-mode')) {
       const dirs = Array.isArray(pluginDir) && pluginDir.every(p => typeof p === 'string') ? pluginDir as string[] : [];
+      const noMcpDirs = Array.isArray(pluginDirNoMcp) && pluginDirNoMcp.every(p => typeof p === 'string') ? pluginDirNoMcp as string[] : [];
       const urls = Array.isArray(pluginUrl) && pluginUrl.every(p => typeof p === 'string') ? pluginUrl as string[] : [];
-      if (dirs.length || urls.length) {
+      if (dirs.length || noMcpDirs.length || urls.length) {
         const { prepareSessionPluginPaths } = await import('./utils/plugins/sessionPluginSources.js');
+        // Resolve these groups separately so extracted ZIP roots keep their MCP policy.
         const sources = await prepareSessionPluginPaths(dirs, urls);
-        setInlinePlugins(sources);
-        clearPluginCache('preAction: --plugin-dir or --plugin-url inline plugins');
+        const noMcpSources = await prepareSessionPluginPaths(noMcpDirs, []);
+        setInlinePlugins([...sources, ...noMcpSources]);
+        setInlinePluginsWithoutMcp(noMcpSources);
+        clearPluginCache('preAction: inline plugins and MCP discovery policy');
       }
     }
 
@@ -765,7 +770,7 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--desktop', 'Open in the Claude Desktop app instead of the terminal (with --continue or --resume <id> to pick the session)', () => true).option('--strict-command <command>', '严格任务模式：仅可执行指定的完整 Bash 命令').action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-dir-no-mcp <path>', 'Load session plugins without MCP server discovery (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--desktop', 'Open in the Claude Desktop app instead of the terminal (with --continue or --resume <id> to pick the session)', () => true).option('--strict-command <command>', '严格任务模式：仅可执行指定的完整 Bash 命令').action(async (prompt, options) => {
     if (options.strictCommand !== undefined) {
       const command = String(options.strictCommand);
       if (!command.trim() || command.includes('\0') || command.includes('\n')) {
