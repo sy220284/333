@@ -4,6 +4,16 @@ import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppEvent } from './api'
 
+// Vitest 的 jsdom 不提供 Electron 页面使用的 Web Storage；在测试中模拟实际浏览器存储行为。
+const preferenceStore=new Map<string,string>()
+Object.defineProperty(window,'localStorage',{configurable:true,value:{
+  getItem:(key:string)=>preferenceStore.get(key)??null,
+  setItem:(key:string,value:string)=>{preferenceStore.set(key,String(value))},
+  removeItem:(key:string)=>{preferenceStore.delete(key)},
+  clear:()=>{preferenceStore.clear()},
+  get length(){return preferenceStore.size},
+  key:(index:number)=>[...preferenceStore.keys()][index]??null
+}})
 const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
