@@ -132,6 +132,7 @@ export async function loadPluginMcpServers(
   plugin: LoadedPlugin,
   errors: PluginError[] = [],
 ): Promise<Record<string, McpServerConfig> | undefined> {
+  if (plugin.skipMcpDiscovery) return undefined
   let servers: Record<string, McpServerConfig> = {}
 
   // Check for .mcp.json in plugin directory first (lowest priority)
@@ -589,7 +590,7 @@ export async function getPluginMcpServers(
   plugin: LoadedPlugin,
   errors: PluginError[] = [],
 ): Promise<Record<string, ScopedMcpServerConfig> | undefined> {
-  if (!plugin.enabled) {
+  if (!plugin.enabled || plugin.skipMcpDiscovery) {
     return undefined
   }
 
