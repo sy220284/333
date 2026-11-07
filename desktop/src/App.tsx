@@ -453,7 +453,11 @@ export function App(){
     })
   }
   async function missionAction(id:string,status:'active'|'paused'|'completed'){
-    await operation('更新任务',async()=>{await invoke('missions.updateStatus',{missionId:id,status});await refresh()})
+    await operation('更新任务',async()=>{
+      const mission=await invoke<Mission>('missions.updateStatus',{missionId:id,status})
+      setMissions(previous=>previous.map(item=>missionId(item)===id?mission:item))
+      void refresh().catch(error=>setError(presentError(error)))
+    })
   }
   async function refreshJobs(id=selectedMission){
     if(!id)return
@@ -479,7 +483,7 @@ export function App(){
         setSessionId(info.sessionId);sessionRef.current=info.sessionId;setHistoryOnly(false)
       }
       await refreshJobs()
-      await refresh()
+      void refresh().catch(error=>setError(presentError(error)))
     })
   }
   async function viewJobSession(job:MissionJob){
