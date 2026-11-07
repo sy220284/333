@@ -34,7 +34,7 @@ test('个人版退役门禁在服务或保护测试变化时按需运行', () =>
   assert.equal(plan['ci-test-matrix'], false)
   const dispatcher = readFileSync(new URL('../.github/workflows/ci-on-demand.yml', import.meta.url), 'utf8')
   assert.match(dispatcher, /personal_retirement_boundary/)
-  assert.match(dispatcher, /personal-retirement-boundary\\.yml/)
+  assert.ok(dispatcher.includes('uses: ./.github/workflows/personal-retirement-boundary.yml'))
 })
 
 test('每次基础门禁固定启用、文档变更不启动全量检查', () => {
