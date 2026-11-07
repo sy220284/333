@@ -58,6 +58,8 @@ const DIRECT_COMMANDS = new Set(['agents','attach','auth','bridge','config','dae
   'update','upgrade','workflows', 'local-settings','local-tasks',
   'setup-token','project','purge','plugins','auto-mode','import'])
 export function isDesktopWorkbenchLaunch(args: string[]): boolean {
+  // 交互式桌面启动仅处理普通会话；后台服务/工作进程必须走各自原生入口。
+  if (classifyStartupArgs(args).backgroundRequest) return false
   const words = beforeDoubleDash(args)
   if(words.some(word=>HEADLESS_OPTIONS.has(word) ||
     [...HEADLESS_OPTIONS].some(option=>word.startsWith(`${option}=`))))return false

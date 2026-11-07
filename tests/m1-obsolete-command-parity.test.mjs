@@ -81,7 +81,8 @@ test('obsolete startup toasts and permission footer hints are gone, operational 
   const bash = source('src/components/permissions/BashPermissionRequest/BashPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
   const powershell = source('src/components/permissions/PowerShellPermissionRequest/PowerShellPermissionRequest.tsx').split('//# sourceMappingURL=')[0]
   assert.equal(existsSync(join(root, 'src/hooks/useOfficialMarketplaceNotification.tsx')), false)
-  assert.doesNotMatch(source('src/screens/REPL.tsx'), /useOfficialMarketplaceNotification/)
+  assert.equal(existsSync(join(root, 'src/screens/REPL.tsx')), false)
+  assert.doesNotMatch(source('desktop/src/App.tsx'), /useOfficialMarketplaceNotification/)
   assert.doesNotMatch(ide, /ide-status-hint|MAX_IDE_HINT_SHOW_COUNT|\/ide for/)
   assert.match(ide, /ide-status-install-error|ide-status-disconnected/)
   assert.doesNotMatch(bash, /ctrl\\+e to/)
