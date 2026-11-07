@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 
 /** Render a practical Markdown subset without trusting model-produced HTML. */
-function inline(text: string): ReactNode[] {
+function inline(text: string, onOpenLink?: (url:string)=>void): ReactNode[] {
   const result: ReactNode[] = []
   const tokens = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\[([^\]]+)\]\(([^)\s]+)\))/g
   let offset = 0
@@ -25,7 +25,7 @@ function inline(text: string): ReactNode[] {
         safe = false
       }
       result.push(safe
-        ? <a key={key} href={href} target="_blank" rel="noopener noreferrer">{label}</a>
+        ? <a key={key} href={href} target="_blank" rel="noopener noreferrer" onClick={onOpenLink?event=>{event.preventDefault();onOpenLink(href)}:undefined}>{label}</a>
         : raw)
     }
     offset = start + raw.length
@@ -39,7 +39,7 @@ const heading = /^(#{1,4})\s+(.+)$/
 const bullet = /^\s*[-*+]\s+(.+)$/
 const ordered = /^\s*\d+[.)]\s+(.+)$/
 
-export function MarkdownMessage({text}: {text: string}) {
+function MarkdownMessageView({text,onOpenLink}: {text: string;onOpenLink?: (url:string)=>void}) {
   const lines = text.replace(/\r\n?/g, '\n').split('\n')
   const blocks: ReactNode[] = []
   let i = 0
@@ -61,7 +61,7 @@ export function MarkdownMessage({text}: {text: string}) {
     const head = line.match(heading)
     if (head) {
       const depth = Math.min(head[1].length, 4)
-      const child = inline(head[2])
+      const child = inline(head[2],onOpenLink)
       blocks.push(depth === 1 ? <h2 key={blocks.length}>{child}</h2> :
         depth === 2 ? <h3 key={blocks.length}>{child}</h3> :
         <h4 key={blocks.length}>{child}</h4>)
@@ -75,7 +75,7 @@ export function MarkdownMessage({text}: {text: string}) {
       while (i < lines.length) {
         const m = lines[i].match(pattern)
         if (!m) break
-        items.push(<li key={items.length}>{inline(m[1])}</li>)
+        items.push(<li key={items.length}>{inline(m[1],onOpenLink)}</li>)
         i++
       }
       blocks.push(listType === 'bullet'
@@ -86,7 +86,7 @@ export function MarkdownMessage({text}: {text: string}) {
     if (line.startsWith('> ')) {
       const quote: string[] = []
       while (i < lines.length && lines[i].startsWith('> ')) quote.push(lines[i++].slice(2))
-      blocks.push(<blockquote key={blocks.length}>{inline(quote.join('\n'))}</blockquote>)
+      blocks.push(<blockquote key={blocks.length}>{inline(quote.join('\n'),onOpenLink)}</blockquote>)
       continue
     }
     const paragraph: string[] = []
@@ -94,7 +94,10 @@ export function MarkdownMessage({text}: {text: string}) {
       !fence.test(lines[i]) && !heading.test(lines[i]) &&
       !bullet.test(lines[i]) && !ordered.test(lines[i]) &&
       !lines[i].startsWith('> ')) paragraph.push(lines[i++])
-    if (paragraph.length) blocks.push(<p key={blocks.length}>{inline(paragraph.join('\n'))}</p>)
+    if (paragraph.length) blocks.push(<p key={blocks.length}>{inline(paragraph.join('\n'),onOpenLink)}</p>)
   }
   return <div className="markdown-message">{blocks}</div>
 }
+
+/** Skip reformatting untouched assistant messages while other agents stream. */
+export const MarkdownMessage = memo(MarkdownMessageView)
