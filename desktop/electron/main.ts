@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { parseMcpImportFile, type ImportedMcpServer } from './mcpImport.js'
+import { formatWorkspaceGitDiff } from './workspaceGitDiff.mjs'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, realpathSync, statSync } from 'node:fs'
 import { readdir, readFile, writeFile, rename, realpath, mkdir, rm, stat } from 'node:fs/promises'
@@ -229,15 +230,12 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
       const result=await git('git',['status','--short','--branch'],options)
       return {text:result.stdout}
     }
-    const [unstaged,staged]=await Promise.all([
+    const [unstaged,staged,untracked]=await Promise.all([
       git('git',['diff','--no-ext-diff','--no-color','--','.'],options),
-      git('git',['diff','--cached','--no-ext-diff','--no-color','--','.'],options)
+      git('git',['diff','--cached','--no-ext-diff','--no-color','--','.'],options),
+      git('git',['ls-files','--others','--exclude-standard','-z','--','.'],options),
     ])
-    const chunks=[
-      unstaged.stdout.trim()?['未暂存修改',unstaged.stdout].join('\n'):'',
-      staged.stdout.trim()?['已暂存修改（Index）',staged.stdout].join('\n'):''
-    ].filter(Boolean)
-    return {text:chunks.join('\n\n')||'暂无已暂存或未暂存的 Git 差异'}
+    return {text:formatWorkspaceGitDiff(unstaged.stdout,staged.stdout,untracked.stdout)}
   }
   if(method==='mcp.add'||method==='mcp.remove'||method==='mcp.toggle'){
     const name=String(data.name||'')
