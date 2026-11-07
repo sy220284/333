@@ -1041,3 +1041,20 @@ test('会话独立模型和权限按工作区持久化，重启 SDK 恢复时重
     expect(launches.at(-1)).toMatchObject({model:'fixture-model',permissionMode:'plan'})
   }finally{await resumed.close();await rm(root,{recursive:true,force:true})}
 })
+
+test('重启后不允许将旧版跳过审批状态带入未授权的桌面宿主',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'desktop-bypass-restore-'))
+  const data=fixture()
+  const opts={...data.options,cwd:root,dataDir:join(root,'data')}
+  const first=createDesktopGateway({...opts,sessionOptions:{allowDangerouslySkipPermissions:true}})
+  let id=''
+  try {
+    id=(await first.handle(request('sessions.open')) as {sessionId:string}).sessionId
+    await first.handle(request('sessions.setPermissionMode',{sessionId:id,mode:'bypassPermissions'}))
+  }finally{await first.close()}
+  const disallowed=createDesktopGateway(opts)
+  try {
+    await expect(disallowed.handle(request('sessions.ensureOpen',{sessionId:id})))
+      .rejects.toThrow('explicit host permission')
+  }finally{await disallowed.close();await rm(root,{recursive:true,force:true})}
+})

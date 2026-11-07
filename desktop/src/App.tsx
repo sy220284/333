@@ -709,8 +709,9 @@ export function App(){
   }
   async function refreshJobs(id=selectedMission){
     if(!id)return
+    const project=workspaceGeneration.current
     const jobs=await invoke<MissionJob[]>('missions.jobs.list',{missionId:id})
-    if(id===selectedMissionRef.current)setMissionJobs(jobs)
+    if(project===workspaceGeneration.current&&id===selectedMissionRef.current)setMissionJobs(jobs)
   }
   async function addJob(){
     if(!selectedMission||!jobTitle.trim()||!jobInstruction.trim())return
@@ -747,14 +748,16 @@ export function App(){
   }
   async function jobAction(method:string,jobId:string){
     if(!selectedMission)return
+    const project=workspaceGeneration.current
+    const generation=method==='missions.jobs.start'?++sessionGeneration.current:sessionGeneration.current
     if(method==='missions.jobs.approve' && !window.confirm('已核对代码、实际结果与测试记录，确认此工作项通过审核？'))return
     if(method==='missions.jobs.retry' && !window.confirm('重新执行前请先核对已产生的文件改动及外部操作。确认重新排队？'))return
     if(method==='missions.jobs.cancel' && !window.confirm('确认取消工作项并保留执行历史？'))return
     await operation('工作项执行',async()=>{
       const result=await invoke<unknown>(method,{missionId:selectedMission,jobId})
       const info=obj(result)
-      if(method==='missions.jobs.start'&&typeof info.sessionId==='string'){
-        ++sessionGeneration.current
+      if(method==='missions.jobs.start'&&typeof info.sessionId==='string'&&
+        project===workspaceGeneration.current&&generation===sessionGeneration.current){
         setSessionId(info.sessionId);sessionRef.current=info.sessionId;setHistoryOnly(false)
         applySessionConfiguration({})
         setMessages([]);setHistoryOffset(0);setVisibleMessageCount(120);setFollowLatest(true);setSessionPhase('idle');setTasks([])

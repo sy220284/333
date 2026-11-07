@@ -214,6 +214,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       const storedSettings = resume ? await sessionSettings.read(resume) : null
       const resolvedModel = selectedModel ?? storedSettings?.model ?? undefined
       const resolvedPermission = smartPolicy?.permissionMode ?? storedSettings?.permissionMode ?? options.sessionOptions?.permissionMode ?? (resume ? undefined : 'default')
+      if(resolvedPermission==='bypassPermissions'&&!options.sessionOptions?.allowDangerouslySkipPermissions)
+        throw new Error('Cannot restore bypassPermissions without explicit host permission')
       const actualSettings: DesktopSessionSettings = { model: resolvedModel ?? options.model ?? null, permissionMode: resolvedPermission ?? null }
       // Reserve once for the entire SDK session. Cross-host capacity is checked
       // under a filesystem lock before any model turn starts.
