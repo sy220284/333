@@ -81,12 +81,11 @@ export function projectTask(
   }
   if (message.subtype === 'task_progress') {
     return {
+      ...previous,
       taskId: message.task_id,
       description: message.description || previous?.description || message.task_id,
-      status: previous?.status === 'completed' || previous?.status === 'failed' ||
-        previous?.status === 'stopped' ? previous.status : 'running',
-      updatedAt: now, 
-      ...previous,
+      status: previous && terminalStatuses.has(previous.status) ? previous.status : 'running',
+      updatedAt: now,
       ...(previous?.toolUseId && { toolUseId: previous.toolUseId }),
       ...(message.tool_use_id && { toolUseId: message.tool_use_id }),
       ...(previous?.taskType && { taskType: previous.taskType }),
