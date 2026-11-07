@@ -431,6 +431,9 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
 
   async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
     const entry = requireSession(sessionId)
+    const sessionBudget = sessionBudgets.get(sessionId)
+    if (sessionBudget?.accountingError)
+      throw new Error(`本会话预算记账失败，需先关闭会话核对实际费用：${sessionBudget.accountingError}`)
     if (entry.closing || entry.consuming || entry.sending)
       throw new Error('A turn is already being consumed or the session is closing')
     // Reserve the session before the first await: concurrent desktop callers
@@ -442,10 +445,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     // runtime independently; a late send result cannot resurrect the turn.
     const cancelled = new Promise<never>((_, reject) => { entry.cancelSend = reject })
     const turnId = randomUUID()
-    const sessionBudget=sessionBudgets.get(sessionId)
     try {
-      if(sessionBudget?.accountingError)
-        throw new Error(`本会话预算记账失败，需先关闭会话核对实际费用：${sessionBudget.accountingError}`)
       if(sessionBudget && await projectBudget.remaining(sessionBudget.leaseId)<=0)
         throw new Error('本会话已用尽预占的共享预算额度，请关闭会话并重新分配预算')
       if(sessionBudget)sessionBudget.awaitingResult=true
