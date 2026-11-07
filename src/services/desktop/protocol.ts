@@ -94,6 +94,23 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
     teamName: z.string().min(1).max(128),
     memberName: z.string().min(1).max(128),
   }),
+  request('agents.profiles.list', {}),
+  request('agents.profiles.create', {
+    agentId: z.string().uuid(),
+    name: z.string().trim().min(2).max(100),
+    description: z.string().trim().min(8).max(1000),
+    domains: z.array(z.string().trim().min(2).max(80)).min(1).max(20),
+    capabilityIds: z.array(z.string().trim().min(3).max(200)).max(100).optional(),
+  }),
+  request('agents.profiles.assign', {
+    agentId: z.string().uuid(),
+    role: z.string().trim().min(2).max(100),
+    purpose: z.string().trim().min(8).max(1000),
+    teamName: z.string().trim().min(1).max(128).optional(),
+    missionId: z.string().min(1).max(160).optional(),
+  }),
+  request('agents.profiles.release', { agentId: z.string().uuid(), roleId: z.string().uuid() }),
+  request('agents.profiles.status', { agentId: z.string().uuid(), status: z.enum(['available','paused','retired']) }),
   request('handoffs.list', {}),
   request('handoffs.create', {
     requestId: z.string().uuid(),
