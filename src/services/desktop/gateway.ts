@@ -1010,9 +1010,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         return deliverTeamHandoff(cwd, handoff.id, current =>
           sendProjectTeamMessage(cwd, {
             teamName: current.teamName, to: current.to,
-            message: current.summary + '\n\n' + current.instruction +
-              '\n交接编号：' + current.id +
-              (current.inputRefs.length ? '\n输入成果：' + current.inputRefs.join('、') : ''),
+            message: `${current.summary}\n\n${current.instruction}\n交接编号：${current.id}${current.inputRefs.length ? `\n输入成果：${current.inputRefs.join('、')}` : ''}`,
             messageId: current.id,
           }), options.dataDir)
       }
@@ -1021,9 +1019,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         return deliverTeamHandoff(cwd, request.handoffId, current =>
           sendProjectTeamMessage(cwd, {
             teamName: current.teamName, to: current.to,
-            message: current.summary + '\n\n' + current.instruction +
-              '\n交接编号：' + current.id +
-              (current.inputRefs.length ? '\n输入成果：' + current.inputRefs.join('、') : ''),
+            message: `${current.summary}\n\n${current.instruction}\n交接编号：${current.id}${current.inputRefs.length ? `\n输入成果：${current.inputRefs.join('、')}` : ''}`,
             messageId: current.id,
           }), options.dataDir)
       }
