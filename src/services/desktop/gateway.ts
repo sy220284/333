@@ -740,6 +740,12 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           purgeRunning = false
         }
       }
+      case 'capabilities.refresh': {
+        const { clearCommandsCache } = await import('../../commands.js')
+        clearCommandsCache()
+        const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
+        return listCapabilityCatalog(cwd)
+      }
       case 'capabilities.list': {
         const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
         return listCapabilityCatalog(cwd)
