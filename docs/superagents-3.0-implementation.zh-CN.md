@@ -113,3 +113,46 @@ feature、source path、test command、CI workflow/run URL、commit SHA、平台
 - 失败恢复：进程崩溃、超限、已发生外部副作用、插件冲突。
 
 **本次实施记录**：方案已归档；第一批目标是 A + B 的基础服务和真实目录视图。其余事项保持可测的交付清单，任何一项没有代码与测试证据都标记为待实施，不以文档作为功能完成证明。
+
+
+## 七、2026-11-07 开发记录（仅列已经提交的真实代码）
+
+> 当前实施范围：原型第一批基础设施，不等于 3.0 全部功能完成。验收基准为各项最新 SHA 及 Actions 原始记录。
+
+| 模块 | 已提交路径 | 本轮完成的实际能力 | 当前验收边界 |
+| --- | --- | --- | --- |
+| 方案 | docs/superagents-3.0-product-architecture.zh-CN.md | 通用任务、动态团队、统一能力、自创扩展、知识规范及 UI 的完整目标与架构 | 设计文件已落库 |
+| 经验规范 | src/services/agentCenter/experienceMemory.ts | 持久候选→人工核验→批准→按场景召回→废弃；内容包含规范、步骤、适用与失效条件、证据引用，跨项目隔离 | 不把原始任务日志当长期经验；证据内容最终由人工审核 |
+| AI 使用经验 | src/tools/ExperienceTool/ExperienceTool.ts | 两种智能体模式均可检索已批准规范，或主动提交待审核经验候选；模型无审批接口 | 自动从任意 Job 归纳和复核的流水线仍待实施 |
+| 能力目录 | src/services/agentCenter/capabilityCatalog.ts | 统一发现原生 Tool、Skills、Plugin、Workflow 与 MCP 配置，投影状态和来源 | 目录只读；完整插件自动安装和可执行健康检查仍待实施 |
+| 自创技能候选 | src/services/agentCenter/skillWorkshop.ts | 创建候选 SKILL.md、浏览、独立授权发布到原生项目技能目录、刷新缓存，保护既有文件和软链接路径 | AI 自动完成完整工具测试、插件打包、升级及回滚仍待实施 |
+| 团队交接 | src/services/agentCenter/teamHandoffs.ts | 结构化项目交接、稳定消息编号、幂等投递、本地持久状态、认领/产物/验收状态机与跨项目隔离 | 当前桌面接线可创建、查看、重试；成员自动确认与总控跨团队调度仍需接线 |
+| 桌面接口 | src/services/desktop/protocol.ts / gateway.ts；desktop/electron/main.ts | 能力查询和刷新、经验候选、人工审核、技能候选与发布、任务交接；所有入口过白名单 | 仍需最新提交的真实安装版验证 |
+| 桌面 UI | desktop/src/App.tsx | 能力中心、经验规范及审核、技能候选发布与版本展示基础、团队交接状态区 | Grok Bot 式群聊主视图、专业多模态预览、动态表单尚未完成 |
+
+### 测试文件和验收
+
+- tests/experience-memory.test.ts：经验验证字段、幂等、候选审核、失效/项目隔离。
+- tests/experience-tool.test.ts：模型只能提议候选，不能自行批准。
+- tests/capability-catalog.test.ts：能力来源去重、冲突检测。
+- tests/skill-workshop.test.ts：候选、发布、保护现有文件、路径越界防护。
+- tests/superagents-capability-protocol.test.ts：原生桌面调用完整路径、技能注册/刷新、经验审核状态。
+- tests/team-handoffs.test.ts：投递失败重试、同号去重、状态顺序、交付和审核。
+- desktop/src/App.test.tsx：更新能力中心真实导航选择器；保留既有 UI 全量回归。
+- package.json 与 .github/workflows/desktop-communication.yml：新测试进入已有 Bun 核心和桌面 CI。
+- 按需调度限制要求全部测试通过统一入口，因此移除了另建的重复 CI 工作流，避免 CI 规则出现第二套不一致逻辑。
+
+**已获得的真实验证：** GitHub Actions 运行 42380715065，在 SHA ff49825df5eb6bceb90360272a7bcd9ccc104f9b 的既有基础版本上：4 个 Bun 文件 12/12，通过；Electron 接口契约 10/10，通过；React UI 49/49，通过；桌面类型检查、生产构建通过。该验证早于新增交接、模型记忆工具及后续路径安全完善，不能用它冒称最新 SHA 的全部回归已通过。
+
+**需要继续独立核对：** 最新 SHA 的 6 个 Bun 新增文件、桌面通信、React 安装版及原有全仓类型门禁。原有权限迁移相关的五条 TypeScript 诊断属于另一个门禁整改范围；按提交差异明确归因，最终合并前仍须解决。此次不启用定时监控、外部云服务或自动派生子智能体。
+
+### 后续设计不能丢失的完整目标
+
+- 长期 Agent 身份与按任务动态角色调配；
+- 项目总控可主动监测已授权事件、发现缺口、协调跨团队依赖、纠偏并独立复核；
+- 从能力缺口到自建 MCP Tool、Skill、Plugin、Workflow、受限测试、审核、动态 UI 配置、升级与回滚的完整生命周期；
+- 群聊式桌面主界面与可折叠任务/成果侧栏；
+- 通用文案、视频、设计、研究、代码产物与编辑/预览/导出闭环；
+- 长期记忆从候选提炼为可验证规范，关联可靠证据与失效规则，能跨会话和授权项目复用。
+
+实施仍以本文件第一至六节确定的完整验收表为准；上述任一欠缺未取得真实证据前状态均为“待实施/待验收”。
