@@ -1357,7 +1357,7 @@ export function App(){
                         setHandoffRevision(v=>v+1)
                       })}>核验后批准</Button>
                   </div>}
-                  {h.status==='completed'&&h.reviewSummary&&<p className="mt-2 text-[11px]">验收结论：{h.reviewSummary}</p>
+                  {h.status==='completed'&&h.reviewSummary&&<p className="mt-2 text-[11px]">验收结论：{h.reviewSummary}</p>}
                 </div>)}
                 {teamHandoffs.length===0&&<Empty icon={ClipboardList} title="尚无跨成员交接" detail="使用团队成员区的『发送并追踪交接』建立持久化工作交接记录。"/>}
                 </div>
