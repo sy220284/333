@@ -21,6 +21,13 @@ test('桌面使用原生UI的新页面并不存在旧UI回退入口',()=>{
   assert.equal(layout.includes('.git-output,'),false)
   assert.ok(layout.includes('.yy-tab'))
 })
+test('清理原项目剩余未使用的布局样式，不影响错误提示',()=>{
+  const layout=src('../src/theme/yaoyao-layout.css')
+  for(const old of ['inline-approval','info-panel','mode-cards','integration-grid','model-grid','mode-card','model-card','provider-item','team-picker','list-row','mcp-row','compact-row','mission-list-item'])
+    assert.doesNotMatch(layout,new RegExp('\\\\.'+old+'(?![\\\\w-])'),old+' 仍存在')
+  assert.ok(layout.includes('.error-banner,.offline-banner {'))
+})
+
 test('工作区切换页面时重新挂载滚动容器，避免出现页面顶部被截断',()=>{
   const app=src('../src/App.tsx')
   assert.ok(app.includes('key={view} className="yy-page'))
