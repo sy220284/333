@@ -189,6 +189,8 @@ export function App(){
   const gitGeneration=useRef(0)
   const operationSequence=useRef(0)
   const pendingOperations=useRef(new Map<number,string>())
+  const permissionRevision=useRef(new Map<string,number>())
+  const hostRevision=useRef(new Map<string,number>())
   const currentFileRef=useRef('')
   const viewRef=useRef<View>('dashboard')
   const applySessionConfiguration=useCallback((value:SessionConfiguration)=>{
@@ -266,17 +268,19 @@ export function App(){
   },[])
   const refreshSession=useCallback(async(id:string)=>{
     const project=workspaceGeneration.current,generation=sessionGeneration.current
+    const currentPermissionRevision=permissionRevision.current.get(id)??0
+    const currentHostRevision=hostRevision.current.get(id)??0
     const [p,h,t]=await Promise.allSettled([
       api.call<Permission[]>('permissions.list',{sessionId:id}),
       api.call<HostRequest[]>('host.list',{sessionId:id}),
       api.call<Task[]>('tasks.list',{sessionId:id})
     ])
     if(project!==workspaceGeneration.current)return
-    if(p.status==='fulfilled')setPermissions(old=>[
+    if(p.status==='fulfilled'&&(permissionRevision.current.get(id)??0)===currentPermissionRevision)setPermissions(old=>[
       ...old.filter(item=>item.sessionId!==id),
       ...(p.value??[]).map(item=>({...item,sessionId:id}))
     ])
-    if(h.status==='fulfilled')setHostRequests(old=>[
+    if(h.status==='fulfilled'&&(hostRevision.current.get(id)??0)===currentHostRevision)setHostRequests(old=>[
       ...old.filter(item=>item.sessionId!==id),
       ...(h.value??[]).map(item=>({...item,sessionId:id}))
     ])
@@ -351,14 +355,18 @@ export function App(){
       }else if(event.event==='session.error'||event.event==='task.persistence.error'){
         setError(String(event.error||'任务执行异常'))
       }else if(event.event==='permission.request'){
+        permissionRevision.current.set(event.sessionId,(permissionRevision.current.get(event.sessionId)??0)+1)
         const p={...obj(event.permission),sessionId:String(event.sessionId||'')} as Permission
         setPermissions(old=>old.some(item=>item.id===p.id&&item.sessionId===p.sessionId)?old:[...old,p])
       }else if(event.event==='permission.resolved'){
+        permissionRevision.current.set(event.sessionId,(permissionRevision.current.get(event.sessionId)??0)+1)
         setPermissions(old=>old.filter(item=>item.id!==event.permissionId||item.sessionId!==event.sessionId))
       }else if(event.event==='host.request'){
+        hostRevision.current.set(event.sessionId,(hostRevision.current.get(event.sessionId)??0)+1)
         const r={...obj(event.request),sessionId:String(event.sessionId||'')} as HostRequest
         setHostRequests(old=>old.some(item=>item.id===r.id&&item.sessionId===r.sessionId)?old:[...old,r])
       }else if(event.event==='host.resolved'){
+        hostRevision.current.set(event.sessionId,(hostRevision.current.get(event.sessionId)??0)+1)
         setHostRequests(old=>old.filter(item=>item.id!==event.requestId||item.sessionId!==event.sessionId))
         setHostForms(old=>{const next={...old};delete next[`${event.sessionId}:${event.requestId}`];return next})
       }else if(event.event==='mission.queue.state'){
@@ -619,6 +627,7 @@ export function App(){
       if(!data.changed)return
       ++workspaceGeneration.current;++refreshGeneration.current;++sessionGeneration.current
       ++directoryGeneration.current;++fileGeneration.current;++gitGeneration.current
+      permissionRevision.current.clear();hostRevision.current.clear()
       currentFileRef.current=''
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setHostForms({});setTasks([]);setFiles([]);setFileTotal(0)

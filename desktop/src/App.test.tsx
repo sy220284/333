@@ -40,6 +40,9 @@ let delayedSessionList=false
 let releaseSessionList:(()=>void)|undefined
 let delayedSave=false
 let releaseSave:(()=>void)|undefined
+let delayedApprovalLists=false
+let releasePermissionList:(()=>void)|undefined
+let releaseHostList:(()=>void)|undefined
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
@@ -106,8 +109,14 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       if(delayedSave)await new Promise<void>(resolve=>{releaseSave=resolve})
       return {saved:true,path:args.path}
     }
-    case 'permissions.list':return []
-    case 'host.list':return []
+    case 'permissions.list':{
+      if(delayedApprovalLists)await new Promise<void>(resolve=>{releasePermissionList=resolve})
+      return []
+    }
+    case 'host.list':{
+      if(delayedApprovalLists)await new Promise<void>(resolve=>{releaseHostList=resolve})
+      return []
+    }
     case 'credentials.list':return {providers:['openai']}
     case 'workspace.list':{
       const offset=Number(args.offset||0)
@@ -142,7 +151,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -768,6 +777,33 @@ describe('摇摇车真实桌面页面交互',()=>{
       expect(screen.getByRole('textbox',{name:'编辑当前文件'})).toHaveValue('第二个文件')
       expect(screen.getByRole('button',{name:'保存文件'})).toBeDisabled()
     } finally {confirm.mockRestore()}
+  })
+
+  it('后台审批请求到达后，迟到的旧权限与宿主列表不会清空待审批队列',async()=>{
+    twoSessions=true
+    delayedApprovalLists=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'恢复会话：会话 A'}))
+    await waitFor(()=>expect(releasePermissionList).toBeTypeOf('function'))
+    await waitFor(()=>expect(releaseHostList).toBeTypeOf('function'))
+    await act(async()=>{
+      listener({event:'permission.request',sessionId:SID,permission:{
+        id:'new-approval',toolName:'Bash',input:{command:'pwd'},
+      }})
+      listener({event:'host.request',sessionId:SID,request:{id:'new-elicitation',request:{
+        subtype:'elicitation',mode:'url',url:'https://example.org/consent',
+      }}})
+    })
+    await act(async()=>{
+      releasePermissionList?.()
+      releaseHostList?.()
+    })
+    expect(screen.getByRole('dialog',{name:'工具权限审批'})).toHaveTextContent('Bash')
+    expect(screen.getByText(/另有 .* 项待审操作/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'允许本次操作'}))
+    expect(await screen.findByRole('dialog',{name:'主机交互请求'})).toBeInTheDocument()
   })
 
 })
