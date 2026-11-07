@@ -6,6 +6,7 @@ import {
   getChromeFlagOverride,
   getFlagSettingsPath,
   getInlinePlugins,
+  getInlinePluginsWithoutMcp,
   getMainLoopModelOverride,
   getSessionBypassPermissionsMode,
 } from '../../bootstrap/state.js'
@@ -57,10 +58,12 @@ export function buildInheritedCliFlags(options?: {
     flags.push(`--settings ${quote([settingsPath])}`)
   }
 
-  // Propagate --plugin-dir for each inline plugin
+  // Preserve the SDK MCP discovery policy when a teammate is forked.
   const inlinePlugins = getInlinePlugins()
+  const withoutMcp = new Set(getInlinePluginsWithoutMcp())
   for (const pluginDir of inlinePlugins) {
-    flags.push(`--plugin-dir ${quote([pluginDir])}`)
+    const flag = withoutMcp.has(pluginDir) ? '--plugin-dir-no-mcp' : '--plugin-dir'
+    flags.push(`${flag} ${quote([pluginDir])}`)
   }
 
   // Propagate --teammate-mode so tmux teammates use the same mode as leader
