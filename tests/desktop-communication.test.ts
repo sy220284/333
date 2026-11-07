@@ -123,6 +123,8 @@ test('desktop model discovery and multi-turn streaming use SDK initialization an
     expect(models.models[0]?.value).toBe('fixture-model')
     const opened = await gateway.handle(request('sessions.open')) as { sessionId: string; agents: unknown[] }
     expect(opened.agents).toHaveLength(1)
+    const ensured = await gateway.handle(request('sessions.ensureOpen', { sessionId: opened.sessionId })) as {sessionId:string;resumed:boolean}
+    expect(ensured).toMatchObject({sessionId:opened.sessionId,resumed:false})
     const turn = await gateway.handle(request('sessions.send', { sessionId: opened.sessionId, message: 'investigate' })) as { turnId: string }
     expect(turn.turnId).toBeTruthy()
     await until(() => events.some(event => event.event === 'task.updated' && event.task.status === 'completed'))
