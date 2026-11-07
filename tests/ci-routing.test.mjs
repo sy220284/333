@@ -172,7 +172,7 @@ test('CI 最新 PR 提交不会被旧 SHA 的手动回跑取消', () => {
   const main=readFileSync(new URL('../.github/workflows/ci-on-demand.yml',import.meta.url),'utf8')
   const desktop=readFileSync(new URL('../.github/workflows/desktop-communication.yml',import.meta.url),'utf8')
   for(const [name,yaml] of [['统一路由',main],['桌面安装版',desktop]]){
-    assert.match(yaml,/^  group: .*github\.run_attempt == 1 && 'latest' \|\| github\.run_id/m,`${name}缺少区分最新提交与旧SHA回跑的分组`)
-    assert.match(yaml,/^  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}$/m,`${name}历史重跑不得取消最新PR验收`)
+    assert.match(yaml,/^ {2}group: .*github\.run_attempt == 1 && 'latest' \|\| github\.run_id/m,`${name}缺少区分最新提交与旧SHA回跑的分组`)
+    assert.match(yaml,/^ {2}cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}$/m,`${name}历史重跑不得取消最新PR验收`)
   }
 })
