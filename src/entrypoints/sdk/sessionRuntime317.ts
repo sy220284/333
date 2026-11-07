@@ -357,9 +357,21 @@ function startSession(
     requests.clear()
     if (failure) messages.error(failure)
     else messages.done()
-    reader.close()
-    child.stdin.destroy()
-    if (child.exitCode === null && child.signalCode === null) child.kill()
+    // Match the official SDK graceful shutdown: EOF lets the CLI flush
+    // transcripts and pending session metadata before a bounded termination.
+    child.stdin.end()
+    if (child.exitCode === null && child.signalCode === null) {
+      const grace = setTimeout(() => {
+        if (child.exitCode !== null || child.signalCode !== null) return
+        child.kill('SIGTERM')
+        const force = setTimeout(() => {
+          if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+        }, 5000)
+        force.unref()
+      }, 2000)
+      grace.unref()
+      void exited.then(() => clearTimeout(grace))
+    }
   }
 
   async function closeAndWait(): Promise<void> {
@@ -367,18 +379,21 @@ function startSession(
     // Child 'close' fires after process exit AND stdio streams have closed,
     // which is necessary before a Windows workspace can be safely removed.
     await exited
+    await pumpEnded
     await transportClosure
   }
 
   async function pump(): Promise<void> {
     for await (const line of reader) {
-      if (closed) return
       if (!line.trim()) continue
       const message: SDKMessage | SDKControlRequest | SDKControlCancelRequest | SDKControlResponse | Extract<StdoutMessage, { type: 'transcript_mirror' }> =
         JSON.parse(line)
       if (message.type === 'transcript_mirror') {
         if (!external) throw new Error('Unexpected SDK transcript mirror')
+        // A mirror can arrive after close() while the child flushes its final files.
         await external.mirror(message.filePath, message.entries)
+      } else if (closed) {
+        continue
       } else if (message.type === 'control_request') {
         void respondToControl(message).catch(fail)
       } else if (message.type === 'control_cancel_request') {
@@ -408,7 +423,7 @@ function startSession(
   abortSignal?.addEventListener('abort', abortSession, { once: true })
   if (abortSignal?.aborted) abortSession()
 
-  void pump().catch(fail)
+  const pumpEnded = pump().catch(fail)
   const initialization = Promise.all([...sdkServers.values()].map(server => server.connect())).then(() => control({
     subtype: 'initialize',
     sdkMcpServers: [...sdkServers.keys()],
@@ -431,7 +446,9 @@ function startSession(
 
   return {
     sessionId,
-    exited,
+    // Consumers (notably the external SessionStore) must not clean up until
+    // all transcript_mirror frames have finished writing.
+    exited: Promise.all([exited, pumpEnded]).then(() => undefined),
     fail,
     control,
     initialization,
