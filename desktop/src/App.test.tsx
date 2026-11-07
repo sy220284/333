@@ -75,6 +75,24 @@ beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcp
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+  it('六套主题可以切换并在重新打开时恢复',async()=>{
+    const user=userEvent.setup()
+    const view=render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    const selector=screen.getByRole('combobox',{name:'界面主题'})
+    expect(selector).toHaveValue('white')
+    await user.selectOptions(selector,'celadon')
+    expect(document.documentElement.dataset.ccTheme).toBe('celadon')
+    view.unmount()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    expect(screen.getByRole('combobox',{name:'界面主题'})).toHaveValue('celadon')
+    await user.selectOptions(screen.getByRole('combobox',{name:'界面主题'}),'ink-blue')
+    expect(document.documentElement.dataset.theme).toBe('dark')
+  })
+
   it('替换后的项目侧栏可直接恢复真实会话并选中会话标签',async()=>{
     longHistory=true
     const user=userEvent.setup()

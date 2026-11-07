@@ -14,6 +14,8 @@ import brandIconUrl from '../build/icon.svg'
 import { asObject, itemFromMessage, statusName, type ConversationItem } from './projection'
 
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
+type ThemeVariant='white'|'paper'|'warm-classic'|'celadon'|'dark'|'ink-blue'
+const THEME_VARIANTS:readonly ThemeVariant[]=['white','paper','warm-classic','celadon','dark','ink-blue']
 type Model={value:string;displayName:string;description?:string}
 const PROVIDERS=[{id:'openai',name:'OpenAI API'},{id:'deepseek',name:'DeepSeek'},{id:'qwen',name:'Qwen'},{id:'kimi',name:'Kimi'},{id:'zhipu',name:'智谱 GLM'},{id:'minimax',name:'MiniMax'}] as const
 type Mission={id?:string;missionId?:string;objective?:string;status?:string;checkpoint?:string;checkpoints?:unknown[];[key:string]:unknown}
@@ -127,7 +129,12 @@ export function App(){
   const [savedContent,setSavedContent]=useState('')
   const [gitStatus,setGitStatus]=useState('')
   const [gitDiff,setGitDiff]=useState('')
-  const [isDark,setIsDark]=useState(()=>loadPreference('dark',false))
+  const [themeVariant,setThemeVariant]=useState<ThemeVariant>(()=>{
+    const stored=window.localStorage.getItem(PREF+'theme')
+    return THEME_VARIANTS.some(theme=>theme===stored)?stored as ThemeVariant:loadPreference('dark',false)?'dark':'white'
+  })
+  const isDark=themeVariant==='dark'||themeVariant==='ink-blue'
+  const setIsDark=(checked:boolean)=>setThemeVariant(checked?'dark':'white')
   const [animate,setAnimate]=useState(()=>loadPreference('motion',true))
   const [permissionMode,setPermissionMode]=useState('default')
   const [activity,setActivity]=useState<string[]>([])
@@ -303,7 +310,12 @@ export function App(){
       .catch(err=>{if(valid)setError(presentError(err))})
     return ()=>{valid=false}
   },[selectedMission])
-  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';window.localStorage.setItem(`${PREF}dark`,String(isDark))},[isDark])
+  useEffect(()=>{
+    document.documentElement.dataset.theme=isDark?'dark':'light'
+    document.documentElement.dataset.ccTheme=themeVariant
+    window.localStorage.setItem(PREF+'dark',String(isDark))
+    window.localStorage.setItem(PREF+'theme',themeVariant)
+  },[isDark,themeVariant])
   useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
   useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
@@ -587,7 +599,7 @@ export function App(){
             const id=String(item.sessionId||item.id||'')
             if(!id)return null
             const label=String(item.summary||item.title||id.slice(0,8))
-            return <button key={id+index} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
+            return <button key={id+index} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
           })}
         </div>
         <nav className="nav-links cc-grouped-nav" aria-label="主要导航">
@@ -731,7 +743,7 @@ export function App(){
           {view==='history'&&<div className="stack-page"><Section title="本地会话" action={<button type="button" className="secondary-button" onClick={()=>void operation('刷新历史',refresh)}><RefreshCw size={15}/>刷新</button>}><Panel><div className="item-list">{sessions.map((s,i)=>{const id=String(s.sessionId||s.id||'');return <button type="button" key={id||i} className="list-row" onClick={()=>void resumeSession(id)} disabled={!id}><div className="row-icon"><History size={17}/></div><div className="row-main"><strong>{String(s.summary||s.title||id||'会话')}</strong><span>{id}</span></div><span className="muted">恢复</span><ChevronRight size={17}/></button>})}{sessions.length===0&&<Empty icon={History} title="没有历史会话" detail="会话历史由后台按工作区保存，运行过的会话可从这里恢复。"/>}</div></Panel></Section></div>}
           {view==='settings'&&<div className="stack-page"><Section title="工具权限审批" subtitle="每一项工具执行请求都需要明确处理。拒绝会直接反馈给执行引擎。"><Panel>{permissions.length===0?<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="AI 发起受保护的工具操作时，申请会出现在这里。"/>:<div className="approval-list">{permissions.map(p=><div key={p.id} className="approval-card"><div className="approval-title"><LockKeyhole size={18}/><div><strong>{p.toolName}</strong><span>{p.description||'工具请求等待确认'} · 会话 {p.sessionId.slice(0,8)}</span></div></div><pre>{json(p.input)}</pre><div className="button-row"><button type="button" className="secondary-button" onClick={()=>void decision(p.id,false)}>拒绝</button><button type="button" className="primary-button" onClick={()=>void decision(p.id,true)}>本次允许</button></div></div>)}</div>}</Panel></Section>
             <Section title="主机交互请求"><Panel>{hostRequests.length===0?<p className="muted">没有需要处理的主机交互请求。</p>:hostRequests.map(r=><div key={r.id} className="approval-card"><strong>{String(r.type||'交互请求')}</strong><pre>{json(r.request||r)}</pre><button type="button" className="secondary-button" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</button></div>)}</Panel></Section>
-            <Section title="外观与体验"><Panel className="settings-list"><label className="setting-row"><div><strong>深色主题</strong><p>深色背景与柔和分层玻璃质感</p></div><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label><label className="setting-row"><div><strong>动态效果</strong><p>开启过渡与悬停动效，系统要求减少动态效果时自动降低</p></div><input type="checkbox" checked={animate} onChange={e=>setAnimate(e.target.checked)}/></label><div className="setting-row"><div><strong>侧边上下文面板</strong><p>显示任务、模型、审批和运行摘要</p></div><button type="button" className="secondary-button" onClick={()=>setRightOpen(v=>!v)}>{rightOpen?'收起面板':'展开面板'}</button></div></Panel></Section></div>}
+            <Section title="外观与体验"><Panel className="settings-list"><div className="setting-row"><div><strong>界面主题</strong><p>六套本地配色，从纯白、纸墨到墨夜蓝。</p></div><select aria-label="界面主题" value={themeVariant} onChange={e=>setThemeVariant(e.target.value as ThemeVariant)}><option value="white">素白</option><option value="paper">纸墨</option><option value="warm-classic">经典暖色</option><option value="celadon">青瓷</option><option value="dark">墨夜</option><option value="ink-blue">墨夜蓝</option></select></div><label className="setting-row"><div><strong>深色主题</strong><p>快速切换至墨夜主题，详细配色可在上方选择。</p></div><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label><label className="setting-row"><div><strong>动态效果</strong><p>开启过渡与悬停动效，系统要求减少动态效果时自动降低</p></div><input type="checkbox" checked={animate} onChange={e=>setAnimate(e.target.checked)}/></label><div className="setting-row"><div><strong>侧边上下文面板</strong><p>显示任务、模型、审批和运行摘要</p></div><button type="button" className="secondary-button" onClick={()=>setRightOpen(v=>!v)}>{rightOpen?'收起面板':'展开面板'}</button></div></Panel></Section></div>}
         </main>
         {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={`runtime-indicator ${connected?'ok':'off'}`}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button type="button" className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map(event=><div className="activity-entry" key={event}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={`connection-light ${connected?'online':'offline'}`}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
       </div>

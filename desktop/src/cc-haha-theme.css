@@ -1,7 +1,7 @@
 /* 新工作台视觉：根据用户提供的 cc-haha 界面结构与纸墨色彩重新编写。
    业务仍调用 333 desktopHost，避免引入 cc-haha 自有服务端和后台依赖。
    源设计参考 https://github.com/NanmiCoder/cc-haha；此文件为独立适配实现。 */
-[data-theme=light]{
+[data-cc-theme=paper]{
   color-scheme:light;
   --bg:#FBF9F4;--surface:#FFFFFF;--surface2:#F7F4EC;--surface3:#ECE6D8;
   --line:#E7E0CF;--text:#231D12;--muted:#6E6350;--subtle:#796E5B;
@@ -9,7 +9,7 @@
   --purple:#776154;--shadow:0 1px 3px rgba(64,49,26,.05),0 6px 24px rgba(64,49,26,.07);--radius:17px;
   --cc-sidebar:#F3EFE5;--cc-border-strong:#D5C9B0;--cc-soft-brand:#F3E6DA;--cc-primary:#231D12;--cc-on-primary:#FBF9F4;
 }
-:root:not([data-theme=light]){
+[data-cc-theme=dark]{
   color-scheme:dark;
   --bg:#201D17;--surface:#252119;--surface2:#2B271F;--surface3:#302B24;
   --line:#383226;--text:#F2EEE6;--muted:#C4BBA9;--subtle:#AAA08E;
@@ -114,3 +114,35 @@ body{background:var(--bg);color:var(--text);font-size:13px}
 .cc-new-tab{min-width:90px}
 .cc-tab[aria-selected=true]{border-bottom-color:var(--surface)}
 @media(max-width:1140px){.cc-tab{max-width:132px}}
+
+/* 与 cc-haha 上传源码对应的另外四个可选配色，直接在本地切换，无远程资源。 */
+[data-cc-theme=white]{
+ color-scheme:light;--bg:#FFFFFF;--surface:#FFFFFF;--surface2:#F5F5F3;--surface3:#F1F0EE;
+ --line:#E9E8E5;--text:#1A1917;--muted:#494640;--subtle:#625E58;
+ --accent:#A24A2E;--accent-bright:#8C3F26;--mint:#2E7D4F;--amber:#A5650F;--danger:#C42B3C;
+ --purple:#6A5D52;--shadow:0 1px 2px rgba(28,25,23,.05),0 6px 20px rgba(28,25,23,.06);
+ --cc-sidebar:#F7F7F6;--cc-border-strong:#D9D7D3;--cc-soft-brand:#F6ECE7;--cc-primary:#1A1917;--cc-on-primary:#FFFFFF;--radius:17px;
+}
+[data-cc-theme=warm-classic]{
+ color-scheme:light;--bg:#F6F0E1;--surface:#F9F4E8;--surface2:#F1EBDA;--surface3:#E5DBC3;
+ --line:#DED2B8;--text:#251E11;--muted:#6E6146;--subtle:#746951;
+ --accent:#96442B;--accent-bright:#7C3620;--mint:#3E8153;--amber:#A8751F;--danger:#C74436;
+ --purple:#7D6953;--shadow:0 1px 2px rgba(64,49,26,.05),0 6px 20px rgba(64,49,26,.08);
+ --cc-sidebar:#EDE5D1;--cc-border-strong:#C8B897;--cc-soft-brand:#F0E1D0;--cc-primary:#251E11;--cc-on-primary:#F6F0E1;--radius:17px;
+}
+[data-cc-theme=celadon]{
+ color-scheme:light;--bg:#F5F8F5;--surface:#FFFFFF;--surface2:#F0F4F0;--surface3:#E0E9E2;
+ --line:#DCE5DE;--text:#1C231D;--muted:#5D6B60;--subtle:#667268;
+ --accent:#96442B;--accent-bright:#7C3620;--mint:#3E8153;--amber:#A8751F;--danger:#C74436;
+ --purple:#527E70;--shadow:0 1px 2px rgba(28,40,30,.04),0 6px 20px rgba(28,40,30,.06);
+ --cc-sidebar:#EAF0EB;--cc-border-strong:#C6D4C9;--cc-soft-brand:#F0E7DC;--cc-primary:#1C231D;--cc-on-primary:#FFFFFF;--radius:17px;
+}
+[data-cc-theme=ink-blue]{
+ color-scheme:dark;--bg:#1A1D24;--surface:#20242D;--surface2:#252A35;--surface3:#2C303C;
+ --line:#2F3441;--text:#E8EAF0;--muted:#9AA1B2;--subtle:#858B97;
+ --accent:#D07B52;--accent-bright:#DE8F66;--mint:#6FB58C;--amber:#D3A34C;--danger:#E0685E;
+ --purple:#9F9BCD;--shadow:0 2px 16px rgba(0,0,0,.16);
+ --cc-sidebar:#15181E;--cc-border-strong:#434A5B;--cc-soft-brand:#37281F;--cc-primary:#E8EAF0;--cc-on-primary:#1A1D24;--radius:17px;
+}
+.cc-workspace-shell select{color:var(--text);background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.cc-workspace-shell select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
