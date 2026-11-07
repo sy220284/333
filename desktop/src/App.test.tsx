@@ -18,6 +18,7 @@ const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
 const OTHER='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
+let stableMissionJobs=false
 let failMcpRefresh=false
 let suspendMcpRefresh=false
 let releaseMcpRefresh:(()=>void)|undefined
@@ -98,11 +99,14 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       return createdMission
     }
     case 'missions.list':
+      if(stableMissionJobs)return {missions:[{missionId:'mission-fixture',objective:'稳定工作项任务',status:'active'}],selectedMissionId:'mission-fixture'}
       if(createdMission)return {missions:[createdMission],selectedMissionId:createdMission.id}
       return showHistoricalJob
       ? {missions:[{missionId:'mission-fixture',objective:'历史任务',status:'active'}],selectedMissionId:'mission-fixture'}
       : {missions:[],selectedMissionId:null}
-    case 'missions.jobs.list':return showHistoricalJob
+    case 'missions.jobs.list':return stableMissionJobs
+      ? [{id:'job-1',title:'先执行',instruction:'第一步',status:'queued',attempt:1},{id:'job-2',title:'后执行',instruction:'第二步',status:'queued',attempt:1}]
+      : showHistoricalJob
       ? [{id:'job-1',title:'审核旧执行',instruction:'分析来源',status:'completed',attempt:1,sessionId:SID}]
       : []
     case 'sessions.history':{
@@ -155,6 +159,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
     case 'credentials.set':return {saved:true}
     case 'mcp.toggle':return {name:args.name,enabled:args.enabled}
+    case 'mcp.add':return {name:args.name,added:true}
     case 'external.open':return {opened:true}
     case 'host.respond':return {requestId:args.requestId,accepted:true}
     case 'tasks.list':return mockTasks
@@ -168,7 +173,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];showAgentActivitySample=false;smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;stableMissionJobs=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];showAgentActivitySample=false;smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -280,11 +285,32 @@ describe('摇摇车真实桌面页面交互',()=>{
     })))
   })
 
+
+  it('工作项实时更新保持原位置，新工作项追加到末尾并短暂标记更新',async()=>{
+    stableMissionJobs=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await screen.findByText('先执行')
+    await screen.findByText('后执行')
+    const titles=()=>Array.from(document.querySelectorAll('.yy-job-card h4'),node=>node.textContent)
+    expect(titles()).toEqual(['先执行','后执行'])
+    await act(async()=>listener({event:'mission.job.updated',missionId:'mission-fixture',job:{
+      id:'job-1',title:'先执行',instruction:'第一步已完成',status:'completed',attempt:1,updatedAt:'2026-11-07T12:00:00Z',
+    }}))
+    expect(titles()).toEqual(['先执行','后执行'])
+    expect(document.querySelector('.yy-job-card')).toHaveAttribute('data-updated','true')
+    await act(async()=>listener({event:'mission.job.updated',missionId:'mission-fixture',job:{
+      id:'job-3',title:'新追加',instruction:'第三步',status:'queued',attempt:1,updatedAt:'2026-11-07T12:01:00Z',
+    }}))
+    expect(titles()).toEqual(['先执行','后执行','新追加'])
+  })
+
   it('项目共享预算从新 UI 配置到真实本地网关，并显示使用与预占',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
-    await user.click(screen.getByRole('button',{name:'高级选项'}))
     await user.type(screen.getByRole('spinbutton',{name:'项目共享预算'}),'5.00')
     await user.click(screen.getByRole('button',{name:'保存项目预算'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('budget.project.set',{limitUsd:5}))
@@ -335,6 +361,30 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(screen.getByRole('tab',{name:'标签页：会话 · 长历史会话'})).toHaveAttribute('aria-selected','true')
   })
 
+
+  it('标签方向键与 Home/End 只移动焦点，不创建或恢复会话',async()=>{
+    longHistory=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'恢复会话：长历史会话'}))
+    const current=await screen.findByRole('tab',{name:'标签页：会话 · 长历史会话'})
+    const fresh=screen.getByRole('tab',{name:'标签页：新会话'})
+    call.mockClear()
+    current.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(fresh).toHaveFocus()
+    await user.keyboard('{ArrowRight}')
+    expect(current).toHaveFocus()
+    await user.keyboard('{Home}')
+    expect(fresh).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(current).toHaveFocus()
+    expect(current).toHaveAttribute('aria-selected','true')
+    expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
+    expect(call).not.toHaveBeenCalledWith('sessions.ensureOpen',expect.anything())
+  })
+
   it('历史工作项仅查看不自动恢复，发送时才恢复原 SDK 会话',async()=>{
     showHistoricalJob=true
     const user=userEvent.setup()
@@ -351,6 +401,18 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'继续原任务'}))
     expect(screen.queryByText(/发送新消息时将恢复原会话/)).not.toBeInTheDocument()
+  })
+
+
+  it('成功操作显示可关闭的反馈，不覆盖错误处理',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'历史记录'}))
+    await user.click(screen.getByRole('button',{name:'刷新'}))
+    expect(await screen.findByText('刷新历史完成')).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'关闭操作反馈'}))
+    expect(screen.queryByText('刷新历史完成')).not.toBeInTheDocument()
   })
 
   it('MCP URL请求提供HTTPS浏览器访问、完成确认与明确拒绝',async()=>{
@@ -452,7 +514,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(within(dialog).getByText(/另有 1 项待审操作/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SID,permissionId:'approval-main',decision:{behavior:'allow'}
+      sessionId:SID,permissionId:'approval-1',decision:{behavior:'allow'}
     }))
     await waitFor(()=>expect(within(dialog).getByText(/FileEdit/)).toBeInTheDocument())
     await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
@@ -512,6 +574,29 @@ describe('摇摇车真实桌面页面交互',()=>{
     await screen.findByText('project-mcp')
     await user.click(screen.getByRole('button',{name:'禁用'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.toggle',{name:'project-mcp',enabled:false}))
+  })
+
+
+  it('已有 MCP 服务时可展开添加表单，输入不会令其意外收起',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'技能与 MCP'}))
+    await screen.findByText('project-mcp')
+    const details=document.querySelector<HTMLDetailsElement>('.yy-mcp-add')
+    expect(details).not.toBeNull()
+    await waitFor(()=>expect(details).not.toHaveAttribute('open'))
+    await user.click(screen.getByText('添加 MCP 服务'))
+    expect(details).toHaveAttribute('open')
+    const name=screen.getByRole('textbox',{name:'名称'})
+    await user.type(name,'added-mcp')
+    expect(name).toBeVisible()
+    expect(details).toHaveAttribute('open')
+    await user.type(screen.getByRole('textbox',{name:'服务器 URL'}),'https://added.example.com/mcp')
+    await user.click(screen.getByRole('button',{name:'添加服务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.add',{
+      name:'added-mcp',scope:'project',config:{type:'http',url:'https://added.example.com/mcp'},
+    }))
   })
 
   it('模型凭证通过专用接口写入且没有明文回显',async()=>{
