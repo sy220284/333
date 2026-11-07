@@ -62,6 +62,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('permissions.list', { sessionId }),
   request('permissions.decide', { sessionId, permissionId: id, decision: PermissionResultSchema() }),
   request('agents.overview', {}),
+  request('agents.activity', {}),
   request('agents.members', { teamName: z.string().min(1).max(128) }),
   request('agents.team.message', {
     teamName: z.string().min(1).max(128),
