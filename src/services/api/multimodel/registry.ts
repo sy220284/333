@@ -94,7 +94,9 @@ export async function discoverIndependentModelDetails(
   const response = await fetcher(addresses[provider], {
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(15_000),
-    ...(provider === 'minimax' ? { redirect: 'error' } : {}),
+    // The catalog is a credentialed request; redirects can cross the
+    // authentication boundary. Every provider uses a fixed trusted URL.
+    redirect: 'error',
   })
   if (!response.ok) throw new Error(`Model discovery failed for ${provider}: HTTP ${response.status}`)
   const data = await response.json() as Record<string, unknown>
