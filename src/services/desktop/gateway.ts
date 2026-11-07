@@ -424,8 +424,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     const cancelled = new Promise<never>((_, reject) => { entry.cancelSend = reject })
     const turnId = randomUUID()
     const sessionBudget=sessionBudgets.get(sessionId)
-    if(sessionBudget)sessionBudget.awaitingResult=true
     try {
+      if(sessionBudget && await projectBudget.remaining(sessionBudget.leaseId)<=0)
+        throw new Error('本会话已用尽预占的共享预算额度，请关闭会话并重新分配预算')
+      if(sessionBudget)sessionBudget.awaitingResult=true
       await Promise.race([entry.runtime.send(message), cancelled])
       if (entry.closing || closed) throw new Error('Desktop session closed during send')
     } catch (error) {
@@ -599,6 +601,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
       case 'budget.project.get': return projectBudget.reconcile()
+      case 'budget.project.resolveUnknown':
+        return projectBudget.resolveUnknown(request.id,request.costUsd)
       case 'budget.project.set':
         if (opening.size || sessions.size || executingMissionJobs.size || activeMissionQueues.size)
           throw new Error('修改项目共享预算前，请关闭当前工作区的会话和任务执行')

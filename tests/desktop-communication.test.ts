@@ -487,6 +487,10 @@ test('多个宿主共享项目预算：并发预占不会超额，费用结算�
     await expect(second.configure(0.5)).rejects.toThrow('低于已使用')
     await second.configure(2)
     expect((await first.get()).limitUsd).toBe(2)
+    const fixed=await first.resolveUnknown(succeeded[1]!,0.22)
+    expect(fixed.uncertainReservations).toBe(0)
+    expect(fixed.spentUsd).toBeCloseTo(0.33,5)
+    await expect(first.resolveUnknown(succeeded[1]!,0)).rejects.toThrow('不存在')
   }finally{await rm(root,{recursive:true,force:true})}
 })
 

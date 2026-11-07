@@ -24,7 +24,9 @@ let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
 let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
-let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number}={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0}
+let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
+  uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}={
+  limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]}
 let smartRecord:{sessionId:string;model:string;permissionMode:string;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;costUsd?:number;budgetUsd?:number}|undefined
 let longHistory=false
 let manyFiles=false
@@ -38,6 +40,10 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'smart.inspect':return {model:String(args.model||'minimax/M3'),status:'configured',message:'本地模型已就绪',checkedOffline:true,contextWindow:64000,hasPricing:true}
     case 'smart.history':return smartRecord?[smartRecord]:[]
     case 'budget.project.get':return budgetState
+    case 'budget.project.resolveUnknown':
+      budgetState={...budgetState,uncertain:[],uncertainReservations:0,
+        reservedUsd:0,spentUsd:budgetState.spentUsd+Number(args.costUsd)}
+      return budgetState
     case 'budget.project.set':
       budgetState={...budgetState,limitUsd:args.limitUsd as number|null,
         availableUsd:args.limitUsd===null?null:Number(args.limitUsd)-budgetState.spentUsd-budgetState.reservedUsd}
@@ -112,7 +118,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{

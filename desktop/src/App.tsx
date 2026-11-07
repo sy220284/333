@@ -36,7 +36,8 @@ type MissionJob={id:string;title:string;instruction:string;status:JobStatus;atte
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
-type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number}
+type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
+  uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}
 type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
@@ -119,6 +120,7 @@ export function App(){
   const [smartHistory,setSmartHistory]=useState<SmartRecord[]>([])
   const [projectBudget,setProjectBudget]=useState<ProjectBudget|null>(null)
   const [projectBudgetInput,setProjectBudgetInput]=useState('')
+  const [unknownCosts,setUnknownCosts]=useState<Record<string,string>>({})
   const projectBudgetInitialized=useRef(false)
   const [smartInspection,setSmartInspection]=useState<SmartInspection|null>(null)
   const [mode,setMode]=useState<'master'|'super'>('master')
@@ -329,7 +331,11 @@ export function App(){
         setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
       }else if(event.event==='session.message'){
         const payload=obj(event.message)
-        if(payload.type==='result')syncMissionOverview()
+        if(payload.type==='result'){
+          syncMissionOverview()
+          void api.call<ProjectBudget>('budget.project.get').then(setProjectBudget)
+            .catch(err=>setError(`预算账本刷新失败：${presentError(err)}`))
+        }
         if(payload.type==='stream_event'){
           const streaming=obj(payload.event)
           const delta=obj(streaming.delta)
@@ -468,6 +474,18 @@ export function App(){
       setProjectBudget(next)
       projectBudgetInitialized.current=true
       setProjectBudgetInput(next.limitUsd===null?'':String(next.limitUsd))
+    })
+  }
+  async function resolveUnknownBudget(id:string){
+    await operation('核实实际模型费用',async()=>{
+      const raw=unknownCosts[id]?.trim()
+      if(raw===undefined||raw==='')throw new Error('请填写服务商确认的真实费用')
+      const cost=Number(raw)
+      if(!Number.isFinite(cost)||cost<0||cost>100000)throw new Error('请填写有效的费用金额')
+      if(!window.confirm(`确认已在服务商账单中核对费用 USD ${cost.toFixed(4)}？此操作将记入已结算账本并释放预占额度。`))return
+      const snapshot=await invoke<ProjectBudget>('budget.project.resolveUnknown',{id,costUsd:cost})
+      setProjectBudget(snapshot)
+      setUnknownCosts(old=>{const next={...old};delete next[id];return next})
     })
   }
   async function executeSmart(){
@@ -850,6 +868,8 @@ export function App(){
             budget={smartBudget} onBudget={setSmartBudget}
             projectBudget={projectBudgetInput} onProjectBudget={setProjectBudgetInput}
             onSaveProjectBudget={()=>void saveProjectBudget()} budgetState={projectBudget??undefined}
+            unknownCosts={unknownCosts} onUnknownCost={(id,value)=>setUnknownCosts(old=>({...old,[id]:value}))}
+            onResolveUnknown={id=>void resolveUnknownBudget(id)}
             permission={smartPolicy} onPermission={setSmartPolicy}
             executions={smartHistory} onOpenExecution={id=>void resumeSession(id)}
             onSuggestion={setDraft}

@@ -16,7 +16,8 @@ type Reservation = { id: string; ownerPid: number; remaining: number; uncertain:
 type BudgetDoc = { version: 1; limit: number | null; spent: number; leases: Reservation[] }
 export type ProjectBudgetSnapshot = {
   limitUsd: number | null; spentUsd: number; reservedUsd: number;
-  availableUsd: number | null; uncertainReservations: number; activeReservations: number
+  availableUsd: number | null; uncertainReservations: number; activeReservations: number;
+  uncertain: Array<{id:string;reservedUsd:number;startedAt:string}>
 }
 const SCALE=1_000_000
 const MAX=100_000*SCALE
@@ -84,6 +85,9 @@ export function createProjectBudget(
     availableUsd:doc.limit===null?null:dollars(Math.max(0,doc.limit-doc.spent-reserved(doc))),
     uncertainReservations:doc.leases.filter(item=>item.uncertain).length,
     activeReservations:doc.leases.filter(item=>!item.uncertain).length,
+    uncertain:doc.leases.filter(item=>item.uncertain).map(item=>({
+      id:item.id,reservedUsd:dollars(item.remaining),startedAt:item.startedAt,
+    })),
   })
   return {
     async get():Promise<ProjectBudgetSnapshot>{return snapshot(await read())},
@@ -113,6 +117,21 @@ export function createProjectBudget(
         if(desired>available)throw new Error(`当前项目可用预算 USD ${dollars(available).toFixed(4)}，无法预占 USD ${dollars(desired).toFixed(4)}`)
         const next={...doc,leases:[...doc.leases,{id,ownerPid:process.pid,remaining:desired,uncertain:false,startedAt:new Date().toISOString()}]}
         return {document:next,result:{id,maxBudgetUsd:dollars(desired)}}
+      })
+    },
+    async remaining(id:string):Promise<number>{
+      const record=(await read()).leases.find(row=>row.id===id)
+      if(!record)throw new Error('预算预占记录已丢失或需要人工核对')
+      if(record.uncertain)throw new Error('此预算记录的费用尚未核实，暂不可继续发送模型请求')
+      return dollars(record.remaining)
+    },
+    async resolveUnknown(id:string,actualCostUsd:number):Promise<ProjectBudgetSnapshot>{
+      const actual=micros(actualCostUsd)
+      return mutate(doc=>{
+        const record=doc.leases.find(row=>row.id===id)
+        if(!record||!record.uncertain)throw new Error('待核实费用记录不存在或尚在执行')
+        const next={...doc,spent:doc.spent+actual,leases:doc.leases.filter(row=>row.id!==id)}
+        return {document:next,result:snapshot(next)}
       })
     },
     async charge(id:string,costUsd:number):Promise<void>{

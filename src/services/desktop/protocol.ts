@@ -21,6 +21,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
   request('models.list', { sessionId: sessionId.optional() }),
   request('budget.project.get', {}),
+  request('budget.project.resolveUnknown', { id: z.string().uuid(), costUsd: z.number().nonnegative().finite().max(100000) }),
   request('budget.project.set', { limitUsd: z.number().positive().finite().max(100000).nullable() }),
   request('smart.inspect', { model: z.string().min(1).max(300).optional() }),
   request('smart.history', {}),

@@ -42,7 +42,11 @@ type Props = {
   projectBudget: string
   onProjectBudget: (value: string) => void
   onSaveProjectBudget: () => void
-  budgetState?: {limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number}
+  budgetState?: {limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;
+    uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}
+  unknownCosts:Record<string,string>
+  onUnknownCost:(id:string,value:string)=>void
+  onResolveUnknown:(id:string)=>void
   permission: 'default' | 'acceptEdits' | 'plan' | 'dontAsk'
   onPermission: (value: Props['permission']) => void
   executions: SmartExecutionPreview[]
@@ -61,6 +65,7 @@ export function NewSessionStarter({
   projectName, modelName, teamMode, sessions, missions, task, onTask, onExecute,
   busy, connected, models, selectedModel, onModel, budget, onBudget,
   projectBudget, onProjectBudget, onSaveProjectBudget, budgetState,
+  unknownCosts,onUnknownCost,onResolveUnknown,
   permission, onPermission, executions, onOpenExecution,
   onSuggestion, onOpenSession, onOpenHistory, onOpenMission, onOpenMissionBoard,
 }: Props) {
@@ -131,6 +136,16 @@ export function NewSessionStarter({
             {budgetState.availableUsd!==null&&` · 可用 USD ${budgetState.availableUsd.toFixed(4)}`}
           </p>}
         </div>
+        {budgetState?.uncertain.map(record=><div key={record.id}
+          className="col-span-full flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--color-warning)] p-3 text-[11px]">
+          <span className="min-w-0 flex-1">待核实费用 · 预占 USD {record.reservedUsd.toFixed(4)} · {record.id.slice(0,8)}</span>
+          <label className="flex min-w-[130px] flex-col gap-1">实际产生费用（美元）
+            <input type="number" min="0" step="0.0001" aria-label={`核实费用 ${record.id.slice(0,8)}`}
+              value={unknownCosts[record.id]??''} onChange={event=>onUnknownCost(record.id,event.target.value)}/>
+          </label>
+          <Button variant="secondary" size="sm" disabled={busy||!connected||unknownCosts[record.id]===undefined||!unknownCosts[record.id]?.trim()}
+            onClick={()=>onResolveUnknown(record.id)}>确认实际账单并释放预占</Button>
+        </div>)}
         <p className="col-span-full m-0 text-[10px] leading-5 text-[var(--color-text-tertiary)]">
           项目额度由全部本地 SDK 会话和智能体共享，执行前预占、模型返回后结算；最后一个模型请求仍可能超额，实际费用以服务商为准。
         </p>
