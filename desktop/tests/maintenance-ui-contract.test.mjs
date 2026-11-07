@@ -1,3 +1,9 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync, existsSync } from 'node:fs'
+
+const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+
 test('新 UI 的智能执行与模型自检必须通过 Electron IPC 白名单', () => {
   const bridge = read('electron/main.ts')
   const allowed = bridge.match(/const permitted = new Set\(\[([\s\S]*?)\]\)/)?.[1]
@@ -11,11 +17,21 @@ test('新 UI 的智能执行与模型自检必须通过 Electron IPC 白名单',
   }
 })
 
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import { readFileSync, existsSync } from 'node:fs'
-
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+test('所有新桌面显式操作自动核对 Electron 调用白名单和安全确认分支', () => {
+  const bridge = read('electron/main.ts')
+  const allowed = new Set((bridge.match(/const permitted = new Set\(\[([\s\S]*?)\]\)/)?.[1] ?? '')
+    .match(/'[^']+'/g)?.map(name => name.slice(1, -1)) ?? [])
+  const handled = new Set([...bridge.matchAll(/method===?'([^']+)'/g)].map(match => match[1]))
+  const screens = ['src/App.tsx','src/components/layout/LocalMaintenance.tsx','src/components/layout/McpImportPanel.tsx']
+  for (const screen of screens) {
+    const calls = [...read(screen).matchAll(/(?:\binvoke|api\.call)(?:<[^]*?>)?\(\s*'([a-z][a-z0-9_.]+)'/g)]
+      .map(match => match[1])
+    assert.ok(calls.length > 1, screen + ' 未提取到界面后台操作')
+    for (const method of calls)
+      assert.ok(allowed.has(method) || handled.has(method),
+        screen + ' 中 ' + method + ' 未连接到 Electron 后台')
+  }
+})
 
 test('本地诊断、数据清理、批量 MCP 导入连接实际桌面协议', () => {
   const app = read('src/App.tsx')
