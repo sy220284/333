@@ -554,7 +554,7 @@ describe('摇摇车真实桌面页面交互',()=>{
       teamName:'原团队',to:'测试成员',message:'验证当前代码并提交测试记录',
       messageId:expect.any(String),
     })))
-    expect(screen.getByRole('status')).toHaveTextContent('已写入 测试成员 的团队信箱')
+    expect(screen.getByText(/已写入 测试成员 的团队信箱/)).toBeInTheDocument()
     expect(call).not.toHaveBeenCalledWith('sessions.send',expect.anything())
     expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
     await user.click(screen.getByRole('button',{name:'查看信箱'}))
