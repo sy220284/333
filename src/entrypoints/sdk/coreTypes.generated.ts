@@ -19,7 +19,6 @@ export type McpSSEServerConfig = z.infer<ReturnType<typeof schemas.McpSSEServerC
 export type McpHttpServerConfig = z.infer<ReturnType<typeof schemas.McpHttpServerConfigSchema>>
 export type McpSdkServerConfig = z.infer<ReturnType<typeof schemas.McpSdkServerConfigSchema>>
 export type McpServerConfigForProcessTransport = z.infer<ReturnType<typeof schemas.McpServerConfigForProcessTransportSchema>>
-export type McpClaudeAIProxyServerConfig = z.infer<ReturnType<typeof schemas.McpClaudeAIProxyServerConfigSchema>>
 export type McpServerStatusConfig = z.infer<ReturnType<typeof schemas.McpServerStatusConfigSchema>>
 export type McpServerStatus = z.infer<ReturnType<typeof schemas.McpServerStatusSchema>>
 export type McpSetServersResult = z.infer<ReturnType<typeof schemas.McpSetServersResultSchema>>
