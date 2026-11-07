@@ -139,6 +139,17 @@ test('全量矩阵和六架构工作流自身修改在 Draft 阶段只做配置�
   assert.equal(full['latest-stable-six-host'], true)
 })
 
+test('权限规则与 SDK 运行结构变化都覆盖协议和安全专项', () => {
+  for(const file of ['src/types/permissions.ts','src/utils/permissions/PermissionUpdateSchema.ts']){
+    const planned=routeChanges([file])
+    assert.equal(planned['sdk-stream-parity'],true,file)
+    assert.equal(planned['governance-security-probe'],true,file)
+    assert.equal(planned.codeql,true,file)
+  }
+  const yaml=readFileSync(new URL('../.github/workflows/sdk-stream-parity.yml',import.meta.url),'utf8')
+  assert.match(yaml,/m1-permission-update-sdk-parity\.test\.ts/)
+})
+
 test('SDK 源码变更覆盖协议与桌面专项，桌面窗口变更也走桌面专项', () => {
   const sdk = routeChanges(['src/entrypoints/sdk/sessionRuntime317.ts'])
   assert.equal(sdk['sdk-stream-parity'], true)

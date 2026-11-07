@@ -15,7 +15,7 @@ export const SPECIALISTS = Object.freeze({
     /^src\/main\.tsx$/, /^tests\/.*(?:chinese|ui-|screen-reader)/,
   ],
   codeql: [
-    /^src\/(security|permissions|auth)\//, /^tests\/.*security/,
+    /^src\/(security|permissions|auth)\//, /^src\/utils\/permissions\//, /^src\/types\/permissions\.ts$/, /^tests\/.*security/,
     /^\.github\/workflows\/codeql\.yml$/,
   ],
   'desktop-communication': [
@@ -34,7 +34,7 @@ export const SPECIALISTS = Object.freeze({
   ],
   'governance-audit': [],
   'governance-security-probe': [
-    /^src\/(security|permissions|auth)\//, /^src\/services\/(analytics|telemetry)\//,
+    /^src\/(security|permissions|auth)\//, /^src\/utils\/permissions\//, /^src\/types\/permissions\.ts$/, /^src\/services\/(analytics|telemetry)\//,
     /^tests\/.*(?:permission|security|privacy|telemetry)/,
   ],
   'independent-models': [
@@ -111,7 +111,7 @@ export const SPECIALISTS = Object.freeze({
     /^tests\/(?:distribution-isolation|release-integrity|rebuild)/,
   ],
   'sdk-stream-parity': [
-    /^src\/entrypoints\/sdk\//,
+    /^src\/entrypoints\/sdk\//, /^src\/utils\/permissions\/PermissionUpdateSchema\.ts$/, /^src\/types\/permissions\.ts$/,
     /^src\/(sdk|QueryEngine\.ts|services\/conversation\/headlessSession)/,
     /^tests\/.*(?:sdk|stream-json|stream-parity)/,
   ],
