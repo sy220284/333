@@ -37,6 +37,7 @@ type Task={taskId:string;status?:string;description?:string;[key:string]:unknown
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
 type MissionJob={id:string;title:string;instruction:string;model?:string;permissionMode?:'default'|'plan'|'dontAsk';status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
+type TeamInbox={memberName:string;messages:Array<{from:string;text:string;timestamp:string;read:boolean;messageId?:string}>}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
 type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
@@ -148,6 +149,8 @@ export function App(){
   const [teamMemberDraft,setTeamMemberDraft]=useState('')
   const [teamMemberInstruction,setTeamMemberInstruction]=useState('')
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
+  const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
+  const [teamNotice,setTeamNotice]=useState('')
   const [missions,setMissions]=useState<Mission[]>([])
   const [selectedMission,setSelectedMission]=useState('')
   const [missionDraft,setMissionDraft]=useState('')
@@ -215,6 +218,7 @@ export function App(){
   },[])
 
   useEffect(()=>{viewRef.current=view},[view])
+  useEffect(()=>{setTeamInbox(null);setTeamNotice('')},[selectedTeam,workspace])
   useEffect(()=>{sessionRef.current=sessionId},[sessionId])
   useEffect(()=>{selectedMissionRef.current=selectedMission},[selectedMission])
   const invoke=useCallback(async<T,>(method:string,args:Record<string,unknown>={}):Promise<T>=>{
@@ -559,16 +563,33 @@ export function App(){
     await sendTeamInstruction(`用户授权在当前已选中的长期目标 ${selectedMission} 下创建团队。团队配置：${specification}。使用原生 TeamCreate 工具建队；创建前校验名称与项目归属，只创建团队，不启动新成员。请显示真实工具结果及最终团队名称。`)
   }
   async function requestTeamAction(action:'message'|'close'){
-    const team=(Array.isArray(overview.teams)?overview.teams as Item[]:[])
+    if(action==='message'){
+      if(!selectedTeam||!teamMemberDraft.trim()||!teamMemberInstruction.trim())return
+      await operation('投递团队成员任务',async()=>{
+        const result=await invoke<{queued:boolean;recipient:string;messageId:string}>('agents.team.message',{
+          teamName:selectedTeam,to:teamMemberDraft.trim(),message:teamMemberInstruction.trim(),
+          messageId:crypto.randomUUID(),
+        })
+        if(!result.queued)throw new Error('团队信箱没有确认写入')
+        setTeamNotice(`已写入 ${result.recipient} 的团队信箱，等待成员读取和执行。`)
+        setTeamMemberInstruction('')
+        setTeamInbox(null)
+      })
+      return
+    }
+    const team=(Array.isArray(overview.teams)?overview.teams as Item[])
       .find(item=>String(item.name||'')===selectedTeam)
     const leadSessionId=String(team?.leadSessionId||'')
     if(!leadSessionId){setError('团队缺少可恢复的负责人会话，请从创建该团队的原会话继续操作');return}
-    if(action==='message'&&(!teamMemberDraft.trim()||!teamMemberInstruction.trim()))return
-    if(action==='close'&&!window.confirm(`确定请求结束团队「${selectedTeam}」？会先向活动成员发送关闭请求，再使用 TeamDelete。`))return
-    const description=action==='message'
-      ? `使用原生 SendMessage 给团队成员 ${JSON.stringify(teamMemberDraft.trim())} 发送任务：${JSON.stringify(teamMemberInstruction.trim())}，确认团队和接收人身份，保留团队信箱记录。`
-      : '先通过原生 SendMessage/requestShutdown 请求现有成员退出，确认全部退出后使用 TeamDelete 完成团队清理，并报告实际结果。'
-    await sendTeamInstruction(`用户授权在负责人所属团队 ${JSON.stringify(selectedTeam)} 执行下述操作。确认所属项目和负责人身份后操作：${description} 禁止对其他团队执行。`,leadSessionId)
+    if(!window.confirm(`确定请求结束团队「${selectedTeam}」？会先向活动成员发送关闭请求，再使用 TeamDelete。`))return
+    await sendTeamInstruction(`用户授权结束负责人所属团队 ${JSON.stringify(selectedTeam)}。先使用原生 SendMessage/requestShutdown 请求成员退出，确认全部退出后使用 TeamDelete 清理，并逐一报告真实工具回执；不得清理其他团队。`,leadSessionId)
+  }
+  async function inspectTeamInbox(memberName:string){
+    if(!selectedTeam)return
+    await operation('读取团队消息',async()=>{
+      const result=await invoke<TeamInbox>('agents.team.inbox',{teamName:selectedTeam,memberName})
+      setTeamInbox(result)
+    })
   }
   async function saveProjectBudget(){
     await operation('保存项目共享预算',async()=>{
@@ -1073,16 +1094,25 @@ export function App(){
                       <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container)]"><Bot size={17}/></span>
                       <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{member.name}</strong><small className="text-[11px] text-[var(--color-text-tertiary)]">{member.agentType||'通用智能体'} · {member.model||'默认模型'}</small></span>
                       <Badge size="sm" tone={member.status==='running'?'success':'neutral'}>{member.status==='running'?'执行中':member.status==='idle'?'空闲':'状态未知'}</Badge>
-                      <Button variant="secondary" size="sm" onClick={()=>setTeamMemberDraft(member.name)}>选为接收人</Button>
+                      <Button variant="secondary" size="sm" onClick={()=>setTeamMemberDraft(member.name)}>选为接收人</Button><Button variant="secondary" size="sm" onClick={()=>void inspectTeamInbox(member.name)}>查看信箱</Button>
                     </div>):<Empty icon={UsersRound} title="当前团队没有活动成员" detail="实际创建成员后将显示角色与运行状态。"/>}
                     <div className="mt-4 space-y-3 border-t border-[var(--color-border)] pt-4">
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">由团队负责人的原生 SDK 会话执行通讯和退出，结果需以工具回执为准。</p>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">任务直接写入原生团队信箱；成员读取和执行状态以真实运行记录为准。结束团队仍由原生 SDK 工具完成。</p>
                       <input aria-label="团队消息接收人" value={teamMemberDraft} onChange={e=>setTeamMemberDraft(e.target.value)} placeholder="接收成员名称"/>
                       <textarea aria-label="团队成员工作指令" rows={2} value={teamMemberInstruction} onChange={e=>setTeamMemberInstruction(e.target.value)} placeholder="明确分工、交付和检查条件"/>
                       <div className="flex flex-wrap gap-2">
                         <Button variant="secondary" size="sm" disabled={Boolean(busy)||!teamMemberDraft.trim()||!teamMemberInstruction.trim()} onClick={()=>void requestTeamAction('message')}><MessageSquare size={13}/>发送成员任务</Button>
                         <Button variant="danger-outline" size="sm" disabled={Boolean(busy)} onClick={()=>void requestTeamAction('close')}><X size={13}/>请求结束团队</Button>
+                        <Button variant="secondary" size="sm" disabled={Boolean(busy)} onClick={()=>void inspectTeamInbox('team-lead')}><History size={13}/>查看团队回复</Button>
                       </div>
+                      {teamNotice&&<p role="status" className="text-[11px] text-[var(--color-text-secondary)]">{teamNotice}</p>}
+                      {teamInbox&&<div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+                        <h4 className="mb-2 text-[12px] font-semibold">信箱：{teamInbox.memberName}（最近 {teamInbox.messages.length} 条）</h4>
+                        {teamInbox.messages.length?teamInbox.messages.map((item,index)=><div key={item.messageId||`${item.timestamp}-${index}`} className="border-b border-[var(--color-border)] py-2 text-[11px] last:border-0">
+                          <div className="flex justify-between gap-2"><strong>{item.from}</strong><span>{item.read?'已读取':'未读取'} · {item.timestamp}</span></div>
+                          <p className="mt-1 whitespace-pre-wrap break-words">{item.text}</p>
+                        </div>):<p className="text-[11px] text-[var(--color-text-tertiary)]">暂无团队信箱记录</p>}
+                      </div>}
                     </div>
                   </Card>
                 </div>:
