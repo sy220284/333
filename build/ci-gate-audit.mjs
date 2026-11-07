@@ -17,6 +17,7 @@ const required = [
   'dev-quality.yml',
   'codeql.yml',
   'governance-security-probe.yml',
+  'personal-retirement-boundary.yml',
 ]
 for (const name of required) {
   if (!existsSync(root(`.github/workflows/${name}`))) {
