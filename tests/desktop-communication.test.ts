@@ -166,6 +166,45 @@ test('desktop model discovery and multi-turn streaming use SDK initialization an
   }
 })
 
+test('跨模式活动视图聚合独立 SDK 任务和 Mission Job，不启动额外模型或泄露其他项目', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'desktop-activities-'))
+  const project = join(root, 'workspace')
+  const otherProject = join(root, 'other')
+  const missionsRoot = join(root, 'mission-data')
+  await Promise.all([mkdir(project), mkdir(otherProject)])
+  const data = fixture()
+  const gateway = createDesktopGateway({
+    ...data.options, cwd: project, missionRoot: missionsRoot, dataDir: join(root,'data'),
+  })
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event=>events.push(event))
+  try {
+    const mission = await createMission('审计项目', project, missionsRoot)
+    const job = await enqueueMissionJob(mission.id, project, '核查工作项', '检查模块依赖', missionsRoot)
+    const foreign = await createMission('其他项目', otherProject, missionsRoot)
+    await enqueueMissionJob(foreign.id, otherProject, '其他项目工作项', '不得混入', missionsRoot)
+    const session = await gateway.handle(request('sessions.open')) as { sessionId: string }
+    await gateway.handle(request('sessions.send',{sessionId:session.sessionId,message:'inspect'}))
+    await until(()=>events.some(event=>event.event==='task.updated'&&event.task.status==='completed'))
+    const before = data.getLaunchEnvironments().length
+    const state = await gateway.handle(request('agents.activity')) as {
+      totalVisible: number
+      activities: Array<{
+        source: string; id: string; title: string; status: string;
+        missionId?: string; jobId?: string; sessionId?: string;
+      }>
+    }
+    expect(data.getLaunchEnvironments()).toHaveLength(before)
+    expect(state.totalVisible).toBeGreaterThanOrEqual(2)
+    expect(state.activities.some(item=>item.source==='session-task'&&item.sessionId===session.sessionId)).toBe(true)
+    expect(state.activities.some(item=>item.source==='mission-job'&&item.missionId===mission.id&&item.jobId===job.id&&item.status==='queued')).toBe(true)
+    expect(state.activities.some(item=>item.missionId===foreign.id||item.title==='其他项目工作项')).toBe(false)
+  } finally {
+    await gateway.close()
+    await rm(root,{recursive:true,force:true})
+  }
+})
+
 test('SDK callback permissions require a matching per-session desktop decision and can be interrupted', async () => {
   const data = fixture()
   const gateway = createDesktopGateway(data.options)
