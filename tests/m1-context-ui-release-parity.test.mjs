@@ -31,7 +31,7 @@ test('新桌面经 SDK 会话历史恢复工作区会话',()=>{
 test('新桌面通过 SDK 恢复会话历史和真实文件状态',()=>{
   const app=source('../desktop/src/App.tsx')
   const gateway=source('../src/services/desktop/gateway.ts')
-  assert.match(app,/async function resumeSession\(id:string\)/)
+  assert.match(app,/const resumeSession=useCallback\(async\(id:string\)/)
   assert.match(app,/sessions\.ensureOpen/)
   assert.match(app,/sessions\.history/)
   assert.match(gateway,/case 'sessions\.ensureOpen'/)
