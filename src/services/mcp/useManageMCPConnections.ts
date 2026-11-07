@@ -31,7 +31,6 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import {
-  filterMcpServersByPolicy,
   getClaudeCodeMcpConfigs,
   getMcpReconnectBlockReason,
   isMcpServerDisabled,

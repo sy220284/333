@@ -23,10 +23,7 @@ import {
   gracefulShutdownSync,
   setupGracefulShutdown,
 } from '../utils/gracefulShutdown.js'
-import {
-  applyConfigEnvironmentVariables,
-  applySafeConfigEnvironmentVariables,
-} from '../utils/managedEnv.js'
+import { applySafeConfigEnvironmentVariables } from '../utils/managedEnv.js'
 import { configureGlobalMTLS } from '../utils/mtls.js'
 import {
   ensureScratchpadDir,

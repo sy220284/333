@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { useEffect } from 'react'
 import { useNotifications } from '../../context/notifications.js'
 import { getIsRemoteMode } from '../../bootstrap/state.js'
