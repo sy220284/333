@@ -534,9 +534,9 @@ test('session settings preserve committed model and permissions through failed w
     const saved = { model: 'verified-model', permissionMode: 'plan' as const }
     await journal.write(id, saved)
     const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
-    const path = join(root, workspace, 'session-settings', id + '.json')
+    const path = join(root, workspace, 'session-settings', `${id}.json`)
     const { rename } = await import('node:fs/promises')
-    const backup = path + '.safe'
+    const backup = `${path}.safe`
     await rename(path, backup)
     await mkdir(path)
     await expect(journal.write(id, {

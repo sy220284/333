@@ -31,7 +31,7 @@ export function normalizeCapabilityCatalog(items: CapabilityEntry[]): Capability
     if (!item.id.trim() || !item.name.trim()) throw new Error('能力目录存在缺失 ID 或名称的条目')
     const previous = unique.get(item.id)
     if (previous && JSON.stringify(previous) !== JSON.stringify(item))
-      throw new Error('能力目录存在同 ID 的冲突定义：' + item.id)
+      throw new Error(`能力目录存在同 ID 的冲突定义：${item.id}`)
     unique.set(item.id, item)
   }
   return [...unique.values()].sort((a, b) =>
@@ -45,13 +45,13 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
   try {
     for (const name of getToolsForDefaultPreset()) {
       items.push({
-        id: 'tool:built-in:' + name, name, kind: 'tool',
+        id: `tool:built-in:${name}`, name, kind: 'tool',
         source: 'built-in', scope: 'built-in', description: '可由模型调用的原生工具',
         status: 'available',
       })
     }
   } catch (error) {
-    warnings.push('内置工具发现失败：' + String(error))
+    warnings.push(`内置工具发现失败：${String(error)}`)
   }
   try {
     const commands = await getCommands(resolve(projectDir))
@@ -60,7 +60,7 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
       const kind: CapabilityKind = command.kind === 'workflow'
         ? 'workflow' : command.type === 'prompt' ? 'skill' : 'command'
       items.push({
-        id: kind + ':' + source + ':' + command.name,
+        id: `${kind}:${source}:${command.name}`,
         name: command.name,
         kind,
         source,
@@ -71,13 +71,13 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
       })
     }
   } catch (error) {
-    warnings.push('本地技能或命令发现失败：' + String(error))
+    warnings.push(`本地技能或命令发现失败：${String(error)}`)
   }
   try {
     const plugins = await loadAllPluginsCacheOnly()
     for (const plugin of plugins.enabled) {
       items.push({
-        id: 'plugin:' + plugin.source + ':' + plugin.name,
+        id: `plugin:${plugin.source}:${plugin.name}`,
         name: plugin.name,
         kind: 'plugin',
         source: plugin.source,
@@ -100,10 +100,10 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
       })
     }
     if (plugins.errors.length > 0) {
-      warnings.push('插件加载存在 ' + plugins.errors.length + ' 项错误，请在插件管理中查看详情')
+      warnings.push(`插件加载存在 ${plugins.errors.length} 项错误，请在插件管理中查看详情`)
     }
   } catch (error) {
-    warnings.push('本地插件发现失败：' + String(error))
+    warnings.push(`本地插件发现失败：${String(error)}`)
   }
   for (const scope of ['project', 'user', 'local'] as const) {
     try {
@@ -112,7 +112,7 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
         const server = configuration.servers[name]
         if (!server) continue
         items.push({
-          id: 'mcp:' + scope + ':' + name,
+          id: `mcp:${scope}:${name}`,
           name,
           kind: 'mcp',
           source: 'mcp-config',
@@ -121,9 +121,9 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
           status: isMcpServerDisabled(name) ? 'disabled' : 'configured',
         })
       }
-      for (const error of configuration.errors) warnings.push(scope + ' MCP 配置：' + error.message)
+      for (const error of configuration.errors) warnings.push(`${scope} MCP 配置：${error.message}`)
     } catch (error) {
-      warnings.push(scope + ' MCP 配置读取失败：' + String(error))
+      warnings.push(`${scope} MCP 配置读取失败：${String(error)}`)
     }
   }
   return { items: normalizeCapabilityCatalog(items), warnings }

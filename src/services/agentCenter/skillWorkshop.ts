@@ -12,7 +12,7 @@ import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 const schema = z.strictObject({
   id: z.string().uuid(),
   slug: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/),
-  description: z.string().trim().min(12).max(240).refine(text => !/[\r\n\u0000]/.test(text), '描述不能换行'),
+  description: z.string().trim().min(12).max(240).refine(text => !text.includes('\r') && !text.includes('\n') && !text.includes('\0'), '描述不能换行'),
   instructions: z.string().trim().min(60).max(20000),
   projectDir: z.string().min(1),
   state: z.enum(['candidate', 'published']),
@@ -27,7 +27,7 @@ function draftDirectory(projectDir: string, root: string): string {
 }
 function draftPath(projectDir: string, id: string, root: string): string {
   if (!z.string().uuid().safeParse(id).success) throw new Error('无效技能候选 ID')
-  return join(draftDirectory(projectDir, root), id + '.json')
+  return join(draftDirectory(projectDir, root), `${id}.json`)
 }
 function skillMarkdown(draft: SkillDraft): string {
   return '---\nname: ' + draft.slug + '\ndescription: ' + JSON.stringify(draft.description) +
@@ -42,7 +42,7 @@ async function readDraft(projectDir: string, id: string, root: string): Promise<
   return item
 }
 async function atomicReplace(path: string, value: SkillDraft): Promise<void> {
-  const temp = path + '.' + randomUUID() + '.tmp'
+  const temp = `${path}.${randomUUID()}.tmp`
   try {
     await writeFile(temp, JSON.stringify(value, null, 2), { flag: 'wx', mode: 0o600 })
     await rename(temp, path)

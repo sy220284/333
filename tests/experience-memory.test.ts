@@ -50,7 +50,7 @@ test('同一经验重复提议幂等，不同版本需先废弃，项目互相�
     const first = await proposeProjectExperience(project, draft, root)
     const second = await proposeProjectExperience(project, draft, root)
     expect(second.id).toBe(first.id)
-    await expect(proposeProjectExperience(project, { ...draft, principle: draft.principle + '。' }, root))
+    await expect(proposeProjectExperience(project, { ...draft, principle: `${draft.principle}。` }, root))
       .rejects.toThrow('已存在')
     expect(await listProjectExperiences(join(root, 'other'), { includeCandidates: true, root })).toHaveLength(0)
     await retireProjectExperience(project, first.id, '旧规范已被新版测试流程替代', root)

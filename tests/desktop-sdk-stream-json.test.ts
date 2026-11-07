@@ -170,7 +170,7 @@ test('SDK blocking hooks require a verified native capability handshake', { time
   ]
   try {
     for (const item of cases) {
-      const cli = join(cwd, item.name + '-sdk-cli.mjs')
+      const cli = join(cwd, `${item.name}-sdk-cli.mjs`)
       const fixture = item.replacement
         ? fixtureCli.replace(
           item.name === 'unsupported' ? 'hook_on_failure_supported: true,' : 'hooks_applied: frame.request.hooks !== undefined,',

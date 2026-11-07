@@ -43,7 +43,7 @@ type Document = z.infer<typeof documentSchema>
 
 function projectPath(projectDir: string, root: string): string {
   if (!projectDir.trim()) throw new Error('经验必须绑定项目目录')
-  return join(root, 'experience-memory', createHash('sha256').update(resolve(projectDir)).digest('hex') + '.json')
+  return join(root, 'experience-memory', `${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
 }
 function verifyProject(doc: Document, projectDir: string): void {
   if (doc.projectDir !== resolve(projectDir)) throw new Error('经验属于另一项目')
@@ -84,7 +84,7 @@ async function mutate(
     const next = documentSchema.parse({ ...doc, revision: current.revision + 1 })
     const data = JSON.stringify(next, null, 2)
     if (Buffer.byteLength(data) > 4_000_000) throw new Error('经验库超过容量限制')
-    const temp = file + '.' + randomUUID() + '.tmp'
+    const temp = `${file}.${randomUUID()}.tmp`
     try {
       await writeFile(temp, data, { flag: 'wx', mode: 0o600 })
       await rename(temp, file)
