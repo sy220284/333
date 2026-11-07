@@ -6,7 +6,7 @@ export function textFromMessage(input:unknown):string {
   if(typeof input==='string')return input
   const message=asObject(input)
   if(!message)return ''
-  const content=message.content??message.message?.content
+  const content=message.content??asObject(message.message)?.content
   if(typeof content==='string')return content
   if(Array.isArray(content))return content.filter(part=>part?.type==='text'&&typeof part.text==='string').map(part=>part.text).join('\n')
   return typeof message.text==='string'?message.text:''
