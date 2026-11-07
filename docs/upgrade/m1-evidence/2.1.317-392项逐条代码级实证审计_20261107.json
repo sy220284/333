@@ -13,14 +13,14 @@
   },
   "code_grade_counts": {
     "RETIRED_BUT_LIVE_IMPLEMENTATION": 7,
-    "SOURCE_COMPLETION_UNPROVEN": 263,
-    "SOURCE_WIRED_TEST_PRESENT": 32,
+    "SOURCE_COMPLETION_UNPROVEN": 260,
+    "SOURCE_WIRED_TEST_PRESENT": 34,
     "RETIREMENT_PROOF_INSUFFICIENT": 87,
-    "CODE_OR_SCOPE_CONFLICT": 3
+    "CODE_OR_SCOPE_CONFLICT": 4
   },
-  "code_wired_confirmed": 32,
+  "code_wired_confirmed": 34,
   "retired_implementation_still_live": 7,
-  "issues": 3,
+  "issues": 4,
   "official_source_decompiled": "/source archive/04_逐模块可阅读JavaScript; specific verified reference chunk-xeb888e4.js:1547–1548; chunk-thp9mgjc.js:59678–59679",
   "entries": [
     {
@@ -3210,8 +3210,19 @@
       "scope": "ADAPT_TO_LOCAL_EQUIVALENT",
       "scope_reason": "该官方变更涉及已改造的宿主、用户入口或执行环境；需要保留可观察的安全、状态与错误行为，使用独立本地实现验收",
       "formal_verification": "未通过完整目标验收",
-      "code_grade": "SOURCE_COMPLETION_UNPROVEN",
-      "note": "尚未得到该更新的独立完整生产调用链及验证证据；不能因此推断代码不存在"
+      "code_grade": "SOURCE_WIRED_TEST_PRESENT",
+      "note": "尚未得到该更新的独立完整生产调用链及验证证据；不能因此推断代码不存在",
+      "title": "MCP elicitation本地表单与SDK控制回执",
+      "sources": [
+        "src/entrypoints/sdk/sessionRuntime317.ts",
+        "src/services/conversation/hostControlBroker.ts",
+        "desktop/src/App.tsx"
+      ],
+      "tests": [
+        "tests/desktop-sdk-stream-json.test.ts"
+      ],
+      "depth": "真实SDK子进程夹具及桌面表单可见，云卡片样式无需复刻",
+      "runtime_accepted": false
     },
     {
       "id": "2.1.316#047",
@@ -3488,8 +3499,18 @@
       "scope": "ADAPT_TO_LOCAL_EQUIVALENT",
       "scope_reason": "该官方变更涉及已改造的宿主、用户入口或执行环境；需要保留可观察的安全、状态与错误行为，使用独立本地实现验收",
       "formal_verification": "未通过完整目标验收",
-      "code_grade": "SOURCE_COMPLETION_UNPROVEN",
-      "note": "尚未得到该更新的独立完整生产调用链及验证证据；不能因此推断代码不存在"
+      "code_grade": "SOURCE_WIRED_TEST_PRESENT",
+      "note": "尚未得到该更新的独立完整生产调用链及验证证据；不能因此推断代码不存在",
+      "title": "同时工具权限请求逐项展示路径/命令并按原会话回执",
+      "sources": [
+        "desktop/src/App.tsx",
+        "src/services/desktop/gateway.ts"
+      ],
+      "tests": [
+        "desktop/src/App.test.tsx"
+      ],
+      "depth": "React交互夹具核验两会话权限；每条input在审批弹窗显示",
+      "runtime_accepted": false
     },
     {
       "id": "2.1.317#016",
@@ -4271,8 +4292,17 @@
       "scope": "ADAPT_TO_LOCAL_EQUIVALENT",
       "scope_reason": "该官方变更涉及已改造的宿主、用户入口或执行环境；需要保留可观察的安全、状态与错误行为，使用独立本地实现验收",
       "formal_verification": "未通过完整目标验收",
-      "code_grade": "SOURCE_COMPLETION_UNPROVEN",
-      "note": "尚未得到该更新的独立完整生产调用链及验证证据；不能因此推断代码不存在"
+      "code_grade": "CODE_OR_SCOPE_CONFLICT",
+      "note": "尚未得到该更新的独立完整生产调用链及验证证据；不能因此推断代码不存在",
+      "issue": "MCP URL elicitation 本地桌面缺失链接访问/拒绝的专门处理",
+      "proof": "desktop/src/App.tsx:611 以 subtype==='elicitation' 一律渲染表单字段；未处理 mode:'url' 与 request.url，当前界面无法提供原版链接卡片的打开入口；底层控制schema支持 mode:'url'",
+      "sources": [
+        "desktop/src/App.tsx",
+        "src/entrypoints/sdk/controlSchemas.ts"
+      ],
+      "tests": [
+        "tests/desktop-sdk-stream-json.test.ts"
+      ]
     },
     {
       "id": "2.1.317#083",
