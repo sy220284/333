@@ -13,7 +13,7 @@ import {
   hasSkipDangerousModePermissionPrompt,
 } from '../../utils/settings/settings.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import { getEnterpriseMcpFilePath, getMcpConfigByName } from './config.js'
+import { getMcpConfigByName } from './config.js'
 import { mcpInfoFromString } from './mcpStringUtils.js'
 import { normalizeNameForMCP } from './normalization.js'
 import {
@@ -270,8 +270,6 @@ export function describeMcpConfigFilePath(scope: ConfigScope): string {
       return `${getGlobalClaudeFile()} [project: ${getCwd()}]`
     case 'dynamic':
       return 'Dynamically configured'
-    case 'enterprise':
-      return getEnterpriseMcpFilePath()
     case 'claudeai':
       return 'claude.ai'
     default:
@@ -289,8 +287,6 @@ export function getScopeLabel(scope: ConfigScope): string {
       return 'User config (available in all your projects)'
     case 'dynamic':
       return 'Dynamic config (from command line)'
-    case 'enterprise':
-      return 'Enterprise config (managed by your organization)'
     case 'claudeai':
       return 'claude.ai config'
     default:
