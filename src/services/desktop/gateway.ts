@@ -968,6 +968,33 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         return sendProjectTeamMessage(cwd, request)
       case 'agents.team.inbox':
         return readProjectTeamInbox(cwd, request.teamName, request.memberName)
+      case 'agents.profiles.list': {
+        const { listAgentProfiles } = await import('../agentCenter/agentRegistry.js')
+        return { agents: await listAgentProfiles(cwd, options.dataDir) }
+      }
+      case 'agents.profiles.create': {
+        const { createAgentProfile } = await import('../agentCenter/agentRegistry.js')
+        return createAgentProfile(cwd, {
+          id:request.agentId,name:request.name,description:request.description,
+          domains:request.domains,capabilityIds:request.capabilityIds??[],
+        }, options.dataDir)
+      }
+      case 'agents.profiles.assign': {
+        const { assignAgentRole } = await import('../agentCenter/agentRegistry.js')
+        return assignAgentRole(cwd,request.agentId,{
+          role:request.role,purpose:request.purpose,
+          ...(request.teamName?{teamName:request.teamName}:{}),
+          ...(request.missionId?{missionId:request.missionId}:{}),
+        },options.dataDir)
+      }
+      case 'agents.profiles.release': {
+        const { releaseAgentRole } = await import('../agentCenter/agentRegistry.js')
+        return releaseAgentRole(cwd,request.agentId,request.roleId,options.dataDir)
+      }
+      case 'agents.profiles.status': {
+        const { updateAgentProfileStatus } = await import('../agentCenter/agentRegistry.js')
+        return updateAgentProfileStatus(cwd,request.agentId,request.status,options.dataDir)
+      }
       case 'handoffs.list': {
         const { listTeamHandoffs } = await import('../agentCenter/teamHandoffs.js')
         return { handoffs: await listTeamHandoffs(cwd, options.dataDir) }
