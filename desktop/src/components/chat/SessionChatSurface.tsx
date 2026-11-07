@@ -9,8 +9,8 @@ import type { ConversationItem } from '../../projection'
 
 type Model={value:string;displayName:string}
 export type SessionChatSurfaceProps={
-  sessionId:string;sessionPhase:string;historyOnly:boolean;models:Model[];selectedModel:string;permissionMode:string;
-  messages:ConversationItem[];visibleMessageCount:number;followLatest:boolean;permissionsCount:number;
+  sessionId:string;sessionPhase:string;historyOnly:boolean;models:Model[];selectedModel:string;permissionMode:string;modelVerified:boolean;permissionVerified:boolean;
+  messages:ConversationItem[];visibleMessageCount:number;historyOffset:number;onLoadEarlier:()=>void;followLatest:boolean;permissionsCount:number;
   draft:string;mode:'master'|'super';busy:boolean;connected:boolean;
   smartRecord?:{model:string;status:"running"|"completed"|"failed"|"interrupted";costUsd?:number;budgetUsd?:number};
   streamRef:RefObject<HTMLDivElement|null>;messagesEnd:RefObject<HTMLDivElement|null>;inputRef:RefObject<HTMLTextAreaElement|null>;
@@ -25,8 +25,8 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
     <div className="flex min-h-[57px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-3">
       <div aria-live="polite" aria-atomic="true" className="flex items-center gap-2.5"><Badge size="sm" tone={p.sessionPhase==='running'?'warning':'neutral'}>{runState}</Badge>{p.sessionId&&<span title={p.sessionId} className="font-mono text-[11px] text-[var(--color-text-tertiary)]">会话 {p.sessionId.slice(0,8)}</span>}</div>
       <div className="flex items-center gap-2">
-        <select aria-label="当前模型" value={p.selectedModel} disabled={p.historyOnly} onChange={e=>p.onModel(e.target.value)}><option value="">默认模型</option>{p.models.map(m=><option key={m.value} value={m.value}>{m.displayName||m.value}</option>)}</select>
-        <select aria-label="权限模式" disabled={p.historyOnly} value={p.permissionMode} onChange={e=>p.onPermissionMode(e.target.value)}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>
+        <select aria-label="当前模型" value={p.sessionId&&!p.modelVerified?'__unknown__':p.selectedModel} disabled={p.historyOnly} onChange={e=>p.onModel(e.target.value)}>{p.sessionId&&!p.modelVerified&&<option value="__unknown__" disabled>模型未核实</option>}<option value="">默认模型</option>{p.models.map(m=><option key={m.value} value={m.value}>{m.displayName||m.value}</option>)}</select>
+        <select aria-label="权限模式" disabled={p.historyOnly||!p.sessionId} value={p.sessionId&&!p.permissionVerified?'unknown':p.permissionMode} onChange={e=>p.onPermissionMode(e.target.value)}>{p.sessionId&&!p.permissionVerified&&<option value="unknown" disabled>权限未核实</option>}<option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>
         {p.sessionId&&!p.historyOnly&&<Button size="base" variant="ghost" onClick={p.onStop} aria-label="停止当前执行"><CircleStop size={17}/></Button>}
       </div>
     </div>
@@ -35,7 +35,7 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
         <EmptyState variant="plain" size="lg" icon={<Sparkles size={24}/>} title="今天想完成什么？" description="分析项目、编写代码、管理任务，或邀请智能体协作。"/>
         <div className="flex flex-wrap justify-center gap-2">{prompts.map(prompt=><Button key={prompt} size="base" variant="secondary" onClick={()=>p.onDraft(prompt)}>{prompt}<ArrowRight size={13}/></Button>)}</div>
       </div>:<>
-        {p.messages.length>p.visibleMessageCount&&<Button variant="secondary" size="base" onClick={()=>{p.onVisibleCount(p.visibleMessageCount+120);p.onFollowLatest(false)}}>加载更早的 {Math.min(120,p.messages.length-p.visibleMessageCount)} 条消息</Button>}
+        {p.messages.length>p.visibleMessageCount?<Button variant="secondary" size="base" onClick={()=>{p.onVisibleCount(p.visibleMessageCount+120);p.onFollowLatest(false)}}>加载更早的 {Math.min(120,p.messages.length-p.visibleMessageCount)} 条消息</Button>:p.historyOffset>0?<Button variant="secondary" size="base" onClick={p.onLoadEarlier}>从磁盘加载更早的消息</Button>:null}
         {p.messages.slice(-p.visibleMessageCount).map(m=><article key={m.id} className="mx-auto flex w-full max-w-[840px] gap-3">
           <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] ${(m.kind==='user'?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}`}>{m.kind==='user'?<span className="text-[11px]">我</span>:m.kind==='assistant'?<Sparkles size={16}/>:<SquareTerminal size={16}/>}</div>
           <div className="min-w-0 flex-1">

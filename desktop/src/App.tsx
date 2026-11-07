@@ -886,7 +886,7 @@ export function App(){
         <div className="flex h-[74px] shrink-0 items-center gap-3 px-5">
           <div className="yy-brand-seal flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand)] text-[var(--color-on-primary)]"><SquareTerminal size={22} strokeWidth={1.65}/></div>
           <div className="min-w-0 flex-1"><div className="font-semibold text-[15px] tracking-[.035em]">摇摇车</div><div className="truncate text-[10px] uppercase tracking-[.16em] text-[var(--color-text-tertiary)]">Local AI Workspace</div></div>
-          <button type="button" aria-label="搜索页面与操作" className="yy-icon" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
+          <button type="button" aria-label="搜索页面与操作" className="yy-icon" onClick={()=>{if(permissions.length||hostRequests.length)return;setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
         </div>
         <div className="px-3 pb-3">
           <button type="button" className="yy-project-picker flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] p-3 text-left shadow-[var(--shadow-card)] transition-[border-color,background-color] hover:border-[var(--color-brand)]" onClick={()=>void selectWorkspace()} title={workspace||'选择工作区'}>
@@ -931,7 +931,7 @@ export function App(){
           {view!=='chat'&&(()=>{const item=NAV.find(e=>e.id===view);if(!item)return null;const Icon=item.icon;return <button type="button" role="tab" aria-selected="true" aria-label={`标签页：${item.label}`} className="yy-tab yy-tab-active" onClick={()=>setView(view)}><Icon size={14}/><span>{item.label}</span><span className="yy-tab-dot"/></button>})()}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pb-1">
-          <button type="button" aria-label="搜索操作" title="搜索操作 (Ctrl K)" className="yy-icon" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
+          <button type="button" aria-label="搜索操作" title="搜索操作 (Ctrl K)" className="yy-icon" onClick={()=>{if(permissions.length||hostRequests.length)return;setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
           <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
           <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
         </div>
@@ -965,13 +965,13 @@ export function App(){
           />}
           {view==='chat'&&<SessionChatSurface
             sessionId={sessionId} sessionPhase={sessionPhase} historyOnly={historyOnly}
-            models={models} selectedModel={selectedModel} permissionMode={permissionMode}
-            messages={messages} visibleMessageCount={visibleMessageCount} followLatest={followLatest} permissionsCount={permissions.length}
+            models={models} selectedModel={selectedModel} permissionMode={permissionMode} modelVerified={modelVerified} permissionVerified={permissionVerified}
+            messages={messages} visibleMessageCount={visibleMessageCount} historyOffset={historyOffset} onLoadEarlier={()=>void loadEarlierHistory()} followLatest={followLatest} permissionsCount={permissions.length}
             draft={draft} mode={mode} busy={Boolean(busy)} connected={connected}
             smartRecord={smartHistory.find(record=>record.sessionId===sessionId)}
             streamRef={streamRef} messagesEnd={messagesEnd} inputRef={inputRef}
             onModel={next=>void selectModel(next)}
-            onPermissionMode={next=>void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}
+            onPermissionMode={next=>void operation('修改权限模式',async()=>{const id=sessionRef.current,generation=sessionGeneration.current;if(!id)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId:id,mode:next});if(generation===sessionGeneration.current&&sessionRef.current===id){setPermissionMode(next);setPermissionVerified(true)}})}
             onStop={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}
             onScrollBottom={setFollowLatest} onVisibleCount={setVisibleMessageCount} onFollowLatest={setFollowLatest}
             onOpenApprovals={()=>setView('settings')} onDraft={setDraft} onSend={()=>void send()} onOpenLink={openChatLink}
@@ -1275,9 +1275,9 @@ export function App(){
       <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(p.sessionId,p.id,false)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(p.sessionId,p.id,true)}>本次允许</Button></div>
     </div>):<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="受保护的工具操作会在这里请求许可。"/>}
   </Card></Section>
-  <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={r.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
+  <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={`${r.sessionId}:${r.id}`} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
   <LocalMaintenance key={workspace} workspace={workspace} connected={connected} onPurged={()=>{
-    setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setSmartHistory([]);setSmartInspection(null);setProjectBudget(null);projectBudgetInitialized.current=false;setPermissions([]);setHostRequests([]);setSessionPhase('idle');
+    ++sessionGeneration.current;setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setHistoryOffset(0);setTasks([]);setSmartHistory([]);setSmartInspection(null);setProjectBudget(null);projectBudgetInitialized.current=false;setPermissions([]);setHostRequests([]);setSessionPhase('idle');
     void refresh()
   }}/>
   <Section title="外观与体验" subtitle="新项目的六套原生配色与统一动效。"><Card radius="lg" surface="lowest" shadow="card">
@@ -1289,13 +1289,13 @@ export function App(){
 </div>}
           </div>
         </div>
-        {rightOpen&&<WorkspaceInspector
+        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="hidden max-[960px]:block fixed inset-0 z-30 bg-black/40" onClick={()=>setRightOpen(false)}/><WorkspaceInspector
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
           smartExecution={smartHistory.find(record=>record.sessionId===sessionId)}
           projectBudget={projectBudget??undefined}
-          onClose={()=>setRightOpen(false)} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
-        />}
+          onClose={()=>{setRightOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="打开详情面板"]')?.focus())}} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
+        /></>}
 
       </div>
       <footer className="yy-statusbar flex h-8 shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 text-[11px] text-[var(--color-text-tertiary)]"><span>{connected?'● 后端已连接':'○ 等待连接'}</span><span className="min-w-0 flex-1 truncate">{workspace||'未选择项目'}</span><span>{sessionId?`会话 ${sessionId.slice(0,8)} · `:''}{statusName(sessionPhase)}</span></footer>
@@ -1310,7 +1310,7 @@ export function App(){
     <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(permissions[0].sessionId,permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(permissions[0].sessionId,permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</Button></div>
     {permissions.length>1&&<p className="mt-3 text-[11px] text-[var(--color-text-tertiary)]">另有 {permissions.length-1} 项待审操作</p>}
   </Modal>}
-  {permissions.length===0&&requested&&<Modal open={true} onClose={()=>{}} dismissible={false} title="主机交互请求" typography="interface">
+  {permissions.length===0&&requested&&<Modal key={requestedKey} open={true} onClose={()=>{}} dismissible={false} title="主机交互请求" typography="interface">
     <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold"><LockKeyhole size={17} className="text-[var(--color-brand)]"/>{String(requestedDetails.title||'需要您的输入')}</div>
     <p className="mb-4 text-[12px] leading-6 text-[var(--color-text-secondary)]">{String(requestedDetails.message||requestedDetails.description||'后台请求用户处理交互内容。')}</p>
     {requestedDetails.subtype==='elicitation'&&requestedDetails.mode==='url'?<>
@@ -1325,11 +1325,11 @@ export function App(){
         <Button variant="primary" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</Button>
       </div>
     </>:requestedDetails.subtype==='elicitation'?<>
-      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div>
+      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:e.target.value}}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:e.target.checked}}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}}))}/>}</label>})}</div>
       <div className="mt-5 flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'decline')}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'accept')}>提交输入</Button></div>
     </>:<div className="flex justify-end"><Button variant="secondary" size="base" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</Button></div>}
   </Modal>}
-  <Modal open={paletteOpen} onClose={()=>{setPaletteOpen(false);setSearch('')}} title="快速操作" typography="interface" width={650}>
+  <Modal open={paletteOpen&&!permissions.length&&!hostRequests.length} onClose={()=>{setPaletteOpen(false);setSearch('')}} title="快速操作" typography="interface" width={650}>
     <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
       <Search size={19} className="text-[var(--color-text-tertiary)]"/>
       <input ref={paletteInputRef} aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setPaletteIndex(index=>Math.min(index+1,Math.max(0,filteredCommands.length-1)))}if(e.key==='ArrowUp'){e.preventDefault();setPaletteIndex(index=>Math.max(0,index-1))}if(e.key==='Enter'&&filteredCommands[paletteIndex]){e.preventDefault();runCommand(filteredCommands[paletteIndex])}}} className="min-w-0 flex-1 border-0! bg-transparent! shadow-none!"/>

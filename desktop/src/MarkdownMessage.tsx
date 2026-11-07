@@ -20,7 +20,7 @@ function inline(text: string, onOpenLink?: (url:string)=>void): ReactNode[] {
       let safe = false
       try {
         const url = new URL(href)
-        safe = (url.protocol === 'https:' || url.protocol === 'http:') && !url.username && !url.password
+        safe = url.protocol === 'https:' && !url.username && !url.password
       } catch {
         safe = false
       }
