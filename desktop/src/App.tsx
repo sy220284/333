@@ -45,6 +45,8 @@ type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;avai
   uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}
 type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
+type CapabilityItem={id:string;name:string;kind:'skill'|'workflow'|'plugin'|'mcp'|'command';source:string;scope:string;description:string;status:'available'|'configured'|'disabled';version?:string}
+type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -52,7 +54,7 @@ const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'missions',label:'长期任务',icon:ClipboardList},
   {id:'files',label:'项目文件',icon:FolderOpen},
   {id:'models',label:'模型管理',icon:Cpu},
-  {id:'integrations',label:'技能与 MCP',icon:Boxes},
+  {id:'integrations',label:'能力中心',icon:Boxes},
   {id:'github',label:'GitHub',icon:GitPullRequest},
   {id:'history',label:'历史记录',icon:History},
   {id:'settings',label:'设置与权限',icon:Settings2}
@@ -70,7 +72,7 @@ const TITLES:Record<View,[string,string]>={
   missions:['长期任务','保存目标、记录检查点，按授权恢复执行。'],
   files:['项目文件','浏览和编辑项目文件，检查真实 Git 差异。'],
   models:['模型管理','查看后端实际发现的模型和当前会话配置。'],
-  integrations:['技能与 MCP','通过 AI 工具链使用和检查已配置的集成能力。'],
+  integrations:['能力中心','统一查看技能、插件、工作流与 MCP，并管理经过验证的经验规范。'],
   github:['GitHub','查看工作区 Git 状态并发起代码审查任务。'],
   history:['历史记录','恢复当前工作区保存在本地的会话。'],
   settings:['设置与权限','控制执行模式、工具授权和工作台偏好。']
@@ -119,6 +121,11 @@ export function App(){
   const [credentialProvider,setCredentialProvider]=useState('openai')
   const [credentialInput,setCredentialInput]=useState('')
   const [mcpServers,setMcpServers]=useState<McpServer[]>([])
+  const [capabilityItems,setCapabilityItems]=useState<CapabilityItem[]>([])
+  const [capabilityWarnings,setCapabilityWarnings]=useState<string[]>([])
+  const [experienceItems,setExperienceItems]=useState<ExperienceItem[]>([])
+  const [catalogRevision,setCatalogRevision]=useState(0)
+  const [catalogError,setCatalogError]=useState('')
   const [mcpAddOpen,setMcpAddOpen]=useState(true)
   const [mcpErrors,setMcpErrors]=useState<string[]>([])
   const [mcpName,setMcpName]=useState('')
@@ -223,6 +230,31 @@ export function App(){
     setPermissionVerified(value.permissionMode!==undefined&&value.permissionMode!==null)
   },[])
 
+  useEffect(()=>{
+    if(view!=='integrations'||!connected)return
+    let active=true
+    void Promise.allSettled([
+      api.call<{items:CapabilityItem[];warnings:string[]}>('capabilities.list'),
+      api.call<{experiences:ExperienceItem[]}>('experience.list',{includeCandidates:true}),
+    ]).then(([catalog,memory])=>{
+      if(!active)return
+      if(catalog.status==='fulfilled'){
+        setCapabilityItems(catalog.value.items??[])
+        setCapabilityWarnings(catalog.value.warnings??[])
+      }else{
+        setCapabilityItems([])
+        setCapabilityWarnings([])
+      }
+      if(memory.status==='fulfilled')setExperienceItems(memory.value.experiences??[])
+      else setExperienceItems([])
+      const errors=[
+        ...(catalog.status==='rejected'?['能力目录：'+presentError(catalog.reason)]:[]),
+        ...(memory.status==='rejected'?['经验规范：'+presentError(memory.reason)]:[]),
+      ]
+      setCatalogError(errors.join('；'))
+    })
+    return()=>{active=false}
+  },[view,workspace,connected,catalogRevision])
   useEffect(()=>{viewRef.current=view},[view])
   useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null},[selectedTeam,workspace])
   useEffect(()=>{sessionRef.current=sessionId},[sessionId])
@@ -1382,6 +1414,46 @@ export function App(){
           </Card>}
   </div>}
           {view==='integrations'&&<div className="space-y-7">
+            <Section title="统一能力目录" subtitle="读取本地实际安装的技能、插件、工作流和 MCP 配置；发现不等于已完成真实工具调用。" action={<Button variant="secondary" size="base" onClick={()=>setCatalogRevision(v=>v+1)}><RefreshCw size={14}/>刷新能力</Button>}>
+              <Card radius="lg" surface="lowest" shadow="card" padding="lg">
+                <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-[var(--color-text-secondary)]">
+                  <span>发现 {capabilityItems.length} 项能力</span>
+                  {(['skill','plugin','workflow','mcp','command'] as const).map(kind=><span key={kind} className="rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] px-2 py-1">{kind} {capabilityItems.filter(item=>item.kind===kind).length}</span>)}
+                </div>
+                <div className="max-h-[450px] space-y-2 overflow-auto">
+                  {capabilityItems.map(item=><div key={item.id} className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2.5">
+                    <Boxes size={16} className="shrink-0 text-[var(--color-text-secondary)]"/>
+                    <div className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{item.name}</strong>
+                      <p className="mt-1 truncate text-[11px] text-[var(--color-text-tertiary)]">{item.kind} · {item.source} · {item.scope}{item.version?' · v'+item.version:''}</p>
+                      {item.description&&<p className="mt-1 line-clamp-2 text-[11px] text-[var(--color-text-secondary)]">{item.description}</p>}
+                    </div>
+                    <Badge size="xs" tone={item.status==='disabled'?'warning':'neutral'}>{item.status==='disabled'?'已禁用':item.status==='configured'?'已配置':'可发现'}</Badge>
+                  </div>)}
+                  {capabilityItems.length===0&&<Empty icon={Boxes} title="暂无已发现能力" detail="可在下方配置 MCP，或通过原有技能及插件加载器安装能力。"/>}
+                </div>
+                {capabilityWarnings.map((item,index)=><p key={index} role="alert" className="mt-2 text-[11px] text-[var(--color-warning)]">{item}</p>)}
+                {catalogError&&<p role="alert" className="mt-2 text-[12px] text-[var(--color-error)]">{catalogError}</p>}
+              </Card>
+            </Section>
+            <Section title="长期经验规范" subtitle="按适用场景、复用步骤和验证证据保存；候选经验经审核后才能被检索为可靠规范。">
+              <Card radius="lg" surface="lowest" shadow="card" padding="lg">
+                <div className="space-y-3">{experienceItems.filter(item=>item.status!=='retired').map(item=><div key={item.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+                  <div className="flex flex-wrap items-center gap-2"><strong className="flex-1 text-[12px]">{item.title}</strong><Badge size="xs" tone={item.status==='approved'?'success':'warning'}>{item.status==='approved'?'已核验':'待核验'}</Badge></div>
+                  <p className="mt-2 text-[12px]">{item.principle}</p>
+                  <details className="mt-2 text-[11px] text-[var(--color-text-secondary)]"><summary className="cursor-pointer">适用条件、复用步骤与证据</summary>
+                    <p className="mt-2">场景：{item.scenario}</p><p>适用：{item.applicability}</p><p>失效：{item.invalidWhen}</p>
+                    <ol className="my-2 list-decimal pl-5">{item.procedure.map((step,index)=><li key={index}>{step}</li>)}</ol>
+                    <p>验证：{item.verification}</p><p className="break-all">证据：{item.evidenceRefs.join('、')}</p>
+                  </details>
+                  {item.status==='candidate'&&<Button variant="secondary" size="sm" className="mt-2" onClick={()=>void operation('确认经验规范',async()=>{
+                    await invoke('experience.approve',{experienceId:item.id,reviewer:'桌面用户'})
+                    setCatalogRevision(value=>value+1)
+                  })}><ShieldCheck size={13}/>证据核对后确认</Button>}
+                </div>)}
+                {experienceItems.every(item=>item.status==='retired')&&<Empty icon={ClipboardList} title="暂无可靠经验规范" detail="将实际任务中的成功方法提炼为候选规则，经证据审核后在这里复用。"/>}
+                </div>
+              </Card>
+            </Section>
             <div className="yy-workspace-three grid grid-cols-3 gap-4 max-[1100px]:grid-cols-1">
               {([{name:'技能 Skills',detail:'复用本地项目与用户级技能。',icon:WandSparkles,prompt:'列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式',action:'检查已安装技能'},{name:'MCP 工具',detail:'让 AI 访问本地与外部工具。',icon:Boxes,prompt:'检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误',action:'检查 MCP 连接'},{name:'插件与扩展',detail:'查看已注册的插件和扩展功能。',icon:Bot,prompt:'审计当前已安装的插件及其功能入口，检查是否能够正常调用',action:'检查插件'}]).map(item=>{const Icon=item.icon;return <Card key={item.name} radius="lg" surface="lowest" shadow="card" className="flex flex-col items-start gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-soft)] text-[var(--color-brand)]"><Icon size={23}/></span>
