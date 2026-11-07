@@ -148,7 +148,7 @@ describe('摇摇车真实桌面页面交互',()=>{
       expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
     }finally{confirm.mockRestore()}
   })
-  it('cc-haha 新首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
+  it('新界面原生首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
@@ -170,7 +170,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     const selector=screen.getByRole('combobox',{name:'界面主题'})
     expect(selector).toHaveValue('white')
     await user.selectOptions(selector,'celadon')
-    expect(document.documentElement.dataset.ccTheme).toBe('celadon')
+    expect(document.documentElement.dataset.theme).toBe('celadon')
     view.unmount()
     render(<App/>)
     await screen.findByText('本地后台已连接')
