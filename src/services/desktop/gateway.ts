@@ -59,6 +59,8 @@ export type DesktopGatewayOptions = {
   missionRoot?: string
   journal?: DesktopTaskJournal
   smartJournal?: SmartExecutionJournal
+  /** Inject the actual project budget ledger for failure-injection tests. */
+  projectBudget?: ReturnType<typeof createProjectBudget>
   createSession?: SessionFactory
   history?: HistoryService
   /** Test seam; production uses the original AgentTool worktree creator. */
@@ -92,8 +94,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
   const sessionSettings = createDesktopSessionSettingsJournal(cwd, options.dataDir)
   const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
-  const projectBudget = createProjectBudget(cwd, options.dataDir)
-  const sessionBudgets = new Map<string,{leaseId:string;awaitingResult:boolean}>()
+  const projectBudget = options.projectBudget ?? createProjectBudget(cwd, options.dataDir)
+  const sessionBudgets = new Map<string,{
+    leaseId: string; awaitingResult: boolean; accountingError?: string
+  }>()
   const smartActive = new Set<string>()
   const smartPrepared = new Map<string, string>()
   const sessions = new Map<string, Entry>()
@@ -440,6 +444,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     const turnId = randomUUID()
     const sessionBudget=sessionBudgets.get(sessionId)
     try {
+      if(sessionBudget?.accountingError)
+        throw new Error(`本会话预算记账失败，需先关闭会话核对实际费用：${sessionBudget.accountingError}`)
       if(sessionBudget && await projectBudget.remaining(sessionBudget.leaseId)<=0)
         throw new Error('本会话已用尽预占的共享预算额度，请关闭会话并重新分配预算')
       if(sessionBudget)sessionBudget.awaitingResult=true
@@ -460,8 +466,18 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           if(sdkMessage.type==='result' && sessionBudget){
             const cost=sdkMessage.total_cost_usd
             if(typeof cost==='number' && Number.isFinite(cost) && cost>=0){
-              await projectBudget.charge(sessionBudget.leaseId,cost)
-              sessionBudget.awaitingResult=false
+              try {
+                await projectBudget.charge(sessionBudget.leaseId,cost)
+                sessionBudget.awaitingResult=false
+              } catch (error) {
+                // The model already produced a result. A ledger I/O failure
+                // must not discard subsequent SDK notifications or relabel
+                // successful execution as interrupted. Preserve the lease as
+                // uncertain and refuse further paid turns until reconciliation.
+                sessionBudget.accountingError=error instanceof Error ? error.message : String(error)
+                emit({event:'session.error',sessionId,turnId,
+                  error:`预算记账失败，实际费用待核对；本会话后续请求已暂停：${sessionBudget.accountingError}`})
+              }
             } // Missing usage remains reserved for explicit reconciliation.
           }
           if (sdkMessage.type === 'result' && smartActive.has(sessionId)) {
