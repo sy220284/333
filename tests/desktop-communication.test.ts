@@ -335,6 +335,61 @@ test('SDK closeAndWait allows the CLI to finish delayed session persistence afte
   }
 })
 
+test('SDK SessionStore drains the final transcript mirror before cleanup', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-mirror-shutdown-'))
+  const script = join(cwd, 'sdk-mirror.cjs')
+  const fixtureScript = [
+    "const { readdirSync } = require('node:fs')",
+    "const { join } = require('node:path')",
+    "const { createInterface } = require('node:readline')",
+    "const args = process.argv.slice(2)",
+    "const sessionId = args[args.indexOf('--session-id') + 1]",
+    "const input = createInterface({ input: process.stdin })",
+    "input.on('line', line => {",
+    "  const frame = JSON.parse(line)",
+    "  if (frame.type === 'control_request') {",
+    "    process.stdout.write(JSON.stringify({ type: 'control_response', response: {",
+    "      subtype: 'success', request_id: frame.request_id, response: {}",
+    "    } }) + '\\n')",
+    "  }",
+    "})",
+    "input.on('close', () => {",
+    "  const projectRoot = join(process.env.CLAUDE_CONFIG_DIR, 'projects')",
+    "  const project = readdirSync(projectRoot)[0]",
+    "  const filePath = join(projectRoot, project, sessionId + '.jsonl')",
+    "  process.stdout.write(JSON.stringify({",
+    "    type: 'transcript_mirror', filePath, entries: [{ event: 'flushed' }]",
+    "  }) + '\\n')",
+    "  setTimeout(() => process.exit(0), 20)",
+    "})",
+  ].join('\n')
+  await writeFile(script, fixtureScript)
+  const records: Record<string, unknown>[] = []
+  const store: import('../src/entrypoints/sdk/runtimeTypes.js').SessionStore = {
+    async append(_key, entries) {
+      await new Promise(resolve => setTimeout(resolve, 70))
+      records.push(...entries)
+    },
+    async load() { return undefined },
+    async listSessions() { return [] },
+  }
+  const session = createSessionRuntime317({
+    cwd,
+    model: 'model-example',
+    pathToClaudeCodeExecutable: script,
+    env: { CLAUDE_CONFIG_DIR: join(cwd, 'config') },
+    sessionStore: store,
+  })
+  try {
+    await session.initialization
+    await session.closeAndWait()
+    expect(records).toEqual([{ event: 'flushed' }])
+  } finally {
+    session.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('SDK 2.1.317 task_updated and background metadata survive desktop restart', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'desktop-task-metadata-'))
   try {
