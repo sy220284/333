@@ -290,10 +290,10 @@ export function App(){
       setAgentActivities(result.activities??[]);setAgentActivityCount(result.totalVisible??0)
     }
   },[])
-  const upsertAgentActivity=(activity:AgentActivity)=>{
+  const upsertAgentActivity=useCallback((activity:AgentActivity)=>{
     setAgentActivities(old=>[activity,...old.filter(item=>item.id!==activity.id)]
       .sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,100))
-  }
+  },[])
   const syncMissionOverview=useCallback(()=>{
     // A later workspace refresh invalidates earlier responses, so data from
     // an old project can never overwrite the currently selected project.
@@ -500,7 +500,7 @@ export function App(){
       finally{if(alive)setInitialLoading(false)}
     })()
     return ()=>{alive=false;unsub();if(jobHighlightTimer.current)clearTimeout(jobHighlightTimer.current)}
-  },[refresh,resumeSession,syncMissionOverview])
+  },[refresh,resumeSession,syncMissionOverview,upsertAgentActivity])
   useEffect(()=>{
     const available=Array.isArray(overview.teams)?overview.teams as Item[]:[]
     if(!available.some(team=>String(team.name||'')===selectedTeam))
