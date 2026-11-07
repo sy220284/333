@@ -10,12 +10,14 @@ let showHistoricalJob=false
 let failMcpRefresh=false
 let activeAgentMode:'master'|'super'='master'
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
+let longHistory=false
+let manyFiles=false
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
-    case 'sessions.list':return []
+    case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
     case 'missions.list':return showHistoricalJob
@@ -24,7 +26,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'missions.jobs.list':return showHistoricalJob
       ? [{id:'job-1',title:'审核旧执行',instruction:'分析来源',status:'completed',attempt:1,sessionId:SID}]
       : []
-    case 'sessions.history':return [{
+    case 'sessions.history':return longHistory?Array.from({length:260},(_,i)=>({uuid:`long-${i}`,type:'assistant',message:{role:'assistant',content:[{type:'text',text:`历史-${i}`}]},timestamp:'2026-11-06T12:00:00Z'})):[{
       uuid:'history-message-1',type:'assistant',
       message:{role:'assistant',content:[{type:'text',text:'历史执行内容'}]},
       timestamp:'2026-11-06T12:00:00Z'
@@ -33,6 +35,11 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'permissions.list':return []
     case 'host.list':return []
     case 'credentials.list':return {providers:['openai']}
+    case 'workspace.list':{
+      const offset=Number(args.offset||0)
+      const end=manyFiles?Math.min(260,offset+Number(args.limit||200)):0
+      return {path:'/projects/example',total:manyFiles?260:0,entries:Array.from({length:Math.max(0,end-offset)},(_,i)=>({name:`file-${offset+i}.ts`,path:`/projects/example/file-${offset+i}.ts`,directory:false}))}
+    }
     case 'mcp.list':
       if(failMcpRefresh)throw new Error('MCP 服务离线')
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
@@ -54,7 +61,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[]})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -232,6 +239,65 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.resume',
       expect.objectContaining({sessionId:SID,taskId:'task-interrupted',
         prompt:expect.stringContaining('核对已有执行结果')})))
+  })
+
+  it('全局命令中心可以搜索并进入对应页面',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.keyboard('{Control>}k{/Control}')
+    const palette=await screen.findByRole('dialog',{name:'快速操作'})
+    await user.type(within(palette).getByRole('textbox',{name:'搜索命令'}),'历史记录')
+    expect(within(palette).getByRole('option',{name:/历史记录/})).toBeInTheDocument()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('heading',{name:'历史记录'})
+    expect(screen.queryByRole('dialog',{name:'快速操作'})).not.toBeInTheDocument()
+  })
+
+  it('长对话默认只渲染最近120条，历史消息可按需逐段展开',async()=>{
+    longHistory=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByText('长历史会话'))
+    await screen.findByText('历史-259')
+    expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:/加载更早的 120 条消息/}))
+    expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:/加载更早的 20 条消息/}))
+    expect(screen.getByText('历史-0')).toBeInTheDocument()
+  })
+
+  it('文件列表分页向网关请求下一页并展示累计数量',async()=>{
+    manyFiles=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'项目文件'}))
+    await user.click(screen.getByRole('button',{name:'刷新文件'}))
+    await screen.findByText('file-199.ts')
+    const more=screen.getByRole('button',{name:/加载更多文件/})
+    expect(more).toHaveTextContent('200/260')
+    await user.click(more)
+    await screen.findByText('file-259.ts')
+    expect(call).toHaveBeenCalledWith('workspace.list',{path:'/projects/example',offset:200,limit:200})
+    expect(screen.queryByRole('button',{name:/加载更多文件/})).not.toBeInTheDocument()
+  })
+
+  it('外观和详情面板偏好在重启后仍保留',async()=>{
+    const user=userEvent.setup()
+    const instance=render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    await user.click(screen.getByRole('checkbox',{name:/深色主题/}))
+    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:dark')).toBe('false'))
+    await user.click(screen.getByRole('button',{name:'收起详情'}))
+    await waitFor(()=>expect(window.localStorage.getItem('yaoyaoche-desktop:inspector')).toBe('false'))
+    instance.unmount()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
   })
 
 })
