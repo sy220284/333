@@ -12,7 +12,7 @@ export type SessionChatSurfaceProps={
   sessionId:string;sessionPhase:string;historyOnly:boolean;models:Model[];selectedModel:string;permissionMode:string;
   messages:ConversationItem[];visibleMessageCount:number;followLatest:boolean;permissionsCount:number;
   draft:string;mode:'master'|'super';busy:boolean;connected:boolean;
-  smartRecord?:{model:string;status:string;costUsd?:number;budgetUsd?:number};
+  smartRecord?:{model:string;status:'running'|'completed'|'failed'|'interrupted';costUsd?:number;budgetUsd?:number};
   streamRef:RefObject<HTMLDivElement|null>;messagesEnd:RefObject<HTMLDivElement|null>;inputRef:RefObject<HTMLTextAreaElement|null>;
   onModel:(value:string)=>void;onPermissionMode:(value:string)=>void;onStop:()=>void;
   onScrollBottom:(value:boolean)=>void;onVisibleCount:(value:number)=>void;onFollowLatest:(value:boolean)=>void;
@@ -23,7 +23,7 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
   const runState=p.historyOnly?'历史记录':({running:'执行中',requires_action:'等待确认',completed:'已完成',cancelled:'已取消',failed:'执行失败'} as Record<string,string>)[p.sessionPhase]||'待命'
   return <section aria-label="AI 对话区" className="flex min-h-[540px] flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] shadow-[var(--shadow-card)]">
     <div className="flex min-h-[57px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-3">
-      <div className="flex items-center gap-2.5"><Badge size="sm" tone={p.sessionPhase==='running'?'warning':'neutral'}>{runState}</Badge>{p.sessionId&&<span title={p.sessionId} className="font-mono text-[11px] text-[var(--color-text-tertiary)]">会话 {p.sessionId.slice(0,8)}</span>}</div>
+      <div aria-live="polite" aria-atomic="true" className="flex items-center gap-2.5"><Badge size="sm" tone={p.sessionPhase==='running'?'warning':'neutral'}>{runState}</Badge>{p.sessionId&&<span title={p.sessionId} className="font-mono text-[11px] text-[var(--color-text-tertiary)]">会话 {p.sessionId.slice(0,8)}</span>}</div>
       <div className="flex items-center gap-2">
         <select aria-label="当前模型" value={p.selectedModel} disabled={p.historyOnly} onChange={e=>p.onModel(e.target.value)}><option value="">默认模型</option>{p.models.map(m=><option key={m.value} value={m.value}>{m.displayName||m.value}</option>)}</select>
         <select aria-label="权限模式" disabled={p.historyOnly} value={p.permissionMode} onChange={e=>p.onPermissionMode(e.target.value)}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>
@@ -48,9 +48,9 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
     </div>
     {!p.followLatest&&p.messages.length>0&&<div className="flex justify-center pb-2"><Button variant="tonal" size="sm" onClick={()=>p.onFollowLatest(true)}><ArrowDown size={13}/>回到最新消息</Button></div>}
     {p.permissionsCount>0&&<div className="flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-warning-container)] px-5 py-3 text-[12px] text-[var(--color-on-warning-container)]"><ShieldCheck size={17}/><span>{p.permissionsCount} 项工具操作等待批准</span><Button variant="secondary" size="sm" onClick={p.onOpenApprovals}>查看审批<ArrowRight size={13}/></Button></div>}
-    {p.smartRecord&&<div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] px-5 py-2 text-[11px] text-[var(--color-text-secondary)]">
-      <span>{p.smartRecord.model} · {p.smartRecord.status==='running'?'执行中':p.smartRecord.status==='completed'?'已完成':p.smartRecord.status==='failed'?'失败':'已中断'}</span>
-      <span>费用 {p.smartRecord.costUsd===undefined?'待确认':'"flex items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-5 py-3 text-[12px] text-[var(--color-text-secondary)]"><History size={16}/>当前正在查看历史执行记录。发送新消息时将恢复原会话。</div>}
+    {p.smartRecord&&<div aria-live="polite" className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] px-5 py-2 text-[11px] text-[var(--color-text-secondary)]">
+      <span>{p.smartRecord.model} · {p.smartRecord.status==='running'?'执行中':p.smartRecord.status==='completed'?'已完成':p.smartRecord.status==='failed'?'执行失败':'已中断'}</span>
+      <span>费用 {p.smartRecord.costUsd===undefined?'待确认':' px-5 py-3 text-[12px] text-[var(--color-text-secondary)]"><History size={16}/>当前正在查看历史执行记录。发送新消息时将恢复原会话。</div>}
     <div className="shrink-0 border-t border-[var(--color-border)] p-4">
       <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 pt-3 shadow-[var(--shadow-composer)]">
         <textarea ref={p.inputRef} aria-label="输入任务" value={p.draft} onChange={e=>p.onDraft(e.target.value)} placeholder="描述任务，支持引用项目文件与技能…" rows={3} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();p.onSend()}}} className="min-h-[68px] w-full resize-none border-0! bg-transparent! shadow-none! focus:shadow-none!"/>
@@ -63,7 +63,7 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
   </section>
 }
 +p.smartRecord.costUsd.toFixed(4)}</span>
-      {p.smartRecord.budgetUsd!==undefined&&<span>· 上限 ${p.smartRecord.budgetUsd}</span>}
+      {p.smartRecord.budgetUsd!==undefined&&<span>· 上限 $ {p.smartRecord.budgetUsd.toFixed(2)}</span>}
     </div>}
     {p.historyOnly&&<div className="flex items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-5 py-3 text-[12px] text-[var(--color-text-secondary)]"><History size={16}/>当前正在查看历史执行记录。发送新消息时将恢复原会话。</div>}
     <div className="shrink-0 border-t border-[var(--color-border)] p-4">
