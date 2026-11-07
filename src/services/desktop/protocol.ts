@@ -20,6 +20,8 @@ const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S)
 export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
   request('models.list', { sessionId: sessionId.optional() }),
+  request('budget.project.get', {}),
+  request('budget.project.set', { limitUsd: z.number().positive().finite().max(100000).nullable() }),
   request('smart.inspect', { model: z.string().min(1).max(300).optional() }),
   request('smart.history', {}),
   request('smart.execute', {

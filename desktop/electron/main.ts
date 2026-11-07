@@ -15,7 +15,7 @@ function requireWindow(): BrowserWindow {
 }
 const git = promisify(execFile)
 const permitted = new Set([
-  'hello','models.list','smart.execute','smart.start','smart.inspect','smart.history','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
+  'hello','models.list','smart.execute','smart.start','smart.inspect','smart.history','budget.project.get','budget.project.set','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
   'sessions.close','sessions.status','sessions.send','sessions.interrupt','sessions.setModel',
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.members','agents.setMode','missions.list','missions.get',

@@ -14,6 +14,7 @@ import {
   cancelMissionJob, recoverMissionJob, markMissionJobIntegrated, type MissionJob,
 } from '../agentCenter/missionJobs.js'
 import { reconcileMissionTerminalJobs } from '../agentCenter/missionReconciliation.js'
+import { createProjectBudget } from '../agentCenter/projectBudget.js'
 import { previewWorktreeIntegration, integrateWorktree } from '../agentCenter/worktreeIntegration.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
@@ -86,6 +87,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   }
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
   const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
+  const projectBudget = createProjectBudget(cwd, options.dataDir)
+  const sessionBudgets = new Map<string,{leaseId:string;awaitingResult:boolean}>()
   const smartActive = new Set<string>()
   const smartPrepared = new Map<string, string>()
   const sessions = new Map<string, Entry>()
@@ -189,6 +192,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       opening.add(resume)
     }
     let runtime: Headless | undefined
+    let preparedBudget: {id?:string;maxBudgetUsd?:number}|undefined
     try {
       const sessionCwd = requestedCwd ?? (resume ? await sessionWorktree(resume) : undefined) ?? cwd
       // A resume ID must be tied to a real transcript in this workspace.
@@ -203,7 +207,20 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
-      runtime = launch(sdkOptions(selectedModel, sessionEnv, sessionCwd, smartPolicy), resume)
+      // Reserve once for the entire SDK session. Cross-host capacity is checked
+      // under a filesystem lock before any model turn starts.
+      const budgetState=await projectBudget.get()
+      if(budgetState.limitUsd!==null){
+        const inspection=await inspectSmartModel(selectedModel)
+        if('hasPricing' in inspection && !inspection.hasPricing)
+          throw new Error('项目已启用共享预算，当前模型缺少可靠费率，请先完善模型价格')
+      }
+      preparedBudget=await projectBudget.reserve(randomUUID(),
+        smartPolicy?.maxBudgetUsd ?? options.sessionOptions?.maxBudgetUsd)
+      runtime = launch(sdkOptions(selectedModel, sessionEnv, sessionCwd, {
+        ...smartPolicy,
+        ...(preparedBudget.maxBudgetUsd===undefined?{}:{maxBudgetUsd:preparedBudget.maxBudgetUsd}),
+      }), resume)
       const info = await initializeModels(runtime)
       if (closed) throw new Error('Desktop gateway closed during session initialization')
       const id = runtime.sessionId
@@ -217,6 +234,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         unsubscribe: [],
       }
       sessions.set(id, entry)
+      if(preparedBudget.id)sessionBudgets.set(id,{leaseId:preparedBudget.id,awaitingResult:false})
       entry.unsubscribe.push(activeRuntime.state.subscribe(() => emit({
         event: 'session.state', sessionId: id, state: activeRuntime.state.getState(),
       })))
@@ -245,6 +263,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       emit({ event: 'session.state', sessionId: id, state: runtime.state.getState() })
       return { sessionId: id, resumed: !!resume, ...info, tasks }
     } catch (error) {
+      if (preparedBudget?.id){
+        await projectBudget.finish(preparedBudget.id,false)
+        if(runtime)sessionBudgets.delete(runtime.sessionId)
+      }
       if (runtime) {
         const active = sessions.get(runtime.sessionId)
         if (active?.runtime === runtime) {
@@ -401,6 +423,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     // runtime independently; a late send result cannot resurrect the turn.
     const cancelled = new Promise<never>((_, reject) => { entry.cancelSend = reject })
     const turnId = randomUUID()
+    const sessionBudget=sessionBudgets.get(sessionId)
+    if(sessionBudget)sessionBudget.awaitingResult=true
     try {
       await Promise.race([entry.runtime.send(message), cancelled])
       if (entry.closing || closed) throw new Error('Desktop session closed during send')
@@ -416,6 +440,13 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       try {
         for await (const sdkMessage of entry.runtime.stream()) {
           emit({ event: 'session.message', sessionId, turnId, message: sdkMessage })
+          if(sdkMessage.type==='result' && sessionBudget){
+            const cost=sdkMessage.total_cost_usd
+            if(typeof cost==='number' && Number.isFinite(cost) && cost>=0){
+              await projectBudget.charge(sessionBudget.leaseId,cost)
+              sessionBudget.awaitingResult=false
+            } // Missing usage remains reserved for explicit reconciliation.
+          }
           if (sdkMessage.type === 'result' && smartActive.has(sessionId)) {
             const interrupted = sdkMessage.terminal_reason === 'aborted_tools' ||
               sdkMessage.terminal_reason === 'aborted_streaming'
@@ -567,6 +598,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           stream: 'sdk-stream-json',
           capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
+      case 'budget.project.get': return projectBudget.reconcile()
+      case 'budget.project.set': return projectBudget.configure(request.limitUsd)
       case 'smart.inspect': return inspectSmartModel(request.model)
       case 'smart.history': {
         await smartJournal.reconcile(ownerKey, new Set(sessions.keys()))
@@ -1049,6 +1082,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       if (entry.consuming) pending.push(entry.consuming)
       await Promise.all(pending)
       if (smartActive.has(id)) await finishSmartExecution(id, 'interrupted')
+      const budget=sessionBudgets.get(id)
+      if(budget){
+        await projectBudget.finish(budget.leaseId,budget.awaitingResult)
+        sessionBudgets.delete(id)
+      }
       if (executingMissionJobs.has(id)) {
         await settleExecutingJob(id, 'interrupted', '桌面执行宿主关闭；请核查结果后显式重试')
       }
