@@ -214,6 +214,10 @@ export type SDKSessionOptions = {
   canUseTool?: CanUseTool
   onControlRequest?: HostControlRequestHandler
   hooks?: HookCallbacks
+  /** Opt into the SDK prompt suggestion event stream. */
+  promptSuggestions?: boolean
+  /** Opt into native agent task progress summaries. */
+  agentProgressSummaries?: boolean
   permissionMode?: PermissionMode
   cwd?: string
   settingSources?: SettingSource[]
