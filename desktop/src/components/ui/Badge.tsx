@@ -166,7 +166,7 @@ export function StatusDot({ tone, size = 'sm', pulse = false, label, className, 
   return (
     <span
       {...rest}
-      role={label ? 'status' : undefined}
+      role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
       className={cx(
