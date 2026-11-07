@@ -46,7 +46,7 @@ jobs:
   desktop-release:
     name: 桌面宿主独立编译、协议握手与发行完整性
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -82,6 +82,18 @@ jobs:
 
       - name: 启动实际编译出的桌面宿主，完成本地任务闭环与重启部署验收
         run: node --test tests/deployed-desktop-host.test.mjs
+
+      - name: 实际生成 Linux AppImage 与 DEB 安装包
+        run: |
+          cd desktop
+          npm install --no-audit --no-fund
+          npm run package:linux
+          test -d release/linux-unpacked
+          ls -lh release/*.{AppImage,deb}
+      - name: 图形环境中启动发行版并检查真实页面与 SDK Host 握手
+        run: |
+          command -v xvfb-run
+          node --test tests/deployed-electron-ui.test.mjs
 
   desktop-workbench:
     name: Electron 工作台类型、行为与打包前构建
