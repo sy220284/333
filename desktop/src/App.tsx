@@ -71,6 +71,7 @@ export function App(){
   const [busy,setBusy]=useState('')
   const [sessionId,setSessionId]=useState('')
   const [sessionPhase,setSessionPhase]=useState('idle')
+  const [historyOnly,setHistoryOnly]=useState(false)
   const [sessions,setSessions]=useState<Item[]>([])
   const [models,setModels]=useState<Model[]>([])
   const [selectedModel,setSelectedModel]=useState('')
@@ -154,6 +155,10 @@ export function App(){
       setMcpServers(queries[5].value.servers??[])
       setMcpErrors(queries[5].value.errors??[])
     }
+    const names=['模型列表','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
+    const failed=queries.flatMap((item,index)=>item.status==='rejected'
+      ? [`${names[index]}：${presentError(item.reason)}`] : [])
+    if(failed.length)setError(`刷新部分失败：${failed.join('；')}`)
   },[])
   const refreshSession=useCallback(async(id:string)=>{
     const [p,h,t]=await Promise.allSettled([
@@ -170,6 +175,10 @@ export function App(){
       ...(h.value??[]).map(item=>({...item,sessionId:id}))
     ])
     if(t.status==='fulfilled')setTasks(t.value??[])
+    const names=['权限请求','宿主请求','后台任务']
+    const failed=[p,h,t].flatMap((item,index)=>item.status==='rejected'
+      ? [`${names[index]}：${presentError(item.reason)}`] : [])
+    if(failed.length)setError(`会话信息刷新失败：${failed.join('；')}`)
   },[])
   useEffect(()=>{
     let alive=true
@@ -295,18 +304,18 @@ export function App(){
   async function createSession(){
     await operation('新建会话',async()=>{
       const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setMessages([])
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([])
       setTasks(response.tasks??[])
       setView('chat');await refresh()
     })
   }
   async function resumeSession(id:string){
     await operation('恢复会话',async()=>{
-      const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.resume',{sessionId:id})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setTasks(response.tasks??[])
+      const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:id})
+      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setHistoryOnly(false);setTasks(response.tasks??[])
       const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
       const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
-      const next=(Array.isArray(rows)?rows:[]).map(itemFromMessage).filter(Boolean) as ConversationItem[]
+      const next=(Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[]
       setMessages(next);setView('chat');await refreshSession(id)
     })
   }
@@ -316,13 +325,19 @@ export function App(){
     if(!sessionId){
       await operation('创建会话',async()=>{
         const response=await invoke<{sessionId:string}>('sessions.open',selectedModel?{model:selectedModel}:{})
-        setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setMessages([])
+        setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([])
         await invoke('sessions.send',{sessionId:response.sessionId,message:text})
         setMessages([{id:`local-${Date.now()}`,kind:'user',text,time:Date.now()}])
         setDraft('');setView('chat')
       })
     }else{
       await operation('发送消息',async()=>{
+        if(historyOnly){
+          const opened=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId})
+          setTasks(opened.tasks??[])
+          setHistoryOnly(false)
+          await refreshSession(sessionId)
+        }
         await invoke('sessions.send',{sessionId,message:text})
         setMessages(old=>[...old,{id:`local-${Date.now()}`,kind:'user',text,time:Date.now()}])
         setDraft('')
@@ -333,7 +348,7 @@ export function App(){
     await operation('切换工作区',async()=>{
       const data=await invoke<{workspace:string;changed:boolean;connected?:boolean;error?:string}>('workspace.pick')
       if(!data.changed)return
-      setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setMessages([])
+      setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setTasks([]);setFiles([])
       setCurrentFile('');setGitStatus('');setGitDiff('')
       setConnected(Boolean(data.connected))
@@ -406,7 +421,7 @@ export function App(){
       const result=await invoke<unknown>(method,{missionId:selectedMission,jobId})
       const info=obj(result)
       if(method==='missions.jobs.start'&&typeof info.sessionId==='string'){
-        setSessionId(info.sessionId);sessionRef.current=info.sessionId
+        setSessionId(info.sessionId);sessionRef.current=info.sessionId;setHistoryOnly(false)
       }
       await refreshJobs()
       await refresh()
@@ -417,11 +432,14 @@ export function App(){
     await operation('查看执行记录',async()=>{
       const history=await invoke<unknown>('sessions.history',{sessionId:job.sessionId,limit:200,offset:0})
       const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
-      setMessages((Array.isArray(rows)?rows:[]).map(itemFromMessage).filter(Boolean) as ConversationItem[])
+      setMessages((Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[])
       const restoredSessionId=job.sessionId
       if(!restoredSessionId)throw new Error('当前工作项没有可恢复的会话记录')
       setSessionId(restoredSessionId);sessionRef.current=restoredSessionId
+      // Historical views must not start a worker; sending explicitly resumes.
+      setHistoryOnly(true)
       setTasks([])
+      setSessionPhase('idle')
       setView('chat')
     })
   }
@@ -545,9 +563,10 @@ export function App(){
             <Section title="快捷入口"><Panel className="quick-links">{[['智能体团队',UsersRound,'agents'],['文件与 Git',Folder,'files'],['模型选择',Cpu,'models'],['技能与连接',Boxes,'integrations']].map(([label,Icon,id])=>{const I=Icon as LucideIcon;return <button type="button" key={String(id)} onClick={()=>setView(id as View)}><I size={20}/><span>{String(label)}</span><ArrowRight size={15}/></button>})}</Panel></Section></div>
           </div>}
           {view==='chat'&&<div className="chat-page">
-            <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" value={selectedModel} onChange={e=>{setSelectedModel(e.target.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:e.target.value}))}}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>
+            <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={historyOnly?'历史记录':statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" disabled={historyOnly} value={selectedModel} onChange={e=>{setSelectedModel(e.target.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:e.target.value}))}}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" disabled={historyOnly} value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&!historyOnly&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>
             <div className="message-stream">{messages.length===0?<div className="chat-empty"><div className="chat-empty-icon"><Sparkles size={38}/></div><h2>今天想完成什么？</h2><p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p><div className="prompt-suggestions">{['分析当前工作区的项目结构','检查 PR19 最新代码问题','规划一个多智能体协作任务'].map(t=><button type="button" key={t} onClick={()=>setDraft(t)}>{t}<ArrowRight size={14}/></button>)}</div></div>:messages.map(m=><div className={`message ${m.kind}`} key={m.id}><div className="message-avatar">{m.kind==='user'?<span>我</span>:m.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}</div><div className="message-content"><div className="message-meta">{m.kind==='user'?'你':m.kind==='assistant'?'摇摇车':'工具'}<time>{dateTime(m.time)}</time></div><div className="message-text">{m.text}</div></div></div>)}<div ref={messagesEnd}/></div>
             {permissions.length>0&&<div className="inline-approval"><ShieldCheck size={18}/><span>{permissions.length} 项工具操作等待批准</span><button type="button" onClick={()=>setView('settings')}>查看审批<ArrowRight size={14}/></button></div>}
+            {historyOnly&&<div className="inline-approval"><History size={18}/><span>当前正在查看历史执行记录。发送新消息时将恢复原会话。</span></div>}
             <div className="composer"><textarea ref={inputRef} aria-label="输入任务" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="描述任务，支持使用文字引用项目文件与技能…" onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void send()}}}/><div className="composer-footer"><div className="composer-hints"><span><Bot size={15}/> {mode==='super'?'Super Agents':'主子智能体'}</span><span>⌘ / Ctrl + Enter 发送</span></div><button type="button" className="primary-button send-button" disabled={!draft.trim()||Boolean(busy)||!connected} onClick={()=>void send()}><Send size={16}/>发送</button></div></div>
           </div>}
           {view==='agents'&&<div className="stack-page"><Section title="协作模式" subtitle="切换模式只变更工作区配置，不会自行启动其他智能体。"><div className="mode-cards"><button type="button" className={`mode-card ${mode==='master'?'selected':''}`} onClick={()=>void agentMode('master')}><div className="mode-icon"><Bot size={26}/></div><div><strong>主智能体 + 子智能体</strong><p>主智能体负责规划与汇总，子智能体并行执行独立工作。</p></div><span>{mode==='master'?<Check size={18}/>:<ArrowRight size={18}/>}</span></button><button type="button" className={`mode-card ${mode==='super'?'selected':''}`} onClick={()=>void agentMode('super')}><div className="mode-icon"><UsersRound size={27}/></div><div><strong>Super Agents 团队模式</strong><p>面向共享任务、团队通信、任务簿和长期目标协同。</p></div><span>{mode==='super'?<Check size={18}/>:<ArrowRight size={18}/>}</span></button></div></Section>
