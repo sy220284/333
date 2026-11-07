@@ -12,6 +12,7 @@ const forbiddenPaths = [
   'src/services/policyLimits',
   'src/services/remoteManagedSettings',
   'src/services/api/adminRequests.ts',
+  'src/services/mcp/claudeai.ts',
   'src/tools/RemoteTriggerTool',
   'src/skills/bundled/scheduleRemoteAgents.ts',
   '.github/workflows/m6-gateway-providers-317.yml',
@@ -77,4 +78,41 @@ test('个人版保留多模型、费用计量、本地任务、权限和诊断�
   ]) {
     assert.ok(existsSync(join(root, path)), '个人版能力不应随企业模块消失：' + path)
   }
+})
+
+test('待分配清单严格排除个人多设备执行池，保留五项可复用能力', () => {
+  const tasks = JSON.parse(readFileSync(join(root, 'docs/features/personal-capability-extraction-backlog.json'), 'utf8')).tasks
+  assert.deepEqual(tasks.map(task => task.id), [
+    'PERSONAL-001', 'PERSONAL-002', 'PERSONAL-003', 'PERSONAL-005', 'PERSONAL-006',
+  ])
+  const doc = readFileSync(join(root, 'docs/features/personal-capability-extraction-backlog.zh-CN.md'), 'utf8')
+  assert.doesNotMatch(doc, /PERSONAL-004|个人多设备任务执行池|自有机器执行池/)
+  assert.equal(tasks.some(task => /多设备|Runner/.test(task.title)), false)
+})
+
+test('个人 MCP 仅使用自身配置，组织专属 MCP 代理及独占配置不会再被接入', () => {
+  const paths = [
+    'src/services/mcp/config.ts',
+    'src/services/mcp/types.ts',
+    'src/services/mcp/utils.ts',
+    'src/services/mcp/client.ts',
+    'src/services/mcp/useManageMCPConnections.ts',
+    'src/cli/handlers/mcpAuth.ts',
+    'src/components/mcp/MCPSettings.tsx',
+    'src/commands/plugin/ManagePlugins.tsx',
+  ]
+  const patterns = [
+    /doesEnterpriseMcpConfigExist|getEnterpriseMcpFilePath|managed-mcp\.json/,
+    /claudeai-proxy|McpClaudeAIProxyServerConfig/,
+    /fetchClaudeAIMcpConfigsIfEligible|createClaudeAiProxyFetch/,
+    /api\/organizations\/.*mcp\/start-auth/,
+  ]
+  for (const path of paths) {
+    const content = readFileSync(join(root, path), 'utf8').split('//# sourceMappingURL=')[0]
+    for (const pattern of patterns) assert.doesNotMatch(content, pattern, path)
+  }
+  const code = readFileSync(join(root, 'src/services/mcp/config.ts'), 'utf8')
+  assert.match(code, /getMcpConfigsByScope\('user'\)/)
+  assert.match(code, /getMcpConfigsByScope\('project'\)/)
+  assert.match(code, /getMcpConfigsByScope\('local'\)/)
 })
