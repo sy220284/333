@@ -198,7 +198,14 @@ export async function writeToMailbox(
       // Re-read messages after acquiring lock to get the latest state
       const messages = await readMailbox(recipientName, teamName)
       // Retrying the same desktop request must not duplicate an assignment.
-      if (message.messageId && messages.some(existing => existing.messageId === message.messageId)) return
+      if (message.messageId) {
+        const prior = messages.find(existing => existing.messageId === message.messageId)
+        if (prior) {
+          if (prior.from !== message.from || prior.text !== message.text)
+            throw new Error('同一消息标识对应不同内容，请重新生成发送请求')
+          return
+        }
+      }
 
       const newMessage: TeammateMessage = {
         ...message,
