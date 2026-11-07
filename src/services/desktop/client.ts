@@ -59,7 +59,12 @@ export function createDesktopClient(input: Readable, output: Writable) {
       return
     }
     const reply = raw as DesktopReply
-    if (typeof reply.id !== 'string' || typeof reply.ok !== 'boolean') {
+    // A malformed failure reply must reject every outstanding RPC instead of
+    // throwing in the EventEmitter callback and leaving its Promise pending.
+    if (typeof reply.id !== 'string' || typeof reply.ok !== 'boolean' ||
+        (reply.ok === false && (!reply.error ||
+          typeof reply.error.code !== 'string' ||
+          typeof reply.error.message !== 'string'))) {
       failAll(new Error('Invalid desktop host reply'))
       return
     }

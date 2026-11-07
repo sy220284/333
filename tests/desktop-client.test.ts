@@ -58,3 +58,24 @@ test('桌面客户端经 JSONL 传输核销实际未知费用记录，并释放�
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('桌面宿主故障回执缺失错误结构时，所有未完成请求明确失败且连接关闭', async () => {
+  const fromServer = new PassThrough()
+  const toServer = new PassThrough()
+  const client = createDesktopClient(fromServer, toServer)
+  try {
+    const first = client.hello()
+    const second = client.hello()
+    // Consume the first outbound request so its real wire correlation ID is used.
+    const firstFrame = await new Promise<string>(resolve => toServer.once('data', bytes => resolve(String(bytes))))
+    const id = (JSON.parse(firstFrame.trim()) as {id:string}).id
+    fromServer.write(`${JSON.stringify({id,ok:false})}\n`)
+    await expect(first).rejects.toThrow('Invalid desktop host reply')
+    await expect(second).rejects.toThrow('Invalid desktop host reply')
+    await expect(client.hello()).rejects.toThrow('closed')
+  } finally {
+    client.close()
+    toServer.end()
+    fromServer.end()
+  }
+})
