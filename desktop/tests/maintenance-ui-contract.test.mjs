@@ -45,3 +45,15 @@ test('MCP 导入保留环境变量且仅在主进程持有文件内容', () => {
   assert.doesNotMatch(panel, /config\.env|TOKEN|process\.env/)
   assert.equal(existsSync(new URL('../../src/components/MCPServerDesktopImportDialog.tsx', import.meta.url)), false)
 })
+
+test('桌面功能接口不能只显示入口：每个实际请求都必须经 Electron 安全白名单或本地处理',()=>{
+  const source=[read('src/App.tsx'),read('src/components/layout/LocalMaintenance.tsx'),read('src/components/layout/McpImportPanel.tsx')].join('\n')
+  const electron=read('electron/main.ts')
+  const registered=electron.match(/const permitted = new Set\(\[([\s\S]*?)\]\)/)?.[1]
+  assert.ok(registered,'缺少 Electron 本地请求白名单')
+  const allowed=new Set([...registered.matchAll(/'([^']+)'/g)].map(m=>m[1]))
+  const local=new Set([...electron.matchAll(/\bmethod\s*===\s*'([^']+)'/g)].map(m=>m[1]))
+  const required=new Set([...source.matchAll(/\b(?:invoke|api\.call)(?:<[^>]+>)?\(\s*['"]([^'"]+)['"]/g)].map(m=>m[1]))
+  assert.ok(required.size>=40,'实际桌面请求提取结果异常，检查测试扫描范围')
+  for(const method of required)assert.ok(allowed.has(method)||local.has(method),method+' 只有新 UI 入口，Electron 后台尚未放行')
+})
