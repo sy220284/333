@@ -1,33 +1,32 @@
+import { createHash } from 'node:crypto'
 import type { Message } from '../../types/message.js'
 
-/**
- * Count an uninterrupted sequence of permission denials at the end of the
- * current conversation. This uses the actual transcript rather than an
- * in-memory counter, so session restore retains the same safety boundary.
- * A successful tool call or a new user instruction resets the sequence.
- */
-export function countRecentPermissionDenials(messages: readonly Message[], maxResults = 12): number {
+/** Store only a fingerprint. Tool arguments can contain sensitive data. */
+export function permissionDenialKey(tool: string, cwd: string, input: unknown): string {
+  const sorted = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(sorted)
+    if (!value || typeof value !== 'object') return value
+    const fields = value as Record<string, unknown>
+    return Object.fromEntries(Object.keys(fields).sort().map(key => [key, sorted(fields[key])]))
+  }
+  return createHash('sha256').update(JSON.stringify([tool, cwd, sorted(input)])).digest('hex')
+}
+
+/** Count consecutive permission decisions for the same request, across resume. */
+export function countRecentPermissionDenials(
+  messages: readonly Message[], key: string, maxResults = 12,
+): number {
   let denied = 0
-  let inspected = 0
-  for (let i = messages.length - 1; i >= 0 && inspected < maxResults; i--) {
+  for (let i = messages.length - 1; i >= 0 && denied < maxResults; i--) {
     const message = messages[i]
     if (message.type !== 'user') continue
-    const blocks = Array.isArray(message.message.content)
-      ? message.message.content.filter(block => block.type === 'tool_result')
-      : []
-    if (!blocks.length) {
-      // A fresh human instruction starts a new requested operation.
-      if (!message.isMeta && !message.sourceToolAssistantUUID) break
+    if (message.permissionDenialKey === key) {
+      denied++
       continue
     }
-    for (let j = blocks.length - 1; j >= 0 && inspected < maxResults; j--) {
-      inspected++
-      const block = blocks[j]
-      if (block.is_error !== true || typeof block.content !== 'string') return denied
-      const reason = block.content.trim()
-      if (!/^(Permission (?:to use|for this action|for this tool use)|The user doesn't want to proceed with this tool use|The user doesn't want to take this action|Error:\s*Permission denied)/i.test(reason)) return denied
-      denied++
-    }
+    const hasResult = Array.isArray(message.message.content) &&
+      message.message.content.some(block => block.type === 'tool_result')
+    if (hasResult || (!message.isMeta && !message.sourceToolAssistantUUID)) break
   }
   return denied
 }
@@ -37,5 +36,5 @@ export function permissionDenialLoopGuidance(priorDenials: number): string | und
   return `REPEATED PERMISSION DENIAL (${priorDenials + 1} consecutive attempts): ` +
     'Stop retrying this operation, including commands with different flags, alternative tools or scripts. ' +
     'Preserve the files and continue independent permitted tasks. ' +
-    'If the denied operation is essential, ask the user to approve it. '
+    'If the denied operation is essential, ask the user to approve it.'
 }

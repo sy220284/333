@@ -543,9 +543,12 @@ test('provider errors redact echoed credentials in HTTP bodies, headers and stre
   const req = () => new Request('https://yaoyaoche-model-bridge.invalid/v1/messages', {
     method: 'POST', body: JSON.stringify({ ...body, model: 'minimax/MiniMax-M3.1-Flash', stream: true }),
   })
-  const http = await makeIndependentFetch(route, token, async () =>
-    new Response(JSON.stringify({ error: { message: `Rejected ${token}` } }),
-      { status: 401, headers: { 'x-request-id': token, 'retry-after': '10' } }))(req())
+  const http = await makeIndependentFetch(route, token, async (url, init) => {
+    assert.equal(String(url), 'https://api.minimaxi.com/v1/chat/completions')
+    assert.equal(init?.redirect, 'error')
+    return new Response(JSON.stringify({ error: { message: `Rejected ${token}` } }),
+      { status: 401, headers: { 'x-request-id': token, 'retry-after': '10' } })
+  })(req())
   assert.equal(http.status, 401)
   assert.equal(http.headers.get('retry-after'), '10')
   assert.equal(http.headers.get('request-id'), null)
@@ -580,6 +583,7 @@ test('MiniMax inference and discovery default to the mainland China API', async 
     'https://api.minimaxi.com/v1/chat/completions')
   const models = await discoverIndependentModels('minimax', 'test-key', async (url, init) => {
     assert.equal(String(url), 'https://api.minimaxi.com/v1/models')
+    assert.equal(init?.redirect, 'error')
     assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer test-key')
     return Response.json({ data: [{ id: 'MiniMax-M3.1-Flash' }] })
   })

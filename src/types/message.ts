@@ -52,6 +52,7 @@ export interface UserMessage extends MessageHeader {
     structuredContent?: Record<string, unknown>
   }
   imagePasteIds?: number[]
+  permissionDenialKey?: string
   sourceToolAssistantUUID?: UUID
   /** Tool-result messages may be linked directly to their originating tool use. */
   sourceToolUseID?: string

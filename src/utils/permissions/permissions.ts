@@ -700,6 +700,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           context.options.tools,
           appState.toolPermissionContext,
           context.abortController.signal,
+          context.options.mainLoopModel,
         )
       } finally {
         clearClassifierChecking(toolUseID)

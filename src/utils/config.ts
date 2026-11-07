@@ -1069,6 +1069,7 @@ function saveConfigWithLock<A extends object>(
     const lockFilePath = `${file}.lock`
     const startTime = Date.now()
     release = lockfile.lockSync(file, {
+      realpath: false, // The explicit lock path is stable before the config file exists.
       lockfilePath: lockFilePath,
       onCompromised: err => {
         // Default onCompromised throws from a setTimeout callback, which

@@ -1,7 +1,7 @@
 import { getIndependentProfile } from './multimodel/profiles.js'
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
 import { resolveIndependentModel, getIndependentApiKey, isRemovedIndependentModel } from './multimodel/registry.js'
-import { makeIndependentFetch } from './multimodel/transport.js'
+import { INDEPENDENT_BRIDGE_ORIGIN, makeIndependentFetch } from './multimodel/transport.js'
 import { assertChatGPTAccountIdentity, getChatGPTAuthorization } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
 import { stripSdkDiagnosticHeaders } from './privacyHeaders.ts'
@@ -119,7 +119,7 @@ export async function getAnthropicClient({
     const fetchIndependent = authorization ? undefined : makeFetch(getIndependentApiKey(independent))
     return new Anthropic({
       apiKey: '333-internal-provider-bridge',
-      baseURL: 'https://333-model-bridge.invalid',
+      baseURL: INDEPENDENT_BRIDGE_ORIGIN,
       maxRetries,
       timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
       fetch: fetchIndependent ?? (async (input, init) => {

@@ -18,7 +18,8 @@ import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { toError } from '../utils/errors.js'
 import { logError } from '../utils/log.js'
 import { extractTextContent } from '../utils/messages.js'
-import { getDefaultOpusModel } from '../utils/model/model.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
+import { getMainLoopModel, getDefaultOpusModel } from '../utils/model/model.js'
 import {
   getProjectsDir,
   getSessionFilesWithMtime,
@@ -32,12 +33,14 @@ import { escapeXmlAttr as escapeHtml } from '../utils/xml.js'
 
 // Model for facet extraction and summarization (Opus - best quality)
 function getAnalysisModel(): string {
-  return getDefaultOpusModel()
+  const model = getMainLoopModel()
+  return resolveIndependentModel(model) ? model : getDefaultOpusModel()
 }
 
 // Model for narrative insights (Opus - best quality)
 function getInsightsModel(): string {
-  return getDefaultOpusModel()
+  const model = getMainLoopModel()
+  return resolveIndependentModel(model) ? model : getDefaultOpusModel()
 }
 
 // ============================================================================

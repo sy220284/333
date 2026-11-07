@@ -1193,8 +1193,8 @@ async function run(): Promise<CommanderCommand> {
         let configs: Record<string, McpServerConfig> | null = null;
         let errors: ValidationError[] = [];
 
-        // First try to parse as JSON string
-        const parsedJson = safeParseJSON(configItem);
+        // An inline MCP configuration is a JSON object. Treat other inputs as paths.
+        const parsedJson = configItem.startsWith('{') ? safeParseJSON(configItem) : null;
         if (parsedJson) {
           const result = parseMcpConfig({
             configObject: parsedJson,
