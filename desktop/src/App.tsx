@@ -10,7 +10,10 @@ import {
 } from 'lucide-react'
 import { api, type AppEvent, type Item } from './api'
 import { MarkdownMessage } from './MarkdownMessage'
-import brandIconUrl from '../build/icon.svg'
+import { Badge } from './components/ui/Badge'
+import { Button } from './components/ui/Button'
+import { Card } from './components/ui/Card'
+import { EmptyState } from './components/ui/EmptyState'
 import { asObject, itemFromMessage, statusName, type ConversationItem } from './projection'
 
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
@@ -64,17 +67,22 @@ function obj(v:unknown):Item{return asObject(v)??{}}
 function presentError(v:unknown){return v instanceof Error?v.message:String(v)}
 function missionId(m:Mission){return String(m.missionId||m.id||'')}
 function json(v:unknown){try{return JSON.stringify(v,null,2)}catch{return String(v)}}
-function IconButton({label,onClick,children,disabled=false}:{
-  label:string;onClick:()=>void;children:ReactNode;disabled?:boolean
-}){return <button aria-label={label} title={label} type="button" className="icon-button" onClick={onClick} disabled={disabled}>{children}</button>}
-function Empty({icon:Icon,title,detail,action}:{
-  icon:LucideIcon;title:string;detail:string;action?:ReactNode
-}){return <div className="empty-state"><div className="empty-icon"><Icon size={28}/></div><h3>{title}</h3><p>{detail}</p>{action}</div>}
-function Section({title,subtitle,action,children}:{
-  title:string;subtitle?:string;action?:ReactNode;children:ReactNode
-}){return <section className="section"><div className="section-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section>}
-function StatusTag({text,tone='neutral'}:{text:string;tone?:'good'|'warn'|'neutral'|'danger'}){return <span className={`status-tag ${tone}`}><span className="status-dot"/>{text}</span>}
-function Panel({children,className=''}:{children:ReactNode;className?:string}){return <div className={`panel ${className}`}>{children}</div>}
+
+function IconButton({label,onClick,children,disabled=false}:{label:string;onClick:()=>void;children:ReactNode;disabled?:boolean}){
+  return <button type="button" aria-label={label} title={label} onClick={onClick} disabled={disabled} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] disabled:opacity-40">{children}</button>
+}
+function Empty({icon:Icon,title,detail,action}:{icon:LucideIcon;title:string;detail:string;action?:ReactNode}){
+  return <EmptyState icon={<Icon size={24}/>} title={title} description={detail} variant="plain" size="lg">{action}</EmptyState>
+}
+function Section({title,subtitle,action,children}:{title:string;subtitle?:string;action?:ReactNode;children:ReactNode}){
+  return <section className="section"><div className="section-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section>
+}
+function StatusTag({text,tone='neutral'}:{text:string;tone?:'good'|'warn'|'neutral'|'danger'}){
+  return <Badge size="sm" tone={tone==='good'?'success':tone==='warn'?'warning':tone==='danger'?'danger':'neutral'}><span className="inline-block h-1.5 w-1.5 rounded-full bg-current"/>{text}</Badge>
+}
+function Panel({children,className=''}:{children:ReactNode;className?:string}){
+  return <Card shadow="none" radius="lg" padding="lg" className={'panel '+className}>{children}</Card>
+}
 export function App(){
   const [view,setView]=useState<View>('dashboard')
   const [workspace,setWorkspace]=useState('')
@@ -331,8 +339,7 @@ export function App(){
     return ()=>{valid=false}
   },[selectedMission])
   useEffect(()=>{
-    document.documentElement.dataset.theme=isDark?'dark':'light'
-    document.documentElement.dataset.ccTheme=themeVariant
+    document.documentElement.dataset.theme=themeVariant
     window.localStorage.setItem(`${PREF}dark`,String(isDark))
     window.localStorage.setItem(`${PREF}theme`,themeVariant)
   },[isDark,themeVariant])
@@ -629,66 +636,66 @@ export function App(){
   const filteredCommands=paletteCommands.filter(item=>`${item.title} ${item.detail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   function runCommand(command:typeof paletteCommands[number]){setPaletteOpen(false);setSearch('');command.run()}
   const heading=TITLES[view]
-    return <div className="app-shell cc-workspace-shell">
-    <aside className="sidebar cc-sidebar">
-      <div className="brand cc-brand"><div className="brand-mark"><img src={brandIconUrl} alt="" width={36} height={36}/></div><div><strong>摇摇车</strong><small>LOCAL AI WORKSPACE</small></div></div>
-      <button type="button" className="workspace-picker cc-workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
-        <div className="workspace-icon"><Folder size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'打开本地项目'}</strong><small>{workspace||'本机项目目录'}</small></div><ChevronDown size={15}/>
-      </button>
-      <button type="button" className="cc-sidebar-action" onClick={()=>void createSession()} disabled={Boolean(busy)}><SquareTerminal size={17}/><span>发起新会话</span><Plus size={16}/></button>
-      <div className="cc-sidebar-scroll">
-        <div className="cc-sidebar-section-head"><span>最近会话</span><button type="button" aria-label="查看全部历史会话" title="查看全部历史会话" onClick={()=>setView('history')}><History size={15}/></button></div>
-        <div className="cc-sidebar-history">
-          {sessions.length===0?<p className="cc-sidebar-empty">尚无本地会话</p>:sessions.slice(0,5).map(item=>{
-            const id=String(item.sessionId||item.id||'')
-            if(!id)return null
-            const label=String(item.summary||item.title||id.slice(0,8))
-            return <button key={id} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
-          })}
+
+  return <div className="app-shell app-shell-viewport yy-app flex min-h-0 overflow-hidden bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+    <div id="sidebar-shell" data-state="open" className="sidebar-shell yy-sidebar-shell">
+      <aside className="sidebar-panel yy-sidebar flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface-sidebar)]">
+        <div className="flex h-[74px] shrink-0 items-center gap-3 px-5">
+          <div className="yy-brand-seal flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand)] text-[var(--color-on-primary)]"><SquareTerminal size={22} strokeWidth={1.65}/></div>
+          <div className="min-w-0 flex-1"><div className="font-semibold text-[15px] tracking-[.035em]">摇摇车</div><div className="truncate text-[10px] uppercase tracking-[.16em] text-[var(--color-text-tertiary)]">Local AI Workspace</div></div>
+          <button type="button" aria-label="搜索页面与操作" className="yy-icon" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
         </div>
-        <nav className="nav-links cc-grouped-nav" aria-label="主要导航">
-          {NAV_GROUPS.map(group=><section className="cc-nav-group" key={group.label}><div className="cc-nav-title">{group.label}</div>{group.views.map(id=>{
-            const item=NAV.find(entry=>entry.id===id)
-            if(!item)return null
-            const Icon=item.icon
-            return <button type="button" key={id} className={`nav-item ${view===id?'active':''}`} onClick={()=>setView(id)} aria-current={view===id?'page':undefined}><Icon size={16} strokeWidth={1.8}/><span>{item.label}</span>{id==='settings'&&permissions.length>0&&<b className="nav-counter">{permissions.length}</b>}</button>
-          })}</section>)}
-        </nav>
-      </div>
-      <div className="sidebar-footer cc-sidebar-footer">
-        <div className="connection-line"><span className={`connection-light ${connected?'online':'offline'}`}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
-        <span className="muted tiny">会话记录存于本机 · 模型请求按配置发送</span>
-      </div>
-    </aside>
-    <div className="workspace-body">
-      <header className="topbar cc-tabbar">
-        <div className="cc-tabs" role="tablist" aria-label="会话与工作区标签">
-          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" className={`cc-tab cc-new-tab ${view==='chat'&&!sessionId?'active':''}`} onClick={()=>void createSession()}><Plus size={15}/><span>新会话</span></button>
-          {([
-            ...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),
-            ...sessions
-          ]).slice(0,6).map(item=>{
-            const id=String(item.sessionId||item.id||'')
-            if(!id)return null
-            const label=String(item.summary||item.title||id.slice(0,8))
-            const active=view==='chat'&&sessionId===id
-            return <button type="button" role="tab" key={id} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`cc-tab ${active?'active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={15}/><span>会话 · {label}</span>{active&&<span className="cc-tab-active-mark"/>}</button>
-          })}
-          {view!=='chat'&&(()=>{
-            const current=NAV.find(item=>item.id===view)
-            if(!current)return null
-            const Icon=current.icon
-            return <button type="button" role="tab" aria-selected={true} aria-label={`标签页：${current.label}`} className="cc-tab active" onClick={()=>setView(view)}><Icon size={15}/><span>{current.label}</span><span className="cc-tab-active-mark"/></button>
-          })()}
+        <div className="px-3 pb-3">
+          <button type="button" className="yy-project-picker flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] p-3 text-left shadow-[var(--shadow-card)] transition-[border-color,background-color] hover:border-[var(--color-brand)]" onClick={()=>void selectWorkspace()} title={workspace||'选择工作区'}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]"><FolderOpen size={17}/></span>
+            <span className="min-w-0 flex-1"><strong className="block truncate text-[13px]">{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'打开本地项目'}</strong><small className="block truncate text-[11px] text-[var(--color-text-tertiary)]">{workspace||'本机项目目录'}</small></span><ChevronDown size={14} className="shrink-0 text-[var(--color-text-tertiary)]"/>
+          </button>
+          <Button block size="md" variant="primary" className="mt-3 justify-center" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={15}/> 新建会话</Button>
         </div>
-        <div className="topbar-actions">
-          <button type="button" className="searchbar search-launcher cc-search" aria-label="搜索页面与操作" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={15}/><span>搜索操作</span><kbd>Ctrl K</kbd></button>
+        <div className="yy-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+          <div className="flex items-center justify-between px-3 pb-2 pt-3 text-[10px] font-semibold tracking-[.12em] text-[var(--color-text-tertiary)]"><span>最近会话</span><button type="button" title="查看全部历史会话" aria-label="查看全部历史会话" className="yy-icon" onClick={()=>setView('history')}><History size={15}/></button></div>
+          <div className="space-y-0.5">
+            {sessions.length===0?<div className="px-3 py-3 text-xs text-[var(--color-text-tertiary)]">尚无本地会话</div>:sessions.slice(0,8).map(item=>{
+              const id=String(item.sessionId||item.id||'');if(!id)return null;
+              const label=String(item.summary||item.title||id.slice(0,8))
+              return <button key={id} type="button" title={label} aria-label={'恢复会话：'+label} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)} className={'yy-nav-link '+(id===sessionId&&view==='chat'?'yy-nav-active':'')}><MessageSquare size={15} className="shrink-0"/><span className="truncate">{label}</span>{id===sessionId&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]"/>}</button>
+            })}
+          </div>
+          <nav aria-label="主要导航" className="mt-4">
+            {NAV_GROUPS.map(group=><section key={group.label} className="mb-4">
+              <div className="px-3 pb-1.5 pt-3 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">{group.label}</div>
+              <div className="space-y-0.5">{group.views.map(id=>{const item=NAV.find(entry=>entry.id===id);if(!item)return null;const Icon=item.icon;
+                return <button type="button" key={id} aria-current={view===id?'page':undefined} onClick={()=>setView(id)} className={'yy-nav-link '+(view===id?'yy-nav-active':'')}><Icon size={17} strokeWidth={1.7}/><span className="truncate">{item.label}</span>{id==='settings'&&permissions.length>0&&<Badge size="xs" tone="warning">{permissions.length}</Badge>}</button>
+              })}</div>
+            </section>)}
+          </nav>
+        </div>
+        <div className="shrink-0 border-t border-[var(--color-border)] px-5 py-4">
+          <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]"><span className={'h-2 w-2 rounded-full '+(connected?'bg-[var(--color-success)]':'bg-[var(--color-error)]')}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
+          <div className="mt-1 text-[10px] leading-5 text-[var(--color-text-tertiary)]">执行记录保留在本机</div>
+        </div>
+      </aside>
+    </div>
+    <main id="content-area" className="yy-content flex min-w-0 flex-1 flex-col overflow-hidden">
+      <header className="yy-tabbar flex h-[55px] shrink-0 items-stretch justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4">
+        <div role="tablist" aria-label="会话与工作区标签" className="yy-tab-strip flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto pt-2">
+          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" onClick={()=>void createSession()} className={'yy-tab '+(view==='chat'&&!sessionId?'yy-tab-active':'')}><Plus size={15}/><span>新会话</span></button>
+          {([...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),...sessions]).slice(0,7).map(item=>{
+            const id=String(item.sessionId||item.id||'');if(!id)return null;
+            const label=String(item.summary||item.title||id.slice(0,8)),active=view==='chat'&&sessionId===id;
+            return <button type="button" role="tab" key={id} aria-selected={active} aria-label={'标签页：会话 · '+label} title={label} className={'yy-tab '+(active?'yy-tab-active':'')} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span className="max-w-44 truncate">{label}</span>{active&&<span className="yy-tab-dot"/>}</button>
+          })}
+          {view!=='chat'&&(()=>{const item=NAV.find(e=>e.id===view);if(!item)return null;const Icon=item.icon;return <button type="button" role="tab" aria-selected="true" aria-label={'标签页：'+item.label} className="yy-tab yy-tab-active" onClick={()=>setView(view)}><Icon size={14}/><span>{item.label}</span><span className="yy-tab-dot"/></button>})()}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 pb-1">
+          <button type="button" aria-label="搜索操作" title="搜索操作 (Ctrl K)" className="yy-icon" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
           <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
           <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
         </div>
       </header>
-      <div className="content-region">
-        <main className="main-content" key={view}>
+      <div className="yy-columns flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className="yy-page min-w-0 flex-1 overflow-y-auto" data-view={view}>
+          <div className="yy-page-inner mx-auto w-full max-w-[1220px] px-6 py-6">
           {view!=='dashboard'&&<div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>}
           {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
           {!connected&&<div className="offline-banner"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button type="button" className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
@@ -813,9 +820,14 @@ export function App(){
           {view==='settings'&&<div className="stack-page"><Section title="工具权限审批" subtitle="每一项工具执行请求都需要明确处理。拒绝会直接反馈给执行引擎。"><Panel>{permissions.length===0?<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="AI 发起受保护的工具操作时，申请会出现在这里。"/>:<div className="approval-list">{permissions.map(p=><div key={p.id} className="approval-card"><div className="approval-title"><LockKeyhole size={18}/><div><strong>{p.toolName}</strong><span>{p.description||'工具请求等待确认'} · 会话 {p.sessionId.slice(0,8)}</span></div></div><pre>{json(p.input)}</pre><div className="button-row"><button type="button" className="secondary-button" onClick={()=>void decision(p.id,false)}>拒绝</button><button type="button" className="primary-button" onClick={()=>void decision(p.id,true)}>本次允许</button></div></div>)}</div>}</Panel></Section>
             <Section title="主机交互请求"><Panel>{hostRequests.length===0?<p className="muted">没有需要处理的主机交互请求。</p>:hostRequests.map(r=><div key={r.id} className="approval-card"><strong>{String(r.type||'交互请求')}</strong><pre>{json(r.request||r)}</pre><button type="button" className="secondary-button" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</button></div>)}</Panel></Section>
             <Section title="外观与体验"><Panel className="settings-list"><div className="setting-row"><div><strong>界面主题</strong><p>六套本地配色，从纯白、纸墨到墨夜蓝。</p></div><select aria-label="界面主题" value={themeVariant} onChange={e=>setThemeVariant(e.target.value as ThemeVariant)}><option value="white">素白</option><option value="paper">纸墨</option><option value="warm-classic">经典暖色</option><option value="celadon">青瓷</option><option value="dark">墨夜</option><option value="ink-blue">墨夜蓝</option></select></div><label className="setting-row"><div><strong>深色主题</strong><p>快速切换至墨夜主题，详细配色可在上方选择。</p></div><input type="checkbox" checked={isDark} onChange={e=>setIsDark(e.target.checked)}/></label><label className="setting-row"><div><strong>动态效果</strong><p>开启过渡与悬停动效，系统要求减少动态效果时自动降低</p></div><input type="checkbox" checked={animate} onChange={e=>setAnimate(e.target.checked)}/></label><div className="setting-row"><div><strong>侧边上下文面板</strong><p>显示任务、模型、审批和运行摘要</p></div><button type="button" className="secondary-button" onClick={()=>setRightOpen(v=>!v)}>{rightOpen?'收起面板':'展开面板'}</button></div></Panel></Section></div>}
-        </main>
+
+          </div>
+        </div>
         {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={`runtime-indicator ${connected?'ok':'off'}`}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button type="button" className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map(event=><div className="activity-entry" key={event}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={`connection-light ${connected?'online':'offline'}`}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
+
       </div>
+      <footer className="yy-statusbar flex h-8 shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 text-[11px] text-[var(--color-text-tertiary)]"><span>{connected?'● 后端已连接':'○ 等待连接'}</span><span className="min-w-0 flex-1 truncate">{workspace||'未选择项目'}</span><span>{sessionId?'会话 '+sessionId.slice(0,8)+' · ':''}{statusName(sessionPhase)}</span></footer>
+    </main>
       {permissions.length>0&&<div className="modal-backdrop" role="presentation"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="工具权限审批"><div className="modal-heading"><div className="modal-icon"><ShieldCheck size={23}/></div><div><span className="eyebrow">PERMISSION REQUEST</span><h2>需要确认工具操作</h2></div></div><p className="muted">摇摇车希望执行以下操作。请检查内容后明确选择。</p><div className="approval-target"><strong>{permissions[0].toolName} · 会话 {permissions[0].sessionId.slice(0,8)}</strong><pre>{json(permissions[0].input)}</pre></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void decision(permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</button><button type="button" className="primary-button" onClick={()=>void decision(permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</button></div>{permissions.length>1&&<span className="modal-count">另有 {permissions.length-1} 项待审操作</span>}</div></div>}
       {permissions.length===0&&requested&&<div className="modal-backdrop"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="主机交互请求"><div className="modal-heading"><div className="modal-icon"><LockKeyhole size={23}/></div><div><span className="eyebrow">HOST REQUEST</span><h2>{String(requestedDetails.title||'需要您的输入')}</h2></div></div><p className="muted">{String(requestedDetails.message||requestedDetails.description||'后台请求用户处理交互内容。')}</p>{requestedDetails.subtype==='elicitation'&&requestedDetails.mode==='url'?<>
         <div className="approval-target">
@@ -846,7 +858,7 @@ export function App(){
           <div className="command-footer"><span>↑↓ 选择</span><span>Enter 执行</span><span>Esc 关闭</span></div>
         </section>
       </div>}
-      <footer className="statusbar"><span><span className={`connection-light ${connected?'online':'offline'}`}/>{connected?'本地连接正常':'后端不可用'}</span><span>{workspace||'未选择项目'}</span><span className="statusbar-right">{sessionId?`会话 ${sessionId.slice(0,8)} · `:''}{statusName(sessionPhase)}</span></footer>
-    </div>
+
+    {view==='settings'&&<div className="yy-legal-note"><span>本界面是非官方改造版。Based on cc-haha: </span><button type="button" onClick={()=>openChatLink('https://github.com/NanmiCoder/cc-haha')}>https://github.com/NanmiCoder/cc-haha</button><span> · Copyright (c) 2026 cc-haha</span></div>}
   </div>
 }
