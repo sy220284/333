@@ -44,7 +44,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
-    case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
+    case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'},{value:'minimax/M4',displayName:'MiniMax M4'}]}
     case 'smart.inspect':return {model:String(args.model||'minimax/M3'),status:'configured',message:'本地模型已就绪',checkedOffline:true,contextWindow:64000,hasPricing:true}
     case 'smart.history':return smartRecord?[smartRecord]:[]
     case 'budget.project.get':return budgetState
@@ -670,6 +670,104 @@ describe('摇摇车真实桌面页面交互',()=>{
     await screen.findByText('本地后台已连接')
     expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'white')
     expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
+  })
+
+  it('乱序恢复 A/B 会话时，A 的迟到历史不得覆盖 B 的消息、模型、权限和阶段',async()=>{
+    twoSessions=true
+    delayedHistoryId=SID
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'恢复会话：会话 A'}))
+    await waitFor(()=>expect(releaseHistory).toBeTypeOf('function'))
+    await user.click(screen.getByRole('button',{name:'恢复会话：会话 B'}))
+    await screen.findByText('会话 B 内容')
+    expect(screen.getByRole('combobox',{name:'权限模式'})).toHaveValue('plan')
+    expect(screen.getByRole('combobox',{name:'当前模型'})).toHaveValue('minimax/M4')
+    await act(async()=>releaseHistory?.())
+    expect(screen.getByText('会话 B 内容')).toBeInTheDocument()
+    expect(screen.queryByText('会话 A 内容')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox',{name:'权限模式'})).toHaveValue('plan')
+    expect(screen.getByRole('combobox',{name:'当前模型'})).toHaveValue('minimax/M4')
+  })
+
+  it('离线切换工作区时，旧项目尚未返回的会话刷新不得重新写回侧栏',async()=>{
+    longHistory=true
+    delayedSessionList=true
+    pickedOfflineWorkspace=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await waitFor(()=>expect(releaseSessionList).toBeTypeOf('function'))
+    await user.click(screen.getByRole('button',{name:'打开本地项目'}))
+    await screen.findByText('本地后台未连接')
+    await act(async()=>releaseSessionList?.())
+    expect(screen.queryByRole('button',{name:'恢复会话：长历史会话'})).not.toBeInTheDocument()
+  })
+
+  it('并发宿主请求到达时，正在填写的表单按会话和请求编号独立保留',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    const makeRequest=(id:string,sessionId:string)=>({
+      event:'host.request' as const,sessionId,request:{id,request:{
+        subtype:'elicitation',mode:'form',title:'补充参数',
+        requested_schema:{type:'object',properties:{ticket:{type:'string',title:'工单编号'}}},
+      }},
+    })
+    await act(async()=>{
+      listener(makeRequest('form-A',SID))
+    })
+    const form=await screen.findByRole('dialog',{name:'主机交互请求'})
+    await user.type(within(form).getByRole('textbox',{name:'工单编号'}),'pending-A')
+    await act(async()=>listener(makeRequest('form-B',OTHER)))
+    expect(within(form).getByRole('textbox',{name:'工单编号'})).toHaveValue('pending-A')
+    await user.click(within(form).getByRole('button',{name:'提交输入'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
+      sessionId:SID,requestId:'form-A',response:{action:'accept',content:{ticket:'pending-A'}},
+    }))
+    expect(within(screen.getByRole('dialog',{name:'主机交互请求'})).getByRole('textbox',{name:'工单编号'})).toHaveValue('')
+  })
+
+  it('工具审批期间禁用新建会话和命令面板快捷键，Tab 焦点保留在审批内',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{
+      id:'needs-review',toolName:'Bash',input:{command:'pwd'},
+    }}))
+    const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
+    await user.keyboard('{Control>}k{/Control}')
+    await user.keyboard('{Control>}n{/Control}')
+    await user.tab()
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    expect(screen.queryByRole('dialog',{name:'快速操作'})).not.toBeInTheDocument()
+    expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
+  })
+
+  it('旧文件保存的迟到响应不应改变新文件的已保存内容基准',async()=>{
+    manyFiles=true
+    delayedSave=true
+    const user=userEvent.setup()
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(true)
+    try {
+      render(<App/>)
+      await screen.findByText('本地后台已连接')
+      await user.click(screen.getByRole('button',{name:'项目文件'}))
+      await user.click(screen.getByRole('button',{name:'刷新文件'}))
+      const first=await screen.findByRole('button',{name:/file-0.ts/})
+      await user.click(first)
+      const editor=await screen.findByRole('textbox',{name:'编辑当前文件'})
+      await user.clear(editor)
+      await user.type(editor,'待保存 A')
+      await user.click(screen.getByRole('button',{name:'保存文件'}))
+      await waitFor(()=>expect(releaseSave).toBeTypeOf('function'))
+      await user.click(screen.getByRole('button',{name:/file-1.ts/}))
+      await waitFor(()=>expect(screen.getByRole('textbox',{name:'编辑当前文件'})).toHaveValue('第二个文件'))
+      await act(async()=>releaseSave?.())
+      expect(screen.getByRole('textbox',{name:'编辑当前文件'})).toHaveValue('第二个文件')
+      expect(screen.getByRole('button',{name:'保存文件'})).toBeDisabled()
+    } finally {confirm.mockRestore()}
   })
 
 })
