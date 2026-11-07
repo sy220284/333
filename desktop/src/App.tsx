@@ -300,8 +300,7 @@ export function App(){
     }).catch(error=>{if(active)setError(`长期身份读取失败：${presentError(error)}`)})
     return()=>{active=false}
   },[view,workspace,connected,profilesRevision])
-  // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and handoff revision invalidate the read model.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: changes to project/revision invalidate supervisor read model.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switching workspace or supervisor revision intentionally refreshes the read model.
   useEffect(()=>{
     if(!connected||!['agents','missions','dashboard'].includes(view))return
     let active=true
@@ -310,6 +309,7 @@ export function App(){
     }).catch(error=>{if(active)setError(`总控状态读取失败：${presentError(error)}`)})
     return()=>{active=false}
   },[view,workspace,connected,supervisorRevision])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switching workspace or handoff revision intentionally refreshes cached handoffs.
   useEffect(()=>{
     if(view!=='agents'||!connected)return
     let active=true

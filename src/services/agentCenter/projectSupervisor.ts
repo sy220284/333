@@ -40,33 +40,33 @@ export function analyzeProjectSupervisor(input:SupervisorInput):SupervisorFindin
   const items:SupervisorFinding[]=[]
   for(const {missionId,missionStatus,job} of input.jobs){
     const base={kind:'job' as const,missionId,jobId:job.id}
-    if(job.status==='review')items.push({...base,id:'job-review:'+job.id,priority:'review',
+    if(job.status==='review')items.push({...base,id:`job-review:${job.id}`,priority:'review',
       title:job.title,detail:'工作项执行已结束，仍需核验成果及原生工作树',
       nextAction:'打开长期任务工作项，查看真实成果和测试证据后审核'})
     if(job.status==='interrupted'||job.status==='failed')items.push({
-      ...base,id:'job-recover:'+job.id,priority:'blocked',
+      ...base,id:`job-recover:${job.id}`,priority:'blocked',
       title:job.title,detail:job.summary??'执行中断或失败',
       nextAction:'核对已写入的文件和外部副作用，再选择恢复或重试',
     })
     if(job.status==='queued'&&missionStatus!=='active')items.push({
-      ...base,id:'job-paused:'+job.id,priority:'blocked',title:job.title,
+      ...base,id:`job-paused:${job.id}`,priority:'blocked',title:job.title,
       detail:'长期目标已暂停，此工作项不会自动启动',
       nextAction:'项目负责人检查目标后显式恢复长期任务'})
   }
   for(const handoff of input.handoffs){
     const base={kind:'handoff' as const,handoffId:handoff.id}
-    if(handoff.status==='draft')items.push({...base,id:'handoff-retry:'+handoff.id,
+    if(handoff.status==='draft')items.push({...base,id:`handoff-retry:${handoff.id}`,
       priority:'blocked',title:handoff.summary,
       detail:'交接已登记但没有得到原生信箱写入确认',
       nextAction:'确认团队和成员仍有效，使用相同交接编号重试投递'})
-    if(handoff.status==='review')items.push({...base,id:'handoff-review:'+handoff.id,
+    if(handoff.status==='review')items.push({...base,id:`handoff-review:${handoff.id}`,
       priority:'review',title:handoff.summary,
       detail:'成员已提交成果引用，等待负责人实际验收',
       nextAction:'打开成果并记录审核意见，确认通过后归档交接'})
   }
   for(const experience of input.experiences){
     if(experience.status==='candidate')items.push({
-      id:'experience-review:'+experience.id,kind:'experience',priority:'review',
+      id:`experience-review:${experience.id}`,kind:'experience',priority:'review',
       experienceId:experience.id,title:experience.title,
       detail:'候选经验需要核验真实来源及适用条件',
       nextAction:'前往能力中心核查证据，记录人工审核结论后批准或废弃',
@@ -74,7 +74,7 @@ export function analyzeProjectSupervisor(input:SupervisorInput):SupervisorFindin
   }
   for(const draft of input.drafts){
     if(draft.state==='candidate')items.push({
-      id:'skill-review:'+draft.id,kind:'skill',priority:'review',
+      id:`skill-review:${draft.id}`,kind:'skill',priority:'review',
       draftId:draft.id,title:draft.slug,
       detail:'AI 或用户提出的技能草稿尚未发布',
       nextAction:'核对技能正文、影响范围和执行权限后按需发布',
@@ -84,7 +84,7 @@ export function analyzeProjectSupervisor(input:SupervisorInput):SupervisorFindin
     if(agent.status==='paused')continue
     const roles=agent.roles.filter(role=>role.state==='active')
     if(agent.status==='available'&&roles.length===0)items.push({
-      id:'identity-unassigned:'+agent.id,kind:'identity',priority:'followup',
+      id:`identity-unassigned:${agent.id}`,kind:'identity',priority:'followup',
       agentId:agent.id,title:agent.name,detail:'稳定身份已建立，但目前没有在岗职责',
       nextAction:'在智能体团队页按具体目标分配职责；此操作不会启动模型',
     })
