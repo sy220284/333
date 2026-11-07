@@ -120,7 +120,7 @@ for (const requiredTest of [
   'tests/m6-gateway-telemetry-policy-317.test.mjs',
   'tests/m6-gateway-postgres-317.test.mjs',
 ]) {
-  if (!gatewayGate.includes(requiredTest)) errors.push('企业网关专项缺失真实验收：' + requiredTest)
+  if (!gatewayGate.includes(requiredTest)) errors.push(`企业网关专项缺失真实验收：${requiredTest}`)
 }
 if (!dispatcher.includes('needs.plan.outputs.m6_gateway_providers_317'))
   errors.push('企业网关未纳入 Draft 按需检查')
