@@ -3,7 +3,7 @@
  * Publishing is an explicit desktop action; existing files are preserved.
  */
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 import { z } from 'zod/v4'
 import * as lockfile from '../../utils/lockfile.js'
@@ -30,7 +30,7 @@ function draftPath(projectDir: string, id: string, root: string): string {
   return join(draftDirectory(projectDir, root), id + '.json')
 }
 function skillMarkdown(draft: SkillDraft): string {
-  return '---\nname: ' + draft.slug + '\ndescription: ' + draft.description +
+  return '---\nname: ' + draft.slug + '\ndescription: ' + JSON.stringify(draft.description) +
     '\n---\n\n' + draft.instructions.trim() + '\n'
 }
 async function readDraft(projectDir: string, id: string, root: string): Promise<SkillDraft> {
@@ -86,10 +86,16 @@ export async function publishSkillDraft(
   try {
     const draft = await readDraft(projectDir, id, root)
     const project = await realpath(projectDir)
-    const skillsRoot = join(project, '.claude', 'skills')
+    const claudeDir = join(project, '.claude')
+    await mkdir(claudeDir, { recursive: true, mode: 0o700 })
+    if (!(await realpath(claudeDir)).startsWith(project + sep))
+      throw new Error('技能目标目录超出了项目范围')
+    const skillsRoot = join(claudeDir, 'skills')
+    await mkdir(skillsRoot, { recursive: true, mode: 0o700 })
+    if (!(await realpath(skillsRoot)).startsWith(project + sep))
+      throw new Error('技能目标目录超出了项目范围')
     const destination = join(skillsRoot, draft.slug)
     await mkdir(destination, { recursive: true, mode: 0o700 })
-    // Reject symlink redirection, including pre-existing skills directories.
     const verified = await realpath(destination)
     if (!verified.startsWith(project + sep)) throw new Error('技能目标目录超出了项目范围')
     const file = join(verified, 'SKILL.md')
@@ -98,6 +104,9 @@ export async function publishSkillDraft(
       await writeFile(file, markdown, { flag: 'wx', mode: 0o600 })
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+      const existingFile = await lstat(file)
+      if (!existingFile.isFile() || existingFile.isSymbolicLink())
+        throw new Error('技能目标存在非普通文件，拒绝覆盖或沿用')
       const existing = await readFile(file, 'utf8')
       if (existing !== markdown) throw new Error('同名技能已存在不同内容，请选择其他名称或明确执行版本升级')
     }
