@@ -1,6 +1,7 @@
 import type { JSONRPCMessage } from '@modelcontextprotocol/server'
 import { SdkControlServerTransport } from '../../services/mcp/SdkControlTransport.js'
 import { parseSdkTransportMessage } from '../../services/mcp/validateSdkTransportMessage.js'
+import { acknowledgeSdkMcpNonRequest } from './mcpControlSemantics317.js'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
@@ -279,10 +280,11 @@ function startSession(
           decision = { ...toolDecision, toolUseID: request.tool_use_id }
         } else if (request.subtype === 'mcp_message') {
           const server = sdkServers.get(request.server_name)
-          if (!server?.transport.onmessage) throw new Error('SDK MCP server is disconnected: ' + request.server_name)
+          if (!server) throw new Error(`SDK MCP server not found: ${request.server_name}`)
           const message = parseSdkTransportMessage(request.message)
           if ('method' in message && 'id' in message) {
             const id = message.id
+            if (!server.transport.onmessage) throw new Error('No message handler registered')
             if (server.pending.has(id)) throw new Error('Duplicate SDK MCP request ID')
             try {
               const mcp_response = await new Promise<JSONRPCMessage>((resolve, reject) => {
@@ -295,8 +297,7 @@ function startSession(
               server.pending.delete(id)
             }
           } else {
-            server.transport.onmessage(message)
-            decision = { mcp_response: { jsonrpc: '2.0', result: {}, id: 0 } }
+            decision = { mcp_response: acknowledgeSdkMcpNonRequest(server.transport, message) }
           }
         } else if (request.subtype === 'hook_callback') {
           const callback = callbacks.get(request.callback_id)
