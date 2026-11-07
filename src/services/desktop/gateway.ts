@@ -432,6 +432,12 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'sessions.open': return openSession(request.model)
       case 'sessions.resume': return openSession(undefined, request.sessionId)
+      case 'sessions.ensureOpen': {
+        const existing = sessions.get(request.sessionId)
+        return existing
+          ? { sessionId: request.sessionId, resumed: false, tasks: [...existing.tasks.values()] }
+          : openSession(undefined, request.sessionId)
+      }
       case 'sessions.list': return history.listSessions({ dir: cwd, limit: request.limit, offset: request.offset })
       case 'sessions.history': return history.getSessionMessages(request.sessionId, {
         dir: cwd, limit: request.limit, offset: request.offset, includeSystemMessages: true,
