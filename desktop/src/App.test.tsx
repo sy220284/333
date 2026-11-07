@@ -322,6 +322,27 @@ describe('摇摇车真实桌面页面交互',()=>{
     }))
   })
 
+  it('设置页按会话和编号精确审批，即使不同 SDK 会话使用了相同编号',async()=>{
+    const user=userEvent.setup()
+    const SECOND='e9c46d7b-2766-49c8-9f2d-142c90a45d5a'
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    await act(async()=>{
+      listener({event:'permission.request',sessionId:SID,permission:{id:'same-request',toolName:'Bash',input:{command:'git status'}}})
+      listener({event:'permission.request',sessionId:SECOND,permission:{id:'same-request',toolName:'FileEdit',input:{file_path:'other.ts'}}})
+    })
+    const buttons=screen.getAllByRole('button',{name:'本次允许'})
+    expect(buttons).toHaveLength(2)
+    await user.click(buttons[1])
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
+      sessionId:SECOND,permissionId:'same-request',decision:{behavior:'allow'}
+    }))
+    expect(call).not.toHaveBeenCalledWith('permissions.decide',{
+      sessionId:SID,permissionId:'same-request',decision:{behavior:'allow'}
+    })
+  })
+
   it('不同会话复用同一个审批编号时都保留请求并分别审批',async()=>{
     const user=userEvent.setup()
     const other='cb5f81c9-782d-4b79-a7ba-b43db0249a1c'

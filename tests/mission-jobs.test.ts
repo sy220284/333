@@ -101,6 +101,28 @@ test('跨桌面宿主最多并行三项执行，任务进入审核后释放槽�
   })
 })
 
+test('同一工作区不同 Mission 共享三项并发上限，完成后立即释放资源', async () => {
+  await fixture(async (root, mission, project) => {
+    const another = 'mission_abcdef0123456789'
+    const tasks = await Promise.all([
+      enqueueMissionJob(mission, project, 'A', '检查 A', root),
+      enqueueMissionJob(mission, project, 'B', '检查 B', root),
+      enqueueMissionJob(another, project, 'C', '检查 C', root),
+      enqueueMissionJob(another, project, 'D', '检查 D', root),
+    ])
+    const started = await Promise.all([
+      claimMissionJob(mission, project, tasks[0]!.id, randomUUID(), process.pid, root),
+      claimMissionJob(mission, project, tasks[1]!.id, randomUUID(), process.pid, root),
+      claimMissionJob(another, project, tasks[2]!.id, randomUUID(), process.pid, root),
+    ])
+    await expect(claimMissionJob(another, project, tasks[3]!.id, randomUUID(), process.pid, root))
+      .rejects.toThrow('同一项目最多并行')
+    await settleMissionJob(mission, project, started[0]!.id, requiredRunId(started[0]!), 'review', '已验证', root)
+    const resumed = await claimMissionJob(another, project, tasks[3]!.id, randomUUID(), process.pid, root)
+    expect(resumed.status).toBe('running')
+  })
+})
+
 test('任务队列验证输入并守住项目和终态边界', async () => {
   await fixture(async (root, mission, project) => {
     expect(() => enqueueMissionJob(mission, project, ' ', '有效指令', root)).toThrow('标题')

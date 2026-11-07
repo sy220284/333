@@ -12,6 +12,7 @@ import {
   bindMissionJobTurn, settleMissionJob, approveMissionJob, retryMissionJob,
   cancelMissionJob, recoverMissionJob, type MissionJob,
 } from '../agentCenter/missionJobs.js'
+import { reconcileMissionTerminalJobs } from '../agentCenter/missionReconciliation.js'
 import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
 import type { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
@@ -385,11 +386,16 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     const mission = await getMission(missionId, options.missionRoot)
     if (resolve(mission.projectDir) !== cwd)
       throw new Error('This mission belongs to a different workspace')
-    return mission
+    await reconcileMissionTerminalJobs(mission.id, cwd, options.missionRoot)
+    return getMission(mission.id, options.missionRoot)
   }
   async function projectMissions() {
-    return (await listMissions(options.missionRoot))
+    const missions = (await listMissions(options.missionRoot))
       .filter(mission => resolve(mission.projectDir) === cwd)
+    return Promise.all(missions.map(async mission => {
+      await reconcileMissionTerminalJobs(mission.id, cwd, options.missionRoot)
+      return getMission(mission.id, options.missionRoot)
+    }))
   }
 
   async function handle(request: DesktopRequest): Promise<unknown> {

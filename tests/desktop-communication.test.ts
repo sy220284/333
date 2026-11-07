@@ -6,7 +6,8 @@ import { join, resolve } from 'node:path'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js'
-import { createMission, selectMission } from '../src/utils/agentMissions.js'
+import { createMission, getMission, linkMissionAssignment, selectMission } from '../src/utils/agentMissions.js'
+import { enqueueMissionJob, approveMissionJob, missionJobAssignmentId } from '../src/services/agentCenter/missionJobs.js'
 import { getConfiguredAgentMode, setAgentMode } from '../src/utils/agentMode.js'
 import { DesktopRequestSchema } from '../src/services/desktop/protocol.js'
 import { projectTask, projectBackgroundTasks, isAgentProgress } from '../src/services/desktop/taskProjection.js'
@@ -395,6 +396,34 @@ test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长
     else process.env.CLAUDE_CODE_COORDINATOR_MODE = beforeOverride
     await gateway.close()
     await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('宿主重启时从已写入的 Job 终态恢复 Mission 关联，不重复调用模型', async () => {
+  const cwd=await mkdtemp(join(tmpdir(),'desktop-mission-repair-'))
+  const missionRoot=join(cwd,'private-store')
+  const data=fixture()
+  const gateway=createDesktopGateway({...data.options,cwd,missionRoot})
+  try {
+    const mission=await createMission('验证崩溃写入修复',cwd,missionRoot)
+    const job=await enqueueMissionJob(mission.id,cwd,'已审核工作项','确认审核持久化',missionRoot)
+    await linkMissionAssignment(mission.id,missionJobAssignmentId(job.id),'agent',job.title,missionRoot)
+    // A post-approval crash may leave two atomically written journals out of sync.
+    const {claimMissionJob,settleMissionJob}=await import('../src/services/agentCenter/missionJobs.js')
+    const claimed=await claimMissionJob(mission.id,cwd,job.id,randomUUID(),process.pid,missionRoot)
+    if(!claimed.runId)throw new Error('未获取任务运行标识')
+    await settleMissionJob(mission.id,cwd,job.id,claimed.runId,'review','检查已完成',missionRoot)
+    await approveMissionJob(mission.id,cwd,job.id,missionRoot)
+    expect((await getMission(mission.id,missionRoot)).assignments[0]?.status).toBe('running')
+    const result=await gateway.handle(request('missions.get',{missionId:mission.id})) as {
+      assignments:Array<{status:string}>
+    }
+    expect(result.assignments[0]?.status).toBe('completed')
+    expect((await getMission(mission.id,missionRoot)).assignments[0]?.status).toBe('completed')
+    expect(data.getLaunchEnvironments()).toHaveLength(0)
+  }finally{
+    await gateway.close()
+    await rm(cwd,{recursive:true,force:true})
   }
 })
 

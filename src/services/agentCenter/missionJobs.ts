@@ -6,8 +6,8 @@
  * Every execution requires an explicit desktop command; a crashed process
  * leaves its ticket for review before any new side effects are attempted.
  */
-import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { z } from 'zod/v4'
 import * as lockfile from '../../utils/lockfile.js'
@@ -162,13 +162,47 @@ export function enqueueMissionJob(
 }
 
 /** Reserve before any model call, so a second host cannot run the same ticket. */
+/**
+ * Serialize claims across ALL Missions in the same project. The earlier
+ * per-Mission limit allowed every desktop host to reserve another three
+ * workers in a different Mission against the very same checkout.
+ */
+async function withProjectWorkerSlot<T>(
+  missionId: string, projectDir: string, root: string, claim: () => Promise<T>,
+): Promise<T> {
+  const dir = join(root, 'agent-mission-jobs')
+  await mkdir(dir, { recursive: true, mode: 0o700 })
+  const project = checkedProject(projectDir)
+  const key = createHash('sha256').update(project).digest('hex').slice(0, 24)
+  const quotaFile = join(dir, `project-quota-${key}.json`)
+  try { await writeFile(quotaFile, JSON.stringify({ project }), { flag: 'wx', mode: 0o600 }) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+  }
+  const release = await lockfile.lock(quotaFile, { retries: { retries: 8, minTimeout: 25, maxTimeout: 250 } })
+  try {
+    let running = 0
+    const filenames = await readdir(dir)
+    for (const file of filenames) {
+      if (!/^mission_[a-f0-9]{16}\\.json$/.test(file)) continue
+      const raw = await readFile(join(dir, file), 'utf8')
+      if (Buffer.byteLength(raw) > 2_000_000) throw new Error('项目任务记录超过容量限制')
+      const doc = documentSchema.parse(JSON.parse(raw))
+      if (resolve(doc.projectDir) !== project) continue
+      running += doc.jobs.filter(item => item.status === 'running').length
+    }
+    if (running >= 3) throw new Error('同一项目最多并行执行 3 项工作，请先完成或恢复其他任务')
+    return await claim()
+  } finally { await release() }
+}
+
 export function claimMissionJob(
   missionId: string, projectDir: string, jobId: string, ownerKey: string,
   ownerPid: number, root?: string,
 ): Promise<MissionJob> {
   if (!z.string().uuid().safeParse(ownerKey).success || !Number.isInteger(ownerPid) || ownerPid < 1)
     throw new Error('无效的任务执行宿主身份')
-  return mutate(missionId, projectDir, doc => {
+  return withProjectWorkerSlot(missionId, projectDir, root ?? getClaudeConfigHomeDir(), () => mutate(missionId, projectDir, doc => {
     const job = requireJob(doc, jobId)
     if (job.status !== 'queued') throw new Error(`任务目前不能执行：${job.status}`)
     // A bounded shared worker pool: concurrent desktop hosts consult the
@@ -182,7 +216,7 @@ export function claimMissionJob(
       sessionId: undefined, turnId: undefined, summary: undefined,
     }
     return { document: update(doc, job, next), job: next }
-  }, root)
+  }, root))
 }
 
 export function bindMissionJobTurn(

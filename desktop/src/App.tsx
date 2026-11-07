@@ -603,18 +603,18 @@ export function App(){
       syncMissionOverview()
     })
   }
-  async function decision(id:string,allow:boolean){
+  async function decision(sessionId:string,id:string,allow:boolean){
     await operation('权限审批',async()=>{
-      const pending=permissions.find(item=>item.id===id)
+      const pending=permissions.find(item=>item.id===id&&item.sessionId===sessionId)
       if(!pending?.sessionId)throw new Error('审批请求已过期，请刷新会话')
       await invoke('permissions.decide',{sessionId:pending.sessionId,permissionId:id,
         decision:allow?{behavior:'allow'}:{behavior:'deny',message:'用户已在桌面端拒绝该工具调用'}})
       setPermissions(old=>old.filter(p=>p.id!==id||p.sessionId!==pending.sessionId))
     })
   }
-  async function respondHost(id:string,action:'accept'|'decline'){
+  async function respondHost(sessionId:string,id:string,action:'accept'|'decline'){
     await operation('主机请求',async()=>{
-      const pending=hostRequests.find(request=>request.id===id)
+      const pending=hostRequests.find(request=>request.id===id&&request.sessionId===sessionId)
       if(!pending?.sessionId)throw new Error('主机请求已过期，请刷新会话')
       await invoke('host.respond',{sessionId:pending.sessionId,requestId:id,response:action==='accept'&&obj(pending.request).mode!=='url'?{action,content:hostForm}:{action}})
       setHostRequests(old=>old.filter(r=>r.id!==id||r.sessionId!==pending.sessionId));setHostForm({})
@@ -957,7 +957,7 @@ export function App(){
       <div className="flex items-center gap-2"><LockKeyhole size={17} className="text-[var(--color-brand)]"/><strong className="text-[13px]">{p.toolName}</strong><Badge size="xs" tone="warning">待审</Badge></div>
       <p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">{p.description||'工具请求等待确认'} · 会话 {p.sessionId.slice(0,8)}</p>
       <pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(p.input)}</pre>
-      <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(p.id,false)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(p.id,true)}>本次允许</Button></div>
+      <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(p.sessionId,p.id,false)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(p.sessionId,p.id,true)}>本次允许</Button></div>
     </div>):<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="受保护的工具操作会在这里请求许可。"/>}
   </Card></Section>
   <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={r.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
@@ -990,7 +990,7 @@ export function App(){
       <strong className="text-[12px]">{permissions[0].toolName} · 会话 {permissions[0].sessionId.slice(0,8)}</strong>
       <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(permissions[0].input)}</pre>
     </div>
-    <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</Button></div>
+    <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(permissions[0].sessionId,permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(permissions[0].sessionId,permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</Button></div>
     {permissions.length>1&&<p className="mt-3 text-[11px] text-[var(--color-text-tertiary)]">另有 {permissions.length-1} 项待审操作</p>}
   </Modal>}
   {permissions.length===0&&requested&&<Modal open={true} onClose={()=>{}} dismissible={false} title="主机交互请求" typography="interface">
@@ -1003,9 +1003,9 @@ export function App(){
       </div>
       <p className="my-4 text-[12px] leading-5 text-[var(--color-text-tertiary)]">确认来源后在系统浏览器访问；完成授权后继续或拒绝请求。</p>
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.id,'decline')} disabled={Boolean(busy)}>拒绝访问</Button>
+        <Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'decline')} disabled={Boolean(busy)}>拒绝访问</Button>
         <Button variant="secondary" size="base" disabled={Boolean(busy)||!String(requestedDetails.url||'').startsWith('https://')} onClick={()=>void operation('打开 MCP 链接',async()=>{const result=await invoke<{opened:boolean}>('external.open',{url:String(requestedDetails.url||'')});if(!result.opened)throw new Error('已取消在浏览器中打开链接')})}>在浏览器中打开</Button>
-        <Button variant="primary" size="base" onClick={()=>void respondHost(requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</Button>
+        <Button variant="primary" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</Button>
       </div>
     </>:requestedDetails.subtype==='elicitation'?<>
       <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div>
