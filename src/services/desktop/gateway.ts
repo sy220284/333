@@ -22,6 +22,7 @@ import type { getSessionInfo, getSessionMessages, listSessions } from '../../ent
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
 import { createHeadlessConversationSession } from '../conversation/headlessSession.js'
 import { createDesktopTaskJournal, type DesktopTaskJournal } from './taskJournal.js'
+import { createDesktopSessionSettingsJournal, type DesktopSessionSettings, type DesktopPermissionMode } from './sessionSettingsJournal.js'
 import { createSmartExecutionJournal, type SmartExecutionJournal } from './smartExecutionJournal.js'
 import { isAgentProgress, projectBackgroundTasks, projectTask, type DesktopTask } from './taskProjection.js'
 import { DESKTOP_PROTOCOL_VERSION, type DesktopEvent, type DesktopRequest } from './protocol.js'
@@ -35,6 +36,8 @@ type HistoryService = {
   getSessionMessages: typeof getSessionMessages
 }
 type Entry = {
+  model: string | null
+  permissionMode: DesktopPermissionMode | null
   runtime: Headless
   tasks: Map<string, DesktopTask>
   seenPermissions: Set<string>
@@ -86,6 +89,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     },
   }
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
+  const sessionSettings = createDesktopSessionSettingsJournal(cwd, options.dataDir)
   const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
   const projectBudget = createProjectBudget(cwd, options.dataDir)
   const sessionBudgets = new Map<string,{leaseId:string;awaitingResult:boolean}>()
@@ -207,18 +211,23 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
+      const storedSettings = resume ? await sessionSettings.read(resume) : null
+      const resolvedModel = selectedModel ?? storedSettings?.model ?? undefined
+      const resolvedPermission = smartPolicy?.permissionMode ?? storedSettings?.permissionMode ?? options.sessionOptions?.permissionMode ?? (resume ? undefined : 'default')
+      const actualSettings: DesktopSessionSettings = { model: resolvedModel ?? options.model ?? null, permissionMode: resolvedPermission ?? null }
       // Reserve once for the entire SDK session. Cross-host capacity is checked
       // under a filesystem lock before any model turn starts.
       const budgetState=await projectBudget.get()
       if(budgetState.limitUsd!==null){
-        const inspection=await inspectSmartModel(selectedModel)
+        const inspection=await inspectSmartModel(resolvedModel)
         if('hasPricing' in inspection && !inspection.hasPricing)
           throw new Error('项目已启用共享预算，当前模型缺少可靠费率，请先完善模型价格')
       }
       preparedBudget=await projectBudget.reserve(randomUUID(),
         smartPolicy?.maxBudgetUsd ?? options.sessionOptions?.maxBudgetUsd)
-      runtime = launch(sdkOptions(selectedModel, sessionEnv, sessionCwd, {
+      runtime = launch(sdkOptions(resolvedModel, sessionEnv, sessionCwd, {
         ...smartPolicy,
+        ...(resolvedPermission ? { permissionMode: resolvedPermission } : {}),
         ...(preparedBudget.maxBudgetUsd===undefined?{}:{maxBudgetUsd:preparedBudget.maxBudgetUsd}),
       }), resume)
       const info = await initializeModels(runtime)
@@ -227,12 +236,14 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       if (sessions.has(id)) throw new Error(`Desktop session already open: ${id}`)
       const activeRuntime = runtime
       const entry: Entry = {
+        ...actualSettings,
         runtime: activeRuntime,
         tasks: new Map(tasks.map(task => [task.taskId, task])),
         seenPermissions: new Set(),
         seenHostRequests: new Set(),
         unsubscribe: [],
       }
+      await sessionSettings.write(id, actualSettings)
       sessions.set(id, entry)
       if(preparedBudget.id)sessionBudgets.set(id,{leaseId:preparedBudget.id,awaitingResult:false})
       entry.unsubscribe.push(activeRuntime.state.subscribe(() => emit({
@@ -261,7 +272,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         entry.seenHostRequests = current
       }))
       emit({ event: 'session.state', sessionId: id, state: runtime.state.getState() })
-      return { sessionId: id, resumed: !!resume, ...info, tasks }
+      return { sessionId: id, resumed: !!resume, ...info, tasks, ...actualSettings }
     } catch (error) {
       if (preparedBudget?.id){
         await projectBudget.finish(preparedBudget.id,false)
@@ -742,16 +753,27 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'sessions.ensureOpen': {
         const existing = sessions.get(request.sessionId)
         return existing
-          ? { sessionId: request.sessionId, resumed: false, tasks: [...existing.tasks.values()] }
+          ? { sessionId: request.sessionId, resumed: false, tasks: [...existing.tasks.values()], model: existing.model, permissionMode: existing.permissionMode }
           : openSession(undefined, request.sessionId)
       }
       case 'sessions.list': return history.listSessions({ dir: cwd, limit: request.limit, offset: request.offset })
-      case 'sessions.history': return history.getSessionMessages(request.sessionId, {
-        dir: await sessionWorktree(request.sessionId) ?? cwd,
-        limit: request.limit, offset: request.offset, includeSystemMessages: true,
-      })
+      case 'sessions.history': {
+        const dir = await sessionWorktree(request.sessionId) ?? cwd
+        if (request.tail) {
+          const all = await history.getSessionMessages(request.sessionId, { dir, includeSystemMessages: true })
+          const end = Math.max(0, all.length - (request.offset ?? 0))
+          const offset = Math.max(0, end - (request.limit ?? 200))
+          return { messages: all.slice(offset, end), total: all.length, offset }
+        }
+        return history.getSessionMessages(request.sessionId, {
+          dir, limit: request.limit, offset: request.offset, includeSystemMessages: true,
+        })
+      }
       case 'sessions.close': return closeSession(request.sessionId)
-      case 'sessions.status': return requireSession(request.sessionId).runtime.state.getState()
+      case 'sessions.status': {
+        const entry = requireSession(request.sessionId)
+        return { ...entry.runtime.state.getState(), model: entry.model, permissionMode: entry.permissionMode }
+      }
       case 'sessions.send': return send(request.sessionId, request.message)
       case 'sessions.interrupt': {
         const entry = requireSession(request.sessionId)
@@ -763,14 +785,19 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'sessions.setModel': {
         const entry = requireSession(request.sessionId)
         await entry.runtime.control({ subtype: 'set_model', model: request.model })
-        return { model: request.model }
+        entry.model = request.model
+        await sessionSettings.write(request.sessionId, { model: entry.model, permissionMode: entry.permissionMode })
+        return { model: entry.model }
       }
       case 'sessions.setPermissionMode': {
         if (request.mode === 'bypassPermissions' && !options.sessionOptions?.allowDangerouslySkipPermissions) {
           throw new Error('Bypass permissions requires explicit host configuration')
         }
-        await requireSession(request.sessionId).runtime.control({ subtype: 'set_permission_mode', mode: request.mode })
-        return { mode: request.mode }
+        const entry = requireSession(request.sessionId)
+        await entry.runtime.control({ subtype: 'set_permission_mode', mode: request.mode })
+        entry.permissionMode = request.mode
+        await sessionSettings.write(request.sessionId, { model: entry.model, permissionMode: entry.permissionMode })
+        return { mode: entry.permissionMode }
       }
       case 'host.list': return requireSession(request.sessionId).runtime.hostControls.getPending()
       case 'host.respond': {
