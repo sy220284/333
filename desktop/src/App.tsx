@@ -17,6 +17,7 @@ import { Badge } from './components/ui/Badge'
 import { Button } from './components/ui/Button'
 import { Card } from './components/ui/Card'
 import { EmptyState } from './components/ui/EmptyState'
+import { Modal } from './components/ui/Modal'
 import { asObject, itemFromMessage, statusName, type ConversationItem } from './projection'
 
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
@@ -979,37 +980,49 @@ export function App(){
       </div>
       <footer className="yy-statusbar flex h-8 shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 text-[11px] text-[var(--color-text-tertiary)]"><span>{connected?'● 后端已连接':'○ 等待连接'}</span><span className="min-w-0 flex-1 truncate">{workspace||'未选择项目'}</span><span>{sessionId?`会话 ${sessionId.slice(0,8)} · `:''}{statusName(sessionPhase)}</span></footer>
     </main>
-      {permissions.length>0&&<div className="modal-backdrop" role="presentation"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="工具权限审批"><div className="modal-heading"><div className="modal-icon"><ShieldCheck size={23}/></div><div><span className="eyebrow">PERMISSION REQUEST</span><h2>需要确认工具操作</h2></div></div><p className="muted">摇摇车希望执行以下操作。请检查内容后明确选择。</p><div className="approval-target"><strong>{permissions[0].toolName} · 会话 {permissions[0].sessionId.slice(0,8)}</strong><pre>{json(permissions[0].input)}</pre></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void decision(permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</button><button type="button" className="primary-button" onClick={()=>void decision(permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</button></div>{permissions.length>1&&<span className="modal-count">另有 {permissions.length-1} 项待审操作</span>}</div></div>}
-      {permissions.length===0&&requested&&<div className="modal-backdrop"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="主机交互请求"><div className="modal-heading"><div className="modal-icon"><LockKeyhole size={23}/></div><div><span className="eyebrow">HOST REQUEST</span><h2>{String(requestedDetails.title||'需要您的输入')}</h2></div></div><p className="muted">{String(requestedDetails.message||requestedDetails.description||'后台请求用户处理交互内容。')}</p>{requestedDetails.subtype==='elicitation'&&requestedDetails.mode==='url'?<>
-        <div className="approval-target">
-          <strong>来自 {String(requestedDetails.mcp_server_name||'MCP')} 的链接请求</strong>
-          <pre>{String(requestedDetails.url||'未提供链接')}</pre>
-        </div>
-        <p className="muted">确认网站来源后，在系统浏览器中访问。完成操作后选择“已完成”，或拒绝此请求。</p>
-        <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={()=>void respondHost(requested.id,'decline')} disabled={Boolean(busy)}>拒绝访问</button>
-          <button type="button" className="secondary-button" disabled={Boolean(busy)||!String(requestedDetails.url||'').startsWith('https://')} onClick={()=>void operation('打开 MCP 链接',async()=>{
-            const result=await invoke<{opened:boolean}>('external.open',{url:String(requestedDetails.url||'')})
-            if(!result.opened)throw new Error('已取消在浏览器中打开链接')
-          })}>在浏览器中打开</button>
-          <button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</button>
-        </div>
-      </>:requestedDetails.subtype==='elicitation'?<><div className="host-fields">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value);const valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`}><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</button><button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</button></div></>:<div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</button></div>}</div></div>}
-      {paletteOpen&&<div className="command-backdrop" role="presentation"><button type="button" className="command-dismiss" aria-label="关闭快速操作" onClick={()=>{setPaletteOpen(false);setSearch('')}}/>
-        <section className="command-dialog" role="dialog" aria-modal="true" aria-label="快速操作">
-          <div className="command-input-row"><Search size={21}/><input ref={paletteInputRef} aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{
-            if(e.key==='ArrowDown'){e.preventDefault();setPaletteIndex(index=>Math.min(index+1,Math.max(0,filteredCommands.length-1)))}
-            if(e.key==='ArrowUp'){e.preventDefault();setPaletteIndex(index=>Math.max(0,index-1))}
-            if(e.key==='Enter'&&filteredCommands[paletteIndex]){e.preventDefault();runCommand(filteredCommands[paletteIndex])}
-          }}/><kbd>ESC</kbd></div>
-          <div className="command-results" role="listbox" aria-label="可用命令">
-            {filteredCommands.length?filteredCommands.map((cmd,index)=>{const CommandIcon=cmd.icon;return <button type="button" role="option" aria-selected={paletteIndex===index} key={cmd.id} className={paletteIndex===index?'command-result selected':'command-result'} onMouseEnter={()=>setPaletteIndex(index)} onClick={()=>runCommand(cmd)}>
-              <span className="command-result-icon"><CommandIcon size={19}/></span><span className="command-result-content"><strong>{cmd.title}</strong><small>{cmd.detail}</small></span><ArrowRight size={16}/></button>}):<div className="command-empty">没有匹配的操作。试试“会话”“任务”或“模型”。</div>}
-          </div>
-          <div className="command-footer"><span>↑↓ 选择</span><span>Enter 执行</span><span>Esc 关闭</span></div>
-        </section>
-      </div>}
-
-    {view==='settings'&&<div className="yy-legal-note"><span>本界面是非官方改造版。Based on cc-haha: </span><button type="button" onClick={()=>openChatLink('https://github.com/NanmiCoder/cc-haha')}>https://github.com/NanmiCoder/cc-haha</button><span> · Copyright (c) 2026 cc-haha</span></div>}
+      {permissions.length>0&&<Modal open={true} onClose={()=>{}} dismissible={false} title="工具权限审批" typography="interface">
+    <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[.1em] text-[var(--color-brand)]"><ShieldCheck size={17}/>PERMISSION REQUEST</div>
+    <p className="mt-2 text-[12px] leading-6 text-[var(--color-text-secondary)]">请确认此次工具操作。结果将返回发起请求的实际会话。</p>
+    <div className="my-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-low)] p-4">
+      <strong className="text-[12px]">{permissions[0].toolName} · 会话 {permissions[0].sessionId.slice(0,8)}</strong>
+      <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(permissions[0].input)}</pre>
+    </div>
+    <div className="flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void decision(permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void decision(permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</Button></div>
+    {permissions.length>1&&<p className="mt-3 text-[11px] text-[var(--color-text-tertiary)]">另有 {permissions.length-1} 项待审操作</p>}
+  </Modal>}
+  {permissions.length===0&&requested&&<Modal open={true} onClose={()=>{}} dismissible={false} title="主机交互请求" typography="interface">
+    <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold"><LockKeyhole size={17} className="text-[var(--color-brand)]"/>{String(requestedDetails.title||'需要您的输入')}</div>
+    <p className="mb-4 text-[12px] leading-6 text-[var(--color-text-secondary)]">{String(requestedDetails.message||requestedDetails.description||'后台请求用户处理交互内容。')}</p>
+    {requestedDetails.subtype==='elicitation'&&requestedDetails.mode==='url'?<>
+      <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-low)] p-4">
+        <strong className="text-[12px]">来自 {String(requestedDetails.mcp_server_name||'MCP')} 的链接请求</strong>
+        <pre className="mt-3 whitespace-pre-wrap break-all font-mono text-[11px] text-[var(--color-text-secondary)]">{String(requestedDetails.url||'未提供链接')}</pre>
+      </div>
+      <p className="my-4 text-[12px] leading-5 text-[var(--color-text-tertiary)]">确认来源后在系统浏览器访问；完成授权后继续或拒绝请求。</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.id,'decline')} disabled={Boolean(busy)}>拒绝访问</Button>
+        <Button variant="secondary" size="base" disabled={Boolean(busy)||!String(requestedDetails.url||'').startsWith('https://')} onClick={()=>void operation('打开 MCP 链接',async()=>{const result=await invoke<{opened:boolean}>('external.open',{url:String(requestedDetails.url||'')});if(!result.opened)throw new Error('已取消在浏览器中打开链接')})}>在浏览器中打开</Button>
+        <Button variant="primary" size="base" onClick={()=>void respondHost(requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</Button>
+      </div>
+    </>:requestedDetails.subtype==='elicitation'?<>
+      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={'host-field-'+key} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={'host-field-'+key} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={'host-field-'+key} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={'host-field-'+key} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div>
+      <div className="mt-5 flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</Button></div>
+    </>:<div className="flex justify-end"><Button variant="secondary" size="base" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</Button></div>}
+  </Modal>}
+  <Modal open={paletteOpen} onClose={()=>{setPaletteOpen(false);setSearch('')}} title="快速操作" typography="interface" width={650}>
+    <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
+      <Search size={19} className="text-[var(--color-text-tertiary)]"/>
+      <input ref={paletteInputRef} aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setPaletteIndex(index=>Math.min(index+1,Math.max(0,filteredCommands.length-1)))}if(e.key==='ArrowUp'){e.preventDefault();setPaletteIndex(index=>Math.max(0,index-1))}if(e.key==='Enter'&&filteredCommands[paletteIndex]){e.preventDefault();runCommand(filteredCommands[paletteIndex])}}} className="min-w-0 flex-1 border-0! bg-transparent! shadow-none!"/>
+      <kbd className="text-[10px] text-[var(--color-text-tertiary)]">ESC</kbd>
+    </div>
+    <div className="mt-2 max-h-[410px] overflow-y-auto" role="listbox" aria-label="可用命令">
+      {filteredCommands.length?filteredCommands.map((cmd,index)=>{const Icon=cmd.icon;return <button key={cmd.id} type="button" role="option" aria-selected={paletteIndex===index} onMouseEnter={()=>setPaletteIndex(index)} onClick={()=>runCommand(cmd)} className={'flex w-full items-center gap-3 rounded-[var(--radius-md)] p-3 text-left transition-colors hover:bg-[var(--color-surface-hover)] '+(paletteIndex===index?'bg-[var(--color-brand-soft)]':'')}>
+        <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container-low)] text-[var(--color-brand)]"><Icon size={18}/></span>
+        <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{cmd.title}</strong><small className="mt-1 block truncate text-[11px] text-[var(--color-text-tertiary)]">{cmd.detail}</small></span><ArrowRight size={15}/>
+      </button>}):<p className="py-9 text-center text-[12px] text-[var(--color-text-tertiary)]">没有匹配的操作。试试“会话”“任务”或“模型”。</p>}
+    </div>
+    <div className="mt-3 flex gap-4 border-t border-[var(--color-border)] pt-3 text-[10px] text-[var(--color-text-tertiary)]"><span>↑↓ 选择</span><span>Enter 执行</span><span>Esc 关闭</span></div>
+  </Modal>
+  {view==='settings'&&<div className="yy-legal-note"><span>本界面是非官方改造版。Based on cc-haha: </span><button type="button" onClick={()=>openChatLink('https://github.com/NanmiCoder/cc-haha')}>https://github.com/NanmiCoder/cc-haha</button><span> · Copyright (c) 2026 cc-haha</span></div>}
   </div>
 }
