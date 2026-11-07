@@ -12,6 +12,7 @@ export type SessionChatSurfaceProps={
   sessionId:string;sessionPhase:string;historyOnly:boolean;models:Model[];selectedModel:string;permissionMode:string;
   messages:ConversationItem[];visibleMessageCount:number;followLatest:boolean;permissionsCount:number;
   draft:string;mode:'master'|'super';busy:boolean;connected:boolean;
+  smartRecord?:{model:string;status:"running"|"completed"|"failed"|"interrupted";costUsd?:number;budgetUsd?:number};
   streamRef:RefObject<HTMLDivElement|null>;messagesEnd:RefObject<HTMLDivElement|null>;inputRef:RefObject<HTMLTextAreaElement|null>;
   onModel:(value:string)=>void;onPermissionMode:(value:string)=>void;onStop:()=>void;
   onScrollBottom:(value:boolean)=>void;onVisibleCount:(value:number)=>void;onFollowLatest:(value:boolean)=>void;
@@ -47,6 +48,11 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
     </div>
     {!p.followLatest&&p.messages.length>0&&<div className="flex justify-center pb-2"><Button variant="tonal" size="sm" onClick={()=>p.onFollowLatest(true)}><ArrowDown size={13}/>回到最新消息</Button></div>}
     {p.permissionsCount>0&&<div className="flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-warning-container)] px-5 py-3 text-[12px] text-[var(--color-on-warning-container)]"><ShieldCheck size={17}/><span>{p.permissionsCount} 项工具操作等待批准</span><Button variant="secondary" size="sm" onClick={p.onOpenApprovals}>查看审批<ArrowRight size={13}/></Button></div>}
+    {p.smartRecord&&<div aria-live="polite" className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] px-5 py-2 text-[11px] text-[var(--color-text-secondary)]">
+      <span>{p.smartRecord.model} · {p.smartRecord.status==="running"?"执行中":p.smartRecord.status==="completed"?"已完成":p.smartRecord.status==="failed"?"执行失败":"已中断"}</span>
+      <span>费用 {p.smartRecord.costUsd===undefined?"待确认":`USD ${p.smartRecord.costUsd.toFixed(4)}`}</span>
+      {p.smartRecord.budgetUsd!==undefined&&<span>· 上限 USD {p.smartRecord.budgetUsd.toFixed(2)}</span>}
+    </div>}
     {p.historyOnly&&<div className="flex items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-5 py-3 text-[12px] text-[var(--color-text-secondary)]"><History size={16}/>当前正在查看历史执行记录。发送新消息时将恢复原会话。</div>}
     <div className="shrink-0 border-t border-[var(--color-border)] p-4">
       <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 pt-3 shadow-[var(--shadow-composer)]">

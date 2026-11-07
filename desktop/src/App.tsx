@@ -35,6 +35,8 @@ type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'c
 type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
+type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
+type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
@@ -108,6 +110,13 @@ export function App(){
   const [visibleMessageCount,setVisibleMessageCount]=useState(120)
   const [followLatest,setFollowLatest]=useState(true)
   const [draft,setDraft]=useState('')
+  const [smartBudget,setSmartBudget]=useState(()=>window.localStorage.getItem(`${PREF}smart-budget`)??'')
+  const [smartPolicy,setSmartPolicy]=useState<'default'|'acceptEdits'|'plan'|'dontAsk'>(()=>{
+    const saved=window.localStorage.getItem(`${PREF}smart-policy`)
+    return saved==='acceptEdits'||saved==='plan'||saved==='dontAsk'?saved:'default'
+  })
+  const [smartHistory,setSmartHistory]=useState<SmartRecord[]>([])
+  const [smartInspection,setSmartInspection]=useState<SmartInspection|null>(null)
   const [mode,setMode]=useState<'master'|'super'>('master')
   const [overview,setOverview]=useState<Item>({})
   const [selectedTeam,setSelectedTeam]=useState('')
@@ -177,6 +186,7 @@ export function App(){
     const current=()=>generation===refreshGeneration.current
     const queries=[
       api.call<{models:Model[]}>('models.list').then(data=>{if(current())setModels(data.models??[])}),
+      api.call<SmartRecord[]>('smart.history').then(data=>{if(current())setSmartHistory(data??[])}),
       api.call<Item[]>('sessions.list',{limit:50,offset:0})
         .then(data=>{if(current())setSessions(Array.isArray(data)?data:[])}),
       api.call<Item>('agents.overview').then(data=>{
@@ -197,7 +207,7 @@ export function App(){
     // A hung external provider must never hold the global action lock.
     // Surface individual failures immediately instead of waiting for the
     // slowest service before showing the user a reason.
-    const names=['模型列表','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
+    const names=['模型列表','智能执行记录','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
     const failed:string[]=[]
     queries.forEach((query,index)=>{
       void query.catch(error=>{
@@ -261,9 +271,14 @@ export function App(){
       if(event.event==='desktop.disconnected'){
         setConnected(false);setError(String(event.error||'桌面后台连接已断开'));return
       }
-      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','mission.activity']
+      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','mission.activity','smart.finished']
       if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
-      if(event.event==='session.state'){
+      if(event.event==='smart.finished'){
+        void api.call<SmartRecord[]>('smart.history').then(setSmartHistory)
+          .catch(e=>setError(`读取执行记录失败：${presentError(e)}`))
+        if(event.sessionId===sessionRef.current)
+          setActivity(old=>[`智能执行已${event.status==='completed'?'完成':event.status==='interrupted'?'中断':'失败'}`,...old].slice(0,20))
+      }else if(event.event==='session.state'){
         const state=obj(event.state)
         setSessionPhase(String(state.phase??state.status??'idle'))
       }else if(event.event==='session.error'||event.event==='task.persistence.error'){
@@ -381,6 +396,8 @@ export function App(){
   },[isDark,themeVariant])
   useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
   useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
+  useEffect(()=>{window.localStorage.setItem(`${PREF}smart-budget`,smartBudget)},[smartBudget])
+  useEffect(()=>{window.localStorage.setItem(`${PREF}smart-policy`,smartPolicy)},[smartPolicy])
   useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
@@ -430,6 +447,32 @@ export function App(){
       : '先通过原生 SendMessage/requestShutdown 请求现有成员退出，确认全部退出后使用 TeamDelete 完成团队清理，并报告实际结果。'
     await sendTeamInstruction(`用户授权在负责人所属团队 ${JSON.stringify(selectedTeam)} 执行下述操作。确认所属项目和负责人身份后操作：${description} 禁止对其他团队执行。`,leadSessionId)
   }
+  async function executeSmart(){
+    const text=draft.trim()
+    if(!text||busy||!connected)return
+    await operation('智能执行',async()=>{
+      const maxBudgetUsd=smartBudget.trim()?Number(smartBudget):undefined
+      if(maxBudgetUsd!==undefined&&(!Number.isFinite(maxBudgetUsd)||maxBudgetUsd<=0||maxBudgetUsd>100000))
+        throw new Error('费用上限请输入大于 0 且不超过 100000 的美元金额')
+      // One user gesture, two IPC phases. Bind the visible session before the
+      // SDK starts streaming; fast tool events can no longer be lost.
+      const started=await invoke<{sessionId:string;prepared:true}>('smart.execute',{
+        prompt:text,deferStart:true,
+        ...(selectedModel?{model:selectedModel}:{}),
+        ...(maxBudgetUsd===undefined?{}:{maxBudgetUsd}),
+        ...(smartPolicy==='default'?{}:{permissionMode:smartPolicy}),
+      })
+      setSessionId(started.sessionId);sessionRef.current=started.sessionId
+      setSessionPhase('running');setHistoryOnly(false);setTasks([])
+      setMessages([{id:`local-smart-${Date.now()}`,kind:'user',text,time:Date.now()}])
+      setVisibleMessageCount(120);setFollowLatest(true);setDraft('');setView('chat')
+      setPermissionMode(smartPolicy);setSmartInspection(null)
+      await invoke('smart.start',{sessionId:started.sessionId})
+      void api.call<SmartRecord[]>('smart.history').then(setSmartHistory)
+        .catch(e=>setError(`读取执行记录失败：${presentError(e)}`))
+      void refresh()
+    })
+  }
   async function createSession(){
     await operation('新建会话',async()=>{
       const response=await invoke<{sessionId:string;models?:Model[];tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
@@ -443,13 +486,7 @@ export function App(){
     if(!text||busy)return
     setFollowLatest(true)
     if(!sessionId){
-      await operation('创建会话',async()=>{
-        const response=await invoke<{sessionId:string}>('sessions.open',selectedModel?{model:selectedModel}:{})
-        setSessionId(response.sessionId);sessionRef.current=response.sessionId;setSessionPhase('idle');setHistoryOnly(false);setMessages([]);setVisibleMessageCount(120);setFollowLatest(true)
-        await invoke('sessions.send',{sessionId:response.sessionId,message:text})
-        setMessages([{id:`local-${Date.now()}`,kind:'user',text,time:Date.now()}])
-        setDraft('');setView('chat')
-      })
+      await executeSmart()
     }else{
       await operation('发送消息',async()=>{
         if(historyOnly){
@@ -770,7 +807,11 @@ export function App(){
             teamMode={mode==='super'?'Super Agents':'主子智能体'}
             sessions={sessions.flatMap(item=>{const id=String(item.sessionId||item.id||'');return id?[{id,label:String(item.summary||item.title||id.slice(0,8))}]:[]})}
             missions={missions.flatMap(m=>{const id=missionId(m);return id?[{id,objective:String(m.objective||'未命名任务'),status:String(m.status||'active')}]:[]})}
-            onCreateSession={()=>void createSession()} onSuggestion={toChat}
+            task={draft} onTask={setDraft} onExecute={()=>void executeSmart()} busy={Boolean(busy)} connected={connected}
+            models={models} selectedModel={selectedModel} onModel={setSelectedModel}
+            budget={smartBudget} onBudget={setSmartBudget} permission={smartPolicy} onPermission={setSmartPolicy}
+            executions={smartHistory} onOpenExecution={id=>void resumeSession(id)}
+            onSuggestion={setDraft}
             onOpenSession={id=>id===sessionId?setView('chat'):void resumeSession(id)}
             onOpenHistory={()=>setView('history')}
             onOpenMission={id=>{setSelectedMission(id);setView('missions')}}
@@ -781,6 +822,7 @@ export function App(){
             models={models} selectedModel={selectedModel} permissionMode={permissionMode}
             messages={messages} visibleMessageCount={visibleMessageCount} followLatest={followLatest} permissionsCount={permissions.length}
             draft={draft} mode={mode} busy={Boolean(busy)} connected={connected}
+            smartRecord={smartHistory.find(record=>record.sessionId===sessionId)}
             streamRef={streamRef} messagesEnd={messagesEnd} inputRef={inputRef}
             onModel={next=>void selectModel(next)}
             onPermissionMode={next=>void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}
@@ -998,9 +1040,17 @@ export function App(){
                 </div>
               </Card>
             </Section>
-            <Card radius="lg" surface="low"><div className="flex flex-wrap items-center gap-3"><ShieldCheck size={19} className="text-[var(--color-brand)]"/><span className="flex-1 text-[12px] text-[var(--color-text-secondary)]">模型参数由后端统一管理，桌面端显示实际发现结果。</span><Button variant="link" size="base" onClick={()=>toChat('检查当前配置的模型、服务商参数与上下文窗口，并列出需要修正的项')}>检查配置 <ArrowRight size={14}/></Button></div></Card>
+            <Card radius="lg" surface="low"><div className="flex flex-wrap items-center gap-3"><ShieldCheck size={19} className="text-[var(--color-brand)]"/><span className="flex-1 text-[12px] text-[var(--color-text-secondary)]">模型参数、费率和工具能力以本地档案为准；自检不会自动发起付费调用。</span><Button variant="link" size="base" onClick={()=>toChat('检查当前配置的模型、服务商参数与上下文窗口，并列出需要修正的项')}>检查配置 <ArrowRight size={14}/></Button></div></Card>
           </div>}
-          {view==='integrations'&&<div className="space-y-7">
+          {view==='models'&&smartInspection&&<Card radius="lg" surface="lowest">
+            <div className="flex items-center gap-2"><ShieldCheck size={17}/><strong>模型自检 · {smartInspection.model}</strong>
+              <Badge tone={smartInspection.status==='missing-credential'?'danger':'success'}>{smartInspection.status==='missing-credential'?'缺少凭证':'本地已检查'}</Badge>
+            </div>
+            <p className="mt-2 text-[12px] text-[var(--color-text-secondary)]">{smartInspection.message}</p>
+            {smartInspection.contextWindow&&<p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">上下文 {smartInspection.contextWindow.toLocaleString()} Token · 输出 {smartInspection.maxOutputTokens?.toLocaleString()??'待核实'}</p>}
+            {smartInspection.hasPricing===false&&<p className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">费率待补齐，设置费用上限时将提示。</p>}
+          </Card>}
+                    {view==='integrations'&&<div className="space-y-7">
             <div className="grid grid-cols-3 gap-4 max-[1100px]:grid-cols-1">
               {([{name:'技能 Skills',detail:'复用本地项目与用户级技能。',icon:WandSparkles,prompt:'列出当前工作区可用的全部技能，包括来源、功能、启用状态和使用方式',action:'检查已安装技能'},{name:'MCP 工具',detail:'让 AI 访问本地与外部工具。',icon:Boxes,prompt:'检查当前 MCP 服务器连接情况，列出服务、工具、授权和连接错误',action:'检查 MCP 连接'},{name:'插件与扩展',detail:'查看已注册的插件和扩展功能。',icon:Bot,prompt:'审计当前已安装的插件及其功能入口，检查是否能够正常调用',action:'检查插件'}]).map(item=>{const Icon=item.icon;return <Card key={item.name} radius="lg" surface="lowest" shadow="card" className="flex flex-col items-start gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-soft)] text-[var(--color-brand)]"><Icon size={23}/></span>
@@ -1062,7 +1112,7 @@ export function App(){
   </Card></Section>
   <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={r.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
   <LocalMaintenance key={workspace} workspace={workspace} connected={connected} onPurged={()=>{
-    setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setPermissions([]);setHostRequests([]);setSessionPhase('idle');
+    setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setSmartHistory([]);setSmartInspection(null);setPermissions([]);setHostRequests([]);setSessionPhase('idle');
     void refresh()
   }}/>
   <Section title="外观与体验" subtitle="新项目的六套原生配色与统一动效。"><Card radius="lg" surface="lowest" shadow="card">
@@ -1077,6 +1127,7 @@ export function App(){
         {rightOpen&&<WorkspaceInspector
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
+          smartExecution={smartHistory.find(record=>record.sessionId===sessionId)}
           onClose={()=>setRightOpen(false)} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
         />}
 
