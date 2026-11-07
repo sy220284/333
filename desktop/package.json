@@ -94,10 +94,15 @@
           "from": "../dist/yaoyaoche",
           "to": "bin/yaoyaoche"
         }
-      ]
+      ],
+      "maintainer": "摇摇车 contributors <208273231+sy220284@users.noreply.github.com>"
     },
     "executableName": "yaoyaoche"
   },
   "description": "摇摇车本地智能体开发工作台，支持主子智能体与 Super Agents 团队协作。",
-  "homepage": "https://github.com/sy220284/333"
+  "homepage": "https://github.com/sy220284/333",
+  "author": {
+    "name": "摇摇车 contributors",
+    "email": "208273231+sy220284@users.noreply.github.com"
+  }
 }
