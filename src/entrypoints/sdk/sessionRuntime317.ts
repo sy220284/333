@@ -433,6 +433,11 @@ function startSession(
     systemPrompt: typeof queryOptions.systemPrompt === 'string' ? queryOptions.systemPrompt : undefined,
     appendSystemPrompt: queryOptions.appendSystemPrompt ??
       (typeof queryOptions.systemPrompt === 'object' ? queryOptions.systemPrompt.append : undefined),
+    // 2.1.317 exposes both switches through initialize rather than CLI flags.
+    // Without forwarding them, the CLI owns the implementation but callers
+    // cannot opt into suggestions or native background agent summaries.
+    promptSuggestions: queryOptions.promptSuggestions,
+    agentProgressSummaries: queryOptions.agentProgressSummaries,
   })).then(async result => {
     const tokens = queryOptions.thinking
       ? queryOptions.thinking.type === 'enabled' ? queryOptions.thinking.budgetTokens : undefined
