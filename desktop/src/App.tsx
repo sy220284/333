@@ -36,7 +36,7 @@ type Permission={id:string;sessionId:string;toolName:string;input?:Item;descript
 type HostRequest={id:string;sessionId:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
-type MissionJob={id:string;title:string;instruction:string;model?:string;permissionMode?:'default'|'plan'|'dontAsk';status:JobStatus;attempt:number;updatedAt?:string;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
+type MissionJob={id:string;title:string;instruction:string;agentProfileId?:string;roleId?:string;model?:string;permissionMode?:'default'|'plan'|'dontAsk';status:JobStatus;attempt:number;updatedAt?:string;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type TeamInbox={memberName:string;messages:Array<{from:string;text:string;timestamp:string;read:boolean;messageId?:string}>}
 type AgentActivity={id:string;source:'session-task'|'mission-job'|'mission-assignment';title:string;status:string;updatedAt:string;sessionId?:string;missionId?:string;jobId?:string;kind?:string;model?:string}
@@ -197,6 +197,7 @@ export function App(){
   const [jobTitle,setJobTitle]=useState('')
   const [jobInstruction,setJobInstruction]=useState('')
   const [jobModel,setJobModel]=useState('')
+  const [jobProfileRole,setJobProfileRole]=useState('')
   const [jobPermission,setJobPermission]=useState<'default'|'plan'|'dontAsk'>('default')
   const [tasks,setTasks]=useState<Task[]>([])
   const [agentActivities,setAgentActivities]=useState<AgentActivity[]>([])
@@ -288,7 +289,7 @@ export function App(){
   useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null;pendingHandoff.current=null},[selectedTeam,workspace])
   // biome-ignore lint/correctness/useExhaustiveDependencies: workspace and profile mutation invalidate the roster projection.
   useEffect(()=>{
-    if(view!=='agents'||!connected)return
+    if((view!=='agents'&&view!=='missions')||!connected)return
     let active=true
     void api.call<{agents:AgentProfile[]}>('agents.profiles.list').then(data=>{
       if(active)setAgentProfiles(data.agents??[])
@@ -977,8 +978,9 @@ export function App(){
         missionId:selectedMission,title:jobTitle.trim(),instruction:jobInstruction.trim(),
         ...(jobModel?{model:jobModel}:{}),
         ...(jobPermission==='default'?{}:{permissionMode:jobPermission}),
+        ...(jobProfileRole?{agentProfileId:jobProfileRole.split('|')[0],roleId:jobProfileRole.split('|')[1]}:{}),
       })
-      setJobTitle('');setJobInstruction('');await refreshJobs()
+      setJobTitle('');setJobInstruction('');setJobProfileRole('');await refreshJobs()
     })
   }
   async function inspectJobEvidence(jobId:string){
@@ -1427,6 +1429,15 @@ export function App(){
                     <input aria-label="工作项标题" placeholder="工作项标题" className="w-full" value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/>
                     <textarea aria-label="工作项执行指令" rows={3} placeholder="给智能体的完整执行要求和验收条件" className="w-full" value={jobInstruction} onChange={e=>setJobInstruction(e.target.value)}/>
                     <div className="grid grid-cols-2 gap-3 max-[850px]:grid-cols-1">
+                      <label className="flex flex-col gap-1.5 text-[11px]">指定长期智能体角色
+                        <select aria-label="指定长期智能体角色" value={jobProfileRole} onChange={e=>setJobProfileRole(e.target.value)}>
+                          <option value="">按现有无身份工作项执行</option>
+                          {agentProfiles.filter(profile=>profile.status==='available').flatMap(profile=>
+                            profile.roles.filter(role=>role.state==='active'&&(!role.missionId||role.missionId===selectedMission))
+                              .map(role=><option key={role.id} value={`${profile.id}|${role.id}`}>{profile.name} · {role.role}</option>)
+                          )}
+                        </select>
+                      </label>
                       <label className="flex flex-col gap-1.5 text-[11px]">工作项执行模型
                         <select aria-label="工作项执行模型" value={jobModel} onChange={e=>setJobModel(e.target.value)}>
                           <option value="">继承当前会话模型</option>
@@ -1466,6 +1477,11 @@ export function App(){
                       <Badge size="sm" tone={job.status==='completed'?'success':job.status==='review'||job.status==='running'?'warning':job.status==='failed'||job.status==='interrupted'?'danger':'neutral'}>{({queued:'排队中',running:'执行中',review:'待审核',completed:'已完成',failed:'执行失败',interrupted:'已中断',cancelled:'已取消'} as Record<string,string>)[job.status]||job.status}</Badge>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap text-[12px] leading-5 text-[var(--color-text-secondary)]">{job.instruction}</p>
+                    {job.agentProfileId&&<p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                      长期身份：{agentProfiles.find(a=>a.id===job.agentProfileId)?.name??'身份已变更'}
+                      {agentProfiles.find(a=>a.id===job.agentProfileId)?.roles.find(role=>role.id===job.roleId)?.role
+                        ? ` · ${agentProfiles.find(a=>a.id===job.agentProfileId)?.roles.find(role=>role.id===job.roleId)?.role}` : ''}
+                    </p>}
                     {(job.model||job.permissionMode)&&<p className="mt-1 text-[10px] text-[var(--color-text-tertiary)]">执行模型：{job.model||'继承当前配置'} · 权限：{job.permissionMode||'项目默认'}</p>}
                     {job.summary&&<div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] p-3 text-[12px] leading-6">{job.summary}</div>}
                     {job.worktreePath&&<div className="mt-3 space-y-2 border-l-2 border-[var(--color-brand)] pl-3 text-[11px]">
