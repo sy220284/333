@@ -31,3 +31,8 @@ test('主题选择器覆盖旧暗色规则且窄窗口保留可见导航',()=>{
  assert.ok(css.includes('.cc-workspace-shell .command-dialog'))
  assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'))
 })
+
+test('仓库审查入口不绑定指定 PR 编号',()=>{
+ assert.equal(app.includes('审查当前 Git 工作区和 PR19'),false)
+ assert.ok(app.includes('关联 Pull Request'))
+})

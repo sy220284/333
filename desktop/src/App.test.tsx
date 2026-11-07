@@ -25,6 +25,7 @@ let activeAgentMode:'master'|'super'='master'
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let longHistory=false
 let manyFiles=false
+let pickedOfflineWorkspace=false
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
@@ -51,6 +52,9 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       timestamp:'2026-11-06T12:00:00Z'
     }]
     case 'sessions.ensureOpen':return {sessionId:SID,resumed:true,tasks:[]}
+    case 'sessions.status':return {phase:'running'}
+    case 'workspace.pick':return pickedOfflineWorkspace?{workspace:'/projects/second',changed:true,connected:false}:{workspace:'/projects/example',changed:false}
+    case 'workspace.read':return {path:String(args.path),content:'原始内容'}
     case 'permissions.list':return []
     case 'host.list':return []
     case 'credentials.list':return {providers:['openai']}
@@ -81,10 +85,51 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+
+  it('侧栏恢复会话后读取真实执行状态，避免显示前一个会话的状态',async()=>{
+    longHistory=true
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    const user=userEvent.setup()
+    await user.click(screen.getByRole('button',{name:'恢复会话：长历史会话'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.status',{sessionId:SID}))
+  })
+
+  it('切换断开的工作区会清空旧项目会话列表',async()=>{
+    longHistory=true
+    pickedOfflineWorkspace=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.getByRole('button',{name:'恢复会话：长历史会话'})).toBeInTheDocument()
+    await user.click(screen.getByTitle('/projects/example'))
+    await waitFor(()=>expect(screen.queryByRole('button',{name:'恢复会话：长历史会话'})).not.toBeInTheDocument())
+    expect(screen.getByText('后台未连接')).toBeInTheDocument()
+  })
+
+  it('打开新文件前会确认是否丢弃旧文件未保存的修改',async()=>{
+    manyFiles=true
+    const user=userEvent.setup()
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(false)
+    try{
+      render(<App/>)
+      await screen.findByText('本地后台已连接')
+      await user.click(screen.getByRole('button',{name:'项目文件'}))
+      await user.click(screen.getByRole('button',{name:'刷新文件'}))
+      await user.click(await screen.findByText('file-0.ts'))
+      const editor=await screen.findByRole('textbox',{name:'编辑当前文件'})
+      await user.clear(editor)
+      await user.type(editor,'未保存修改')
+      await user.click(screen.getByText('file-1.ts'))
+      expect(confirm).toHaveBeenCalled()
+      expect(editor).toHaveValue('未保存修改')
+      expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
+    }finally{confirm.mockRestore()}
+  })
   it('cc-haha 新首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
     const user=userEvent.setup()
     render(<App/>)
