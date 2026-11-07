@@ -1484,6 +1484,26 @@ export function registerHookCallbacks(
   }
 }
 
+/** Replace only matchers owned by the SDK stream that re-initialized.
+ * Plugin and locally configured hooks remain registered and in their order. */
+export function replaceSdkHookCallbacks(
+  previous: Partial<Record<HookEvent, HookCallbackMatcher[]>>,
+  next: Partial<Record<HookEvent, HookCallbackMatcher[]>>,
+): void {
+  if (STATE.registeredHooks) {
+    for (const [event, matchers] of Object.entries(previous)) {
+      const key = event as HookEvent
+      const retired = new Set(matchers)
+      const current = STATE.registeredHooks[key]
+      if (!current) continue
+      const remaining = current.filter(matcher => !retired.has(matcher as HookCallbackMatcher))
+      if (remaining.length) STATE.registeredHooks[key] = remaining
+      else delete STATE.registeredHooks[key]
+    }
+  }
+  registerHookCallbacks(next)
+}
+
 export function getRegisteredHooks(): Partial<
   Record<HookEvent, RegisteredHookMatcher[]>
 > | null {
