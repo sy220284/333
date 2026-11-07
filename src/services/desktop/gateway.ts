@@ -748,17 +748,17 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'capabilities.skills.drafts': {
         const { listSkillDrafts } = await import('../agentCenter/skillWorkshop.js')
-        return { drafts: await listSkillDrafts(cwd) }
+        return { drafts: await listSkillDrafts(cwd, options.dataDir) }
       }
       case 'capabilities.skills.createDraft': {
         const { createSkillDraft } = await import('../agentCenter/skillWorkshop.js')
         return createSkillDraft(cwd, {
           slug: request.slug, description: request.description, instructions: request.instructions,
-        })
+        }, options.dataDir)
       }
       case 'capabilities.skills.publish': {
         const { publishSkillDraft } = await import('../agentCenter/skillWorkshop.js')
-        const result = await publishSkillDraft(cwd, request.draftId)
+        const result = await publishSkillDraft(cwd, request.draftId, options.dataDir)
         const { clearCommandsCache } = await import('../../commands.js')
         clearCommandsCache()
         return result
@@ -769,24 +769,24 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'experience.list': {
         const { listProjectExperiences } = await import('../agentCenter/experienceMemory.js')
-        return { experiences: await listProjectExperiences(cwd, { includeCandidates: request.includeCandidates }) }
+        return { experiences: await listProjectExperiences(cwd, { includeCandidates: request.includeCandidates, root: options.dataDir }) }
       }
       case 'experience.search': {
         const { findRelevantExperiences } = await import('../agentCenter/experienceMemory.js')
-        return { experiences: await findRelevantExperiences(cwd, request.query) }
+        return { experiences: await findRelevantExperiences(cwd, request.query, options.dataDir) }
       }
       case 'experience.propose': {
         const { proposeProjectExperience, validateExperienceDraft } =
           await import('../agentCenter/experienceMemory.js')
-        return proposeProjectExperience(cwd, validateExperienceDraft(request.draft))
+        return proposeProjectExperience(cwd, validateExperienceDraft(request.draft), options.dataDir)
       }
       case 'experience.approve': {
         const { approveProjectExperience } = await import('../agentCenter/experienceMemory.js')
-        return approveProjectExperience(cwd, request.experienceId, request.reviewer)
+        return approveProjectExperience(cwd, request.experienceId, request.reviewer, options.dataDir)
       }
       case 'experience.retire': {
         const { retireProjectExperience } = await import('../agentCenter/experienceMemory.js')
-        return retireProjectExperience(cwd, request.experienceId, request.reason)
+        return retireProjectExperience(cwd, request.experienceId, request.reason, options.dataDir)
       }
       case 'models.list': return models(request.sessionId)
       case 'mcp.list': {
