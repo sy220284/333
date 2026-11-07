@@ -45,7 +45,7 @@ function collect(rootDir) {
 
 test('企业服务端、云端策略、组织管理员与官方远程智能体入口均已退役', () => {
   for (const path of forbiddenPaths) {
-    assert.equal(existsSync(join(root, path)), false, '仍存在企业模块：' + path)
+    assert.equal(existsSync(join(root, path)), false, `仍存在企业模块：${path}`)
   }
   const main = readFileSync(join(src, 'main.tsx'), 'utf8').split('//# sourceMappingURL=')[0]
   const tools = readFileSync(join(src, 'tools.ts'), 'utf8').split('//# sourceMappingURL=')[0]
@@ -60,9 +60,9 @@ test('个人版生产源码没有引用已退役企业模块或官方企业配�
     const content = readFileSync(file, 'utf8').split('//# sourceMappingURL=')[0]
     const path = relative(root, file)
     for (const pattern of forbiddenImports)
-      assert.doesNotMatch(content, pattern, path + ' 引用退役模块')
+      assert.doesNotMatch(content, pattern, `${path} 引用退役模块`)
     for (const endpoint of forbiddenEndpointFragments)
-      assert.equal(content.includes(endpoint), false, path + ' 仍包含官方企业接口 ' + endpoint)
+      assert.equal(content.includes(endpoint), false, `${path} 仍包含官方企业接口 ${endpoint}`)
   }
 })
 
@@ -76,7 +76,7 @@ test('个人版保留多模型、费用计量、本地任务、权限和诊断�
     'src/services/analytics/localDiagnostics.ts',
     'src/services/desktop/gateway.ts',
   ]) {
-    assert.ok(existsSync(join(root, path)), '个人版能力不应随企业模块消失：' + path)
+    assert.ok(existsSync(join(root, path)), `个人版能力不应随企业模块消失：${path}`)
   }
 })
 

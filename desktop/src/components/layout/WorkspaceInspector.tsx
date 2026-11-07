@@ -28,7 +28,7 @@ export function WorkspaceInspector({connected,phase,model,mode,approvals,tasks,a
           </Badge>
         </div>
         <div className="flex items-start justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">模型</span><strong className="max-w-[130px] truncate text-right" title={smartExecution.model}>{smartExecution.model}</strong></div>
-        <div className="flex justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">费用</span><strong>{smartExecution.costUsd===undefined?'结算中':'USD '+smartExecution.costUsd.toFixed(4)}</strong></div>
+        <div className="flex justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">费用</span><strong>{smartExecution.costUsd===undefined?'结算中':`USD ${smartExecution.costUsd.toFixed(4)}`}</strong></div>
         {smartExecution.budgetUsd!==undefined&&<div className="flex justify-between gap-2 text-[11px]"><span className="text-[var(--color-text-tertiary)]">上限</span><strong>USD {smartExecution.budgetUsd.toFixed(2)}</strong></div>}
       </section>}
       <section className="space-y-1 border-b border-[var(--color-border)] p-4">

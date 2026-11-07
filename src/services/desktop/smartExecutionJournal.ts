@@ -38,7 +38,7 @@ export function createSmartExecutionJournal(
   projectDir: string,
   rootDir: string = join(homedir(), '.yaoyaoche', 'smart-executions'),
 ): SmartExecutionJournal {
-  const file = join(resolve(rootDir), createHash('sha256').update(resolve(projectDir)).digest('hex') + '.json')
+  const file = join(resolve(rootDir), `${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
   async function read(): Promise<SmartExecutionRecord[]> {
     let raw: string
     try { raw = await readFile(file, 'utf8') }
@@ -60,7 +60,7 @@ export function createSmartExecutionJournal(
       const next = verified(change(await read()))
       const content = JSON.stringify(next)
       if (Buffer.byteLength(content) > 150_000) throw new Error('Smart execution history exceeds size limit')
-      const temp = file + '.' + randomUUID() + '.tmp'
+      const temp = `${file}.${randomUUID()}.tmp`
       try {
         await writeFile(temp, content, { mode: 0o600, flag: 'wx' })
         await rename(temp, file)
@@ -83,7 +83,9 @@ export function createSmartExecutionJournal(
       await mutate(old => {
         const index = old.findIndex(item => item.sessionId === sessionId)
         if (index < 0) throw new Error('Unknown execution session')
-        if (old[index]!.status !== 'running') throw new Error('Execution already finalized')
+        const record = old[index]
+        if (!record) throw new Error('Unknown execution session')
+        if (record.status !== 'running') throw new Error('Execution already finalized')
         return old.map((item, i) => i === index
           ? { ...item, status, finishedAt: new Date().toISOString(), ...(costUsd === undefined ? {} : { costUsd }) }
           : item)

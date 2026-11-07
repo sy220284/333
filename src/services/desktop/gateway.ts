@@ -406,7 +406,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (smartActive.has(sessionId)) {
           try { await finishSmartExecution(sessionId, 'interrupted') }
           catch (error) { emit({ event: 'session.error', sessionId, turnId,
-            error: '智能执行记录写入失败：' + String(error) }) }
+            error: `智能执行记录写入失败：${String(error)}` }) }
         }
         if (executingMissionJobs.has(sessionId)) {
           try {

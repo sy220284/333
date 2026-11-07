@@ -31,7 +31,7 @@ test('智能执行本地账本保存任务元数据，禁止记录任务提示�
     await journal.finish(id, 'completed', 1.2345)
     expect(await journal.list()).toMatchObject([{ sessionId: id, status: 'completed', costUsd: 1.2345 }])
     await expect(journal.finish(id, 'completed')).rejects.toThrow('already finalized')
-    const path = join(root, createHash('sha256').update(project).digest('hex') + '.json')
+    const path = join(root, `${createHash('sha256').update(project).digest('hex')}.json`)
     const file = await readFile(path, 'utf8')
     expect(file).not.toContain('prompt')
     expect(file).not.toContain('API_KEY')
@@ -112,7 +112,7 @@ test('一个智能执行入口完成离线预检、SDK 预算权限传递、事�
       costUsd: 0.32, budgetUsd: 1.25,
     })
     const file = await readFile(join(root,
-      createHash('sha256').update(project).digest('hex') + '.json'), 'utf8')
+      `${createHash('sha256').update(project).digest('hex')}.json`), 'utf8')
     expect(file).not.toContain('SECRET_KEY')
     expect(file).not.toContain('修复项目问题')
   } finally {
