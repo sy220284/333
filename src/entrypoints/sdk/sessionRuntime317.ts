@@ -16,6 +16,11 @@ import { Stream } from '../../utils/stream.js'
 
 type ExternalSession = Awaited<ReturnType<typeof prepareExternalSession317>>
 const hostControlSubtypes = new Set<string>(['elicitation', ...SDK_HOST_CONTROL_SUBTYPES])
+// 2.1.317 routes these requests to the machine serving remote tools;
+// the SDK side intentionally leaves them unanswered.
+const remoteWorkerSubtypes = new Set([
+  'remote_tool_call', 'remote_plumbing_call', 'remote_tools_probe', 'remote_tools_reannounce',
+])
 
 export function createSessionRuntime317(
   options: SDKSessionOptions | InternalOptions,
@@ -217,14 +222,17 @@ function startSession(
   }
 
   async function respondToControl({ request_id, request }: SDKControlRequest): Promise<void> {
+    if (closed || permissions.has(request_id)) return
     const controller = new AbortController()
     permissions.set(request_id, controller)
     try {
       let response: SDKControlResponse['response']
       try {
         let decision: Record<string, unknown>
-        if (request.subtype === 'can_use_tool' && options.canUseTool) {
-          decision = await options.canUseTool(request.tool_name, request.input, {
+        if (remoteWorkerSubtypes.has(request.subtype)) return
+        if (request.subtype === 'can_use_tool') {
+          if (!options.canUseTool) throw new Error('canUseTool callback is not provided.')
+          const toolDecision = await options.canUseTool(request.tool_name, request.input, {
             signal: controller.signal,
             suggestions: request.permission_suggestions,
             toolUseID: request.tool_use_id,
@@ -253,7 +261,10 @@ function startSession(
               }),
             },
           })
-          decision = { ...decision, toolUseID: request.tool_use_id }
+          // The official SDK leaves the request unanswered when the callback
+          // returns null; this is distinct from allow/deny and from an error.
+          if (toolDecision === null) return
+          decision = { ...toolDecision, toolUseID: request.tool_use_id }
         } else if (request.subtype === 'mcp_message') {
           const server = sdkServers.get(request.server_name)
           if (!server?.transport.onmessage) throw new Error('SDK MCP server is disconnected: ' + request.server_name)
@@ -283,9 +294,20 @@ function startSession(
           if (request.subtype === 'remote_control_work_secret' && request.session_id !== sessionId) {
             throw new Error('Work secret request names a different SDK session')
           }
-          decision = await options.onControlRequest(request as SDKHostControlRequest, {
+          const hostDecision = await options.onControlRequest(request as SDKHostControlRequest, {
             signal: controller.signal, requestId: request_id,
           })
+          if (hostDecision === null) {
+            if (request.subtype === 'elicitation' || request.subtype === 'request_user_dialog') return
+            throw new Error(`Host control callback returned null for ${request.subtype}`)
+          }
+          decision = hostDecision
+        } else if (request.subtype === 'elicitation') {
+          // Official SDK: missing elicitation handler defaults to decline.
+          decision = { action: 'decline' }
+        } else if (request.subtype === 'request_user_dialog') {
+          // Official SDK: a capable host (or worker park deadline) settles it.
+          return
         } else {
           throw new Error(`Unsupported SDK control request: ${request.subtype}`)
         }
@@ -298,7 +320,7 @@ function startSession(
       }
       if (!controller.signal.aborted) await write({ type: 'control_response', response })
     } finally {
-      permissions.delete(request_id)
+      if (permissions.get(request_id) === controller) permissions.delete(request_id)
     }
   }
 
