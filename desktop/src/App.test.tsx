@@ -305,6 +305,24 @@ describe('摇摇车真实桌面页面交互',()=>{
   })
 
 
+  it('长期工作项选定稳定身份角色后写入真实入队协议',async()=>{
+    showProfileSample=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'研究与审校的长期目标')
+    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+    await screen.findByRole('heading',{name:'研究与审校的长期目标'})
+    await user.selectOptions(screen.getByRole('combobox',{name:'指定长期智能体角色'}),`${PROFILE_ID}|${ROLE_ID}`)
+    await user.type(screen.getByRole('textbox',{name:'工作项标题'}),'检验研究来源')
+    await user.type(screen.getByRole('textbox',{name:'工作项执行指令'}),'核查原始引用和审校结论')
+    await user.click(screen.getByRole('button',{name:'添加工作项'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('missions.jobs.enqueue',expect.objectContaining({
+      agentProfileId:PROFILE_ID,roleId:ROLE_ID,
+    })))
+  })
+
   it('工作项实时更新保持原位置，新工作项追加到末尾并短暂标记更新',async()=>{
     stableMissionJobs=true
     const user=userEvent.setup()
