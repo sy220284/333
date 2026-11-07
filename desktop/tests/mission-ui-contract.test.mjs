@@ -10,6 +10,10 @@ test('桌面安全网关完整放行工作项队列与人工审核方法', () =>
   const protocol = source('../src/services/desktop/protocol.ts')
   assert.ok(main.includes("'agents.members'"), '桌面IPC缺少真实团队成员查询')
   assert.ok(protocol.includes("request('agents.members'"), '协议缺少团队成员查询')
+  for (const action of ['message', 'inbox']) {
+    assert.ok(main.includes(`'agents.team.${action}'`), `Electron IPC 未开放团队 ${action}`)
+    assert.ok(protocol.includes(`request('agents.team.${action}'`), `团队 ${action} 缺少协议定义`)
+  }
   for (const action of [
     'list', 'enqueue', 'start', 'evidence', 'previewIntegrate', 'integrate', 'runBatch', 'runQueue', 'haltQueue', 'queueStatus', 'approve', 'retry', 'recover', 'cancel',
   ]) {
@@ -63,7 +67,7 @@ test('长期任务视图显示正确的检查点、执行次数、终态和异�
   assert.match(app, /执行次数：\{job\.attempt\}/)
   assert.match(app, /状态|待审核/)
   const button = source('src/components/ui/Button.tsx')
-  assert.match(app, /<Card key=\{job\.id\}[^>]+className="min-w-0"/)
+  assert.match(app, /<Card key=\{job\.id\}[^>]+className="[^"]*\bmin-w-0\b[^"]*"/)
   assert.doesNotMatch(css, /\.job-card/)
   assert.match(button, /focus-visible:ring-2/)
   assert.match(css, /prefers-reduced-motion/)
