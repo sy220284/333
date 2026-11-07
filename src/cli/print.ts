@@ -4483,11 +4483,12 @@ async function handleInitializeRequest(
       subtype: 'success',
       request_id: requestId,
       response: initResponse,
-      ...(initialized && {
-        pending_permission_requests: structuredIO.getPendingPermissionRequests(),
-        pending_user_dialog_requests: structuredIO.getPendingUserDialogRequests(),
-        pending_elicitation_requests: structuredIO.getPendingElicitationRequests(),
-      }),
+      // The 2.1.317 CLI reports all outstanding prompts on *every*
+      // initialize, including the first connection to a running worker.
+      // Omitting these on initial attach can strand already parked approvals.
+      pending_permission_requests: structuredIO.getPendingPermissionRequests(),
+      pending_user_dialog_requests: structuredIO.getPendingUserDialogRequests(),
+      pending_elicitation_requests: structuredIO.getPendingElicitationRequests(),
     },
   })
 
