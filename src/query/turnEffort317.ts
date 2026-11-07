@@ -37,6 +37,9 @@ export function queuedTurnRequestsUltrathink(
 ): boolean {
   return commands.some(command =>
     command.mode === 'prompt' &&
+    !command.isMeta &&
+    !command.screeningPending &&
+    (command.origin === undefined || command.origin.kind === 'human') &&
     command.agentId === undefined &&
     hasUltrathinkKeyword(
       command.preExpansionValue ??
