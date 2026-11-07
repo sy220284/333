@@ -56,6 +56,16 @@ export const SPECIALISTS = Object.freeze({
     /^src\/hooks\/(?:useScheduledTasks|useMergedTools|useVoice)/,
     /^tests\/(?:agent-|mission-jobs|local-feature|local-mcp|local-voice|proactive)/,
   ],
+  'personal-retirement-boundary': [
+    /^src\/cli\/(gateway|selfHostedRunner)\//,
+    /^src\/services\/(remoteManagedSettings|policyLimits)\//,
+    /^src\/services\/api\/adminRequests\./,
+    /^src\/utils\/settings\//,
+    /^src\/tools\.ts$/,
+    /^src\/skills\/bundled\/index\.ts$/,
+    /^tests\/enterprise-retirement-boundary\.test\.mjs$/,
+    /^docs\/features\/personal-capability-extraction-backlog/,
+  ],
   'local-privacy': [
     /^src\/services\/(analytics|telemetry|metrics|privacy)\//,
     /^src\/utils\/(?:telemetry|privacy|analytics|metrics)/,
