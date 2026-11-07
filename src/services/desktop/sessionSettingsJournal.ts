@@ -48,7 +48,8 @@ export function createDesktopSessionSettingsJournal(
       const path = pathFor(id)
       const content = JSON.stringify(schema.parse({ version: 1, ...settings }))
       const previous = pending.get(id) ?? Promise.resolve()
-      const job = previous.then(async () => {
+      const ready = previous.then(() => undefined, () => undefined)
+      const job = ready.then(async () => {
         await mkdir(directory, { recursive: true, mode: 0o700 })
         const temporary = `${path}.${randomUUID()}.tmp`
         try {
@@ -57,7 +58,8 @@ export function createDesktopSessionSettingsJournal(
         } finally { await rm(temporary, { force: true }) }
       })
       pending.set(id, job)
-      void job.finally(() => { if (pending.get(id) === job) pending.delete(id) }).catch(() => {})
+      const clearPending = () => { if (pending.get(id) === job) pending.delete(id) }
+      void job.then(clearPending, clearPending)
       return job
     },
   }

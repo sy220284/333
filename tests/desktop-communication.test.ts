@@ -976,3 +976,68 @@ test('多会话压力实测：32个独立SDK会话同时启动并完成流式工
     await gateway.close()
   }
 })
+
+test('桌面历史默认尾页覆盖 0、260 和 400 条记录，旧版正序分页仍可用',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'desktop-history-tail-'))
+  const data=fixture()
+  let count=0
+  const history={
+    ...data.options.history!,
+    async getSessionMessages(_id:string,options?:{limit?:number;offset?:number}) {
+      const all=Array.from({length:count},(_,i)=>({
+        type:'assistant',uuid:`history-${i}`,session_id:randomUUID(),
+        message:{role:'assistant',content:[{type:'text',text:`item-${i}`}]},
+      })) as unknown as SDKMessage[]
+      return all.slice(options?.offset??0,options?.limit===undefined?undefined:(options.offset??0)+options.limit)
+    },
+  }
+  const gateway=createDesktopGateway({...data.options,cwd:root,dataDir:join(root,'data'),history})
+  try{
+    for(const length of [0,260,400]){
+      count=length
+      const id=randomUUID()
+      const page=await gateway.handle(request('sessions.history',{sessionId:id,tail:true,limit:200})) as {
+        messages:SDKMessage[];total:number;offset:number
+      }
+      expect(page.total).toBe(length)
+      expect(page.messages.length).toBe(Math.min(length,200))
+      expect(page.offset).toBe(Math.max(0,length-200))
+      if(length>0){
+        expect(page.messages.at(-1)?.uuid).toBe(`history-${length-1}`)
+      }
+      const earlier=await gateway.handle(request('sessions.history',{
+        sessionId:id,offset:0,limit:Math.max(1,page.offset),
+      })) as SDKMessage[]
+      expect(earlier.length).toBe(Math.max(0,Math.min(length,page.offset||1)))
+    }
+  }finally{await gateway.close();await rm(root,{recursive:true,force:true})}
+})
+
+test('会话独立模型和权限按工作区持久化，重启 SDK 恢复时重放真实选项',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'desktop-settings-restart-'))
+  const data=fixture()
+  const launches:Array<{model?:string;permissionMode?:string}>=[]
+  const factory=data.options.createSession!
+  const options:DesktopGatewayOptions={
+    ...data.options,cwd:root,dataDir:join(root,'data'),
+    createSession:(settings,resume)=>{
+      launches.push({model:settings.model,permissionMode:settings.permissionMode})
+      return factory(settings,resume)
+    },
+  }
+  let sessionId=''
+  const first=createDesktopGateway(options)
+  try{
+    const opened=await first.handle(request('sessions.open',{model:'fixture-model'})) as {sessionId:string}
+    sessionId=opened.sessionId
+    await first.handle(request('sessions.setPermissionMode',{sessionId,mode:'plan'}))
+    const live=await first.handle(request('sessions.status',{sessionId})) as {model:string;permissionMode:string}
+    expect(live).toMatchObject({model:'fixture-model',permissionMode:'plan'})
+  }finally{await first.close()}
+  const resumed=createDesktopGateway(options)
+  try{
+    const reopened=await resumed.handle(request('sessions.ensureOpen',{sessionId})) as {model:string;permissionMode:string}
+    expect(reopened).toMatchObject({model:'fixture-model',permissionMode:'plan'})
+    expect(launches.at(-1)).toMatchObject({model:'fixture-model',permissionMode:'plan'})
+  }finally{await resumed.close();await rm(root,{recursive:true,force:true})}
+})
