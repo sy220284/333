@@ -116,7 +116,7 @@ if (workflows.includes('m6-gateway-providers-317.yml'))
   errors.push('已退役企业网关专项仍存在')
 if (existsSync(root('src/cli/gateway/')))
   errors.push('企业网关源码目录仍存在，请完成全量清退')
-const retiredGatewayTests = readdirSync(root('tests/')).filter(name => /^m6-gateway-.*\\.test\\.mjs$/.test(name))
+const retiredGatewayTests = readdirSync(root('tests/')).filter(name => /^m6-gateway-.*\.test\.mjs$/.test(name))
 if (retiredGatewayTests.length)
   errors.push('企业网关测试已无对应业务入口：' + retiredGatewayTests.join(','))
 
