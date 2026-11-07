@@ -1,75 +1,40 @@
-name: 自定义工作提示真实终端对照
+name: 新桌面会话反馈及流式协议校验
 on:
   workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: spinner-parity-${{ github.event.pull_request.number || github.ref }}
+  group: desktop-session-feedback-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
-  spinner-parity:
-    name: 两轮对话中的提示与官方 x64 对照
+  desktop-session-feedback:
+    name: 工作台真实会话状态、流式输出与提示配置
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '26'
+          node-version: '26.13.0'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - name: 恢复锁定依赖并校验发行素材
+      - name: 恢复本地协议与设置测试依赖
         run: |
           node build/verify-bundled-assets.mjs
           node build/restore-claude-api.mjs --verify
           node build/restore-dependencies.mjs
           node build/install-public-deps.mjs
-      - name: 安装固定版本终端画面解码器
-        run: python3 -m pip install --disable-pip-version-check pyte==0.8.2
-      - name: 验证提示来源和两轮请求识别
+      - name: 会话提示配置、动态状态与流式事件测试
         run: |
           node --test tests/m1-spinner-tips.test.mjs tests/m1-custom-spinner-tips.test.mjs
           node --test tests/m1-spinner-settings-integration.test.mjs
-          node --experimental-strip-types --test tests/m1-spinner-animation-status.test.mjs
-          node --experimental-strip-types --test tests/m1-thinking-duration-label.test.mjs
-          python3 tests/m1-spinner-pty-harness.test.py
-      - name: 源码重建并准备固定哈希的官方 x64
+          node --experimental-strip-types --test tests/m1-spinner-animation-status.test.mjs tests/m1-thinking-duration-label.test.mjs
+          node --test desktop/tests/desktop-session-feedback.test.mjs
+      - name: 验证新 UI 实际主题与桌面打包
         run: |
-          bun build/rebuild.mjs
-          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
-            'https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude' \
-            --output "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
-          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  ${RUNNER_TEMP}/claude-2.1.317-linux-x64" | sha256sum --check
-          chmod 700 "${RUNNER_TEMP}/claude-2.1.317-linux-x64"
-          printf '#!/bin/sh\nexec bun "%s/dist/cli.js" "$@"\n' "$GITHUB_WORKSPACE" > "${RUNNER_TEMP}/m1-current-cli"
-          chmod 700 "${RUNNER_TEMP}/m1-current-cli"
-      - name: 对照真实两轮对话的内联与文件提示
-        run: |
-          python3 tests/m1-x64-spinner-tips.py \
-            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
-            --candidate "${RUNNER_TEMP}/m1-current-cli" \
-            | tee "${RUNNER_TEMP}/m1-spinner-parity.json"
-      - name: 验证后台标题调用不会误充真实对话
-        run: python3 tests/m1-x64-conversation-ui-request-routing.test.py
-      - name: 官方与重建版同场景流式、工具、重试终端帧对照
-        run: |
-          python3 tests/m1-x64-conversation-ui-scenarios.py \
-            --reference "${RUNNER_TEMP}/claude-2.1.317-linux-x64" \
-            --candidate "${RUNNER_TEMP}/m1-current-cli" \
-            --report "${RUNNER_TEMP}/m1-dialogue-ui-parity.json"
-      - name: 保存真实终端对照结果
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: m1-spinner-parity-${{ github.event.pull_request.number || github.ref }}
-          path: |
-            ${{ runner.temp }}/m1-spinner-parity.json
-            ${{ runner.temp }}/m1-dialogue-ui-parity.json
-          if-no-files-found: warn
-          retention-days: 30
+          npm ci --prefix desktop --ignore-scripts
+          npm --prefix desktop run typecheck
+          npm --prefix desktop test
+          npm --prefix desktop run build
