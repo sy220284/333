@@ -47,7 +47,7 @@ test('六套主题的正文和辅助文字维持可读对比度',()=>{
   for (const theme of ['white','paper','warm-classic','celadon','dark','ink-blue']){
     const style=css.match(new RegExp(':root\\[data-cc-theme='+theme+'\\]\\{([^}]*)\\}'))
     assert.ok(style,theme+' 缺少样式')
-    const tokens=Object.fromEntries([...style[1].matchAll(/--([a-z-]+):\\s*(#[0-9A-Fa-f]{6})/g)].map(m=>[m[1],m[2]]))
+    const tokens=Object.fromEntries([...style[1].matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)].map(m=>[m[1],m[2]]))
     for (const textToken of ['text','muted','subtle','accent']){
       assert.ok(contrast(tokens[textToken],tokens.surface)>=4.5,theme+' '+textToken+' 对比度不足')
     }
