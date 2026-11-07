@@ -126,6 +126,7 @@ export function App(){
   const [permissionMode,setPermissionMode]=useState('default')
   const [activity,setActivity]=useState<string[]>([])
   const inputRef=useRef<HTMLTextAreaElement>(null)
+  const paletteInputRef=useRef<HTMLInputElement>(null)
   const messagesEnd=useRef<HTMLDivElement>(null)
   const streamRef=useRef<HTMLDivElement>(null)
   const sessionRef=useRef('')
@@ -296,9 +297,10 @@ export function App(){
       .catch(err=>{if(valid)setError(presentError(err))})
     return ()=>{valid=false}
   },[selectedMission])
-  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';window.localStorage.setItem(PREF+'dark',String(isDark))},[isDark])
-  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(PREF+'motion',String(animate))},[animate])
-  useEffect(()=>{window.localStorage.setItem(PREF+'inspector',String(rightOpen))},[rightOpen])
+  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';window.localStorage.setItem(`${PREF}dark`,String(isDark))},[isDark])
+  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
+  useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
+  useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
       const mod=event.ctrlKey||event.metaKey
@@ -562,7 +564,7 @@ export function App(){
     {id:'refresh',title:'刷新工作区数据',detail:'重新读取任务、模型与服务',icon:RefreshCw,run:()=>void operation('刷新',refresh)},
     {id:'inspector',title:rightOpen?'收起上下文面板':'展开上下文面板',detail:'调整工作台布局',icon:PanelRightOpen,run:()=>setRightOpen(value=>!value)}
   ]
-  const filteredCommands=paletteCommands.filter(item=>(item.title+' '+item.detail).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+  const filteredCommands=paletteCommands.filter(item=>`${item.title} ${item.detail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   function runCommand(command:typeof paletteCommands[number]){setPaletteOpen(false);setSearch('');command.run()}
   const heading=TITLES[view]
     return <div className="app-shell">
@@ -707,7 +709,7 @@ export function App(){
       </>:requestedDetails.subtype==='elicitation'?<><div className="host-fields">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value);const valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`}><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</button><button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</button></div></>:<div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</button></div>}</div></div>}
       {paletteOpen&&<div className="command-backdrop" role="presentation"><button type="button" className="command-dismiss" aria-label="关闭快速操作" onClick={()=>{setPaletteOpen(false);setSearch('')}}/>
         <section className="command-dialog" role="dialog" aria-modal="true" aria-label="快速操作">
-          <div className="command-input-row"><Search size={21}/><input autoFocus aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{
+          <div className="command-input-row"><Search size={21}/><input ref={paletteInputRef} aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{
             if(e.key==='ArrowDown'){e.preventDefault();setPaletteIndex(index=>Math.min(index+1,Math.max(0,filteredCommands.length-1)))}
             if(e.key==='ArrowUp'){e.preventDefault();setPaletteIndex(index=>Math.max(0,index-1))}
             if(e.key==='Enter'&&filteredCommands[paletteIndex]){e.preventDefault();runCommand(filteredCommands[paletteIndex])}
