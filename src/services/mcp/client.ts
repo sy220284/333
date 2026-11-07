@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+import { getOriginalCwd } from '../../bootstrap/state.js'
 import {z} from 'zod/v4'
 import {mcpTasksEnabled317,readMcpTaskHandle317,driveMcpTaskForeground317} from './mcpTasks317.js'
 import type {

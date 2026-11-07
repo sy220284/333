@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useNotifications } from '../../context/notifications.js'
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { Text } from '../../ink.js'
@@ -23,14 +23,14 @@ export function useMcpConnectivityStatus({ mcpClients = EMPTY_MCP_CLIENTS }: Pro
     if (failed.length > 0) {
       addNotification({
         key: 'mcp-failed',
-        jsx: <><Text color="error">{failed.length} MCP {failed.length === 1 ? 'server' : 'servers'} failed</Text><Text dimColor> · /mcp</Text></>,
+        jsx: <React.Fragment><Text color="error">{failed.length} MCP {failed.length === 1 ? 'server' : 'servers'} failed</Text><Text dimColor> · /mcp</Text></React.Fragment>,
         priority: 'medium',
       })
     }
     if (needsAuth.length > 0) {
       addNotification({
         key: 'mcp-needs-auth',
-        jsx: <><Text color="warning">{needsAuth.length} MCP {needsAuth.length === 1 ? 'server needs' : 'servers need'} auth</Text><Text dimColor> · /mcp</Text></>,
+        jsx: <React.Fragment><Text color="warning">{needsAuth.length} MCP {needsAuth.length === 1 ? 'server needs' : 'servers need'} auth</Text><Text dimColor> · /mcp</Text></React.Fragment>,
         priority: 'medium',
       })
     }
