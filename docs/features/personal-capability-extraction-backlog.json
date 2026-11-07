@@ -80,31 +80,6 @@
       ]
     },
     {
-      "id": "PERSONAL-004",
-      "title": "个人多设备任务执行池（本地或自有机器）",
-      "priority": "P1",
-      "assignee": null,
-      "status": "待分配",
-      "baseline": [
-        "src/services/agentCenter/missionJobs.ts 已有同项目任务队列与领取/终态",
-        "src/services/desktop/gateway.ts 已能查询、停止、恢复任务",
-        "src/services/conversation/headlessSession.ts 已支持无终端 SDK 会话"
-      ],
-      "sourcePaths": [
-        "src/cli/selfHostedRunner/runnerAdmin317.ts",
-        "src/cli/selfHostedRunner/runnerHost317.ts",
-        "src/cli/selfHostedRunner/orchestrator317.ts",
-        "src/cli/selfHostedRunner/endpointPolicy.ts"
-      ],
-      "gap": "现有任务队列主要面向当前本地宿主，跨设备工作分配、设备注册、断线恢复与可观测性仍需个人化。",
-      "implementation": "提炼 Runner 的心跳、领取、重试、会话/机器管理，接入现有 missionJobs；仅访问用户主动配对的本机/局域网/自有 HTTPS 节点，采用最小权限凭据；按需启动而非内置企业平台服务。",
-      "acceptance": [
-        "单机优先；用户显式添加第二台自有节点后可分配并追踪任务",
-        "断电/断线、重复领取、取消、恢复与路径隔离有可重复实测",
-        "所有模型凭据与用户项目数据默认留在授权设备，不向官方云上传"
-      ]
-    },
-    {
       "id": "PERSONAL-005",
       "title": "本地任务／工具／预算审计时间线",
       "priority": "P1",
@@ -150,5 +125,6 @@
         "全部检测按用户操作触发，避免后台偷偷请求模型与产生费用"
       ]
     }
-  ]
+  ],
+  "taskCount": 5
 }
