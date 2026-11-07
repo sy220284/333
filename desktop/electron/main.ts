@@ -237,7 +237,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
   }
   if(method==='mcp.add'||method==='mcp.remove'||method==='mcp.toggle'){
     const name=String(data.name||'')
-    const details=method==='mcp.add'?JSON.stringify(data.config):method==='mcp.toggle'?`启用：${String(data.enabled)}`:'删除现有服务配置'
+    const details=method==='mcp.add'?JSON.stringify(data.config,(key,value)=>key==='env'&&value&&typeof value==='object'?Object.fromEntries(Object.keys(value).map(name=>[name,'[已隐藏]'])):value):method==='mcp.toggle'?`启用：${String(data.enabled)}`:'删除现有服务配置'
     const answer=await dialog.showMessageBox(requireWindow(),{
       type:'warning',title:'确认 MCP 服务器配置',
       buttons:['取消','确认修改'],defaultId:0,cancelId:0,

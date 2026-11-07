@@ -104,6 +104,7 @@ export function App(){
   const [mcpType,setMcpType]=useState<'http'|'sse'|'stdio'>('http')
   const [mcpTarget,setMcpTarget]=useState('')
   const [mcpArguments,setMcpArguments]=useState('')
+  const [mcpEnvironment,setMcpEnvironment]=useState('')
   const [mcpScope,setMcpScope]=useState<'project'|'user'|'local'>('project')
   const [messages,setMessages]=useState<ConversationItem[]>([])
   const [visibleMessageCount,setVisibleMessageCount]=useState(120)
@@ -597,11 +598,20 @@ export function App(){
   async function installMcp(){
     if(!mcpName.trim()||!mcpTarget.trim())return
     await operation('添加 MCP 服务',async()=>{
+      const env:Record<string,string>={}
+      if(mcpType==='stdio'){
+        for(const line of mcpEnvironment.split('\n')){
+          if(!line.trim())continue
+          const pair=/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line.replace(/\r$/,''))
+          if(!pair)throw new Error('环境变量请使用 NAME=VALUE 格式，每行一项')
+          env[pair[1]]=pair[2]
+        }
+      }
       const config=mcpType==='stdio'
-        ?{type:'stdio',command:mcpTarget.trim(),args:mcpArguments.split('\n').map(x=>x.trim()).filter(Boolean)}
+        ?{type:'stdio',command:mcpTarget.trim(),args:mcpArguments.split('\n').map(x=>x.trim()).filter(Boolean),...(Object.keys(env).length?{env}:{})}
         :{type:mcpType,url:mcpTarget.trim()}
       const result=await invoke<{added?:boolean;cancelled?:boolean}>('mcp.add',{name:mcpName.trim(),scope:mcpScope,config})
-      if(result.added){setMcpName('');setMcpTarget('');setMcpArguments('');await refresh()}
+      if(result.added){setMcpName('');setMcpTarget('');setMcpArguments('');setMcpEnvironment('');await refresh()}
     })
   }
   async function manageMcp(server:McpServer,method:'mcp.remove'|'mcp.toggle'){
@@ -964,6 +974,7 @@ export function App(){
                   <label className="space-y-1 text-[12px]">配置范围<select className="w-full" value={mcpScope} onChange={e=>setMcpScope(e.target.value as typeof mcpScope)}><option value="project">当前项目</option><option value="user">用户级</option><option value="local">本地项目级</option></select></label>
                   <label className="space-y-1 text-[12px]">{mcpType==='stdio'?'启动命令':'服务器 URL'}<input className="w-full" placeholder={mcpType==='stdio'?'例如 npx':'https://mcp.example.com/mcp'} value={mcpTarget} onChange={e=>setMcpTarget(e.target.value)}/></label>
                   {mcpType==='stdio'&&<label className="col-span-2 space-y-1 text-[12px]">命令参数（每行一项）<textarea className="w-full" rows={3} value={mcpArguments} onChange={e=>setMcpArguments(e.target.value)} placeholder={"-y\n@example/server"}/></label>}
+                   {mcpType==='stdio'&&<label className="col-span-2 space-y-1 text-[12px]">环境变量（每行 NAME=VALUE）<textarea className="w-full font-mono" rows={3} spellCheck={false} autoComplete="off" value={mcpEnvironment} onChange={e=>setMcpEnvironment(e.target.value)} placeholder={"API_TOKEN=在本机输入密钥"}/><span className="block text-[11px] text-[var(--color-text-tertiary)]">变量仅保存在所选的本地 MCP 配置，不写入界面偏好或智能执行账本。</span></label>
                 </div>
                 <Button variant="primary" size="base" className="mt-4" onClick={()=>void installMcp()} disabled={!mcpName.trim()||!mcpTarget.trim()||Boolean(busy)}><Plus size={14}/>添加服务</Button>
               </Card>

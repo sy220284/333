@@ -103,7 +103,7 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
         <p className="mt-3 break-all text-[11px] text-[var(--color-text-tertiary)]">当前工作区：{workspace}</p>
         {preview && <div className="mt-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2"><Badge size="sm" tone="warning">{preview.items.length} 项待清理</Badge>
-            <span className="text-[11px] text-[var(--color-text-secondary)]">当前打开会话：{preview.activeSessions}。空闲会话将在确认后关闭。</span></div>
+            <span className="text-[11px] text-[var(--color-text-secondary)]">当前打开会话：{preview.activeSessions}。清理前请关闭所有打开的会话并重新预览。</span></div>
           {preview.warnings.map((warning, i) => <p key={i} role="alert" className="text-[12px] text-[var(--color-error)]">{warning}</p>)}
           <div className="max-h-56 overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
             {preview.items.length ? preview.items.map((item, i) => <div key={i} className="border-b border-[var(--color-border)] py-2 last:border-b-0">
@@ -114,7 +114,7 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
           {preview.items.length > 0 && <>
             <label className="flex items-start gap-2 text-[12px]"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/>
               <span>已核对删除清单，确认永久删除该工作区的本地 AI 记录。</span></label>
-            <Button variant="danger-outline" size="base" disabled={!confirmed || Boolean(busy)} onClick={() => void purge()}>
+            <Button variant="danger-outline" size="base" disabled={!confirmed || Boolean(busy) || preview.activeSessions > 0} onClick={() => void purge()}>
               {busy === 'purge' ? '清理中…' : '确认清理所列记录'}</Button>
           </>}
         </div>}
