@@ -703,6 +703,11 @@ export const ControlResponseSchema = lazySchema(() =>
     subtype: z.literal('success'),
     request_id: z.string(),
     response: z.record(z.string(), z.unknown()).optional(),
+    // A second 2.1.317 initialize re-delivers parked requests so the
+    // attaching host can resume them without inventing new request IDs.
+    pending_permission_requests: z.array(SDKControlRequestSchema()).optional(),
+    pending_user_dialog_requests: z.array(SDKControlRequestSchema()).optional(),
+    pending_elicitation_requests: z.array(SDKControlRequestSchema()).optional(),
   }),
 )
 
