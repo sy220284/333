@@ -99,7 +99,21 @@
       "syncDesktopName": true
     },
     "executableName": "yaoyaoche",
-    "artifactName": "yaoyaoche-${version}-${arch}.${ext}"
+    "artifactName": "yaoyaoche-${version}-${arch}.${ext}",
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "fonts-noto-cjk"
+      ]
+    }
   },
   "description": "摇摇车本地智能体开发工作台，支持主子智能体与 Super Agents 团队协作。",
   "homepage": "https://github.com/sy220284/333",
