@@ -48,6 +48,7 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRu
   let lastHostCallback: HostControlRequestHandler | undefined
   let lastControl: Record<string, unknown> | undefined
   const launchEnvironments: Array<Record<string, string | undefined>> = []
+  const launchSummaries: boolean[] = []
   const transcriptIds = new Set<string>()
   const store = new Map<string, DesktopTask[]>()
   const history: NonNullable<DesktopGatewayOptions['history']> = {
@@ -69,8 +70,9 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRu
     },
     async write(id: string, tasks: DesktopTask[]) { store.set(id, tasks) },
   }
-  const launch = ((options: { canUseTool?: CanUseTool; onControlRequest?: HostControlRequestHandler; env?: Record<string, string | undefined> }, resume?: string) => {
+  const launch = ((options: { canUseTool?: CanUseTool; onControlRequest?: HostControlRequestHandler; env?: Record<string, string | undefined>; agentProgressSummaries?: boolean }, resume?: string) => {
     launchEnvironments.push({ ...options.env })
+    launchSummaries.push(options.agentProgressSummaries === true)
     lastToolCallback = options.canUseTool
     lastHostCallback = options.onControlRequest
     const sessionId = resume ?? randomUUID()
@@ -119,6 +121,7 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRu
     getHostCallback: () => lastHostCallback,
     getControl: () => lastControl,
     getLaunchEnvironments: () => launchEnvironments,
+    getLaunchSummaries: () => launchSummaries,
   }
 }
 
@@ -585,6 +588,27 @@ test('budget ledger I/O failure leaves SDK completion intact and blocks another 
     expect(uncertainAtClose).toBe(true)
   } finally {
     await gateway.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('desktop forwards native background agent summaries with a host opt-out', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-sdk-progress-'))
+  const data = fixture()
+  const gateway = createDesktopGateway({ ...data.options, cwd })
+  const optedOut = fixture()
+  const optedOutGateway = createDesktopGateway({
+    ...optedOut.options, cwd,
+    sessionOptions: { agentProgressSummaries: false },
+  })
+  try {
+    await gateway.handle(request('sessions.open'))
+    expect(data.getLaunchSummaries()).toEqual([true])
+    await optedOutGateway.handle(request('sessions.open'))
+    expect(optedOut.getLaunchSummaries()).toEqual([false])
+  } finally {
+    await gateway.close()
+    await optedOutGateway.close()
     await rm(cwd, { recursive: true, force: true })
   }
 })
