@@ -17,6 +17,35 @@ const WORKFLOW_ONLY = process.argv.includes('--workflow-only')
 const CI_SUPPLEMENTAL = process.argv.includes('--ci-supplemental')
 const CI_ORACLE = process.argv.includes('--ci-oracle')
 const EXCLUDE_ORACLE = process.argv.includes('--exclude-oracle')
+const CI_PORTABLE = process.argv.includes('--ci-portable')
+
+// External fixture suites are executed by their dedicated real-environment CI jobs.
+// The offline toolchain tests all other suites without requiring PostgreSQL,
+// a graphical Electron release, or a separately installed TypeScript AST parser.
+// Their coverage is checked against executable workflow commands before planning.
+export const PORTABLE_EXTERNAL_FIXTURES = Object.freeze({
+  'tests/chinese-source-integrity.test.mjs': '.github/workflows/chinese-only-ui.yml',
+  'tests/deployed-electron-ui.test.mjs': '.github/workflows/desktop-communication.yml',
+  'tests/governance-contract-trace.test.mjs': '.github/workflows/governance-audit.yml',
+  'tests/m1-ink-paste-event.test.mjs': '.github/workflows/m1-evidence.yml',
+  'tests/m1-source-gap-ast.test.mjs': '.github/workflows/m1-evidence.yml',
+  'tests/m6-gateway-postgres-317.test.mjs': '.github/workflows/rebuild.yml',
+})
+
+export function verifyPortableCoverage(root = ROOT) {
+  const fixtures = Object.entries(PORTABLE_EXTERNAL_FIXTURES)
+  for (const [suite, workflow] of fixtures) {
+    if (!existsSync(resolve(root, suite)))
+      throw new Error(`离线测试分工引用了已不存在的套件：${suite}`)
+    if (!existsSync(resolve(root, workflow)))
+      throw new Error(`离线测试分工缺少真实环境工作流：${workflow}`)
+    const runCommands = workflowRunCommands(readFileSync(resolve(root, workflow), 'utf8'))
+    if (!runCommands.includes(suite))
+      throw new Error(`真实环境工作流未执行 ${suite}：${workflow}`)
+  }
+  return fixtures
+}
+
 
 // Official native parity is executed once with a verified 2.1.317 binary,
 // rather than silently skipped on each of the six supplemental shards.
@@ -213,13 +242,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (!Number.isSafeInteger(shardCount) || shardCount < 1 ||
     !Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount)
     throw new Error('无效测试分片范围')
-  const selected = pending.filter((_, i) => i % shardCount === shardIndex)
+  if (CI_PORTABLE && !CI_SUPPLEMENTAL)
+    throw new Error('--ci-portable 只可与 --ci-supplemental 同时使用')
+  const externalFixtures = CI_PORTABLE ? verifyPortableCoverage(ROOT) : []
+  const externalSet = new Set(externalFixtures.map(([file]) => file))
+  const selected = pending.filter((file, i) =>
+    i % shardCount === shardIndex && !externalSet.has(file))
   const plan = selected.map(file => ({ file, runtime: runtimeForTest(file) }))
   console.log(JSON.stringify({
-    mode: CI_ORACLE ? 'ci-oracle' : CI_SUPPLEMENTAL ? 'ci-supplemental' : (WORKFLOW_ONLY ? 'workflow-only' : 'unregistered'),
+    mode: CI_PORTABLE ? 'ci-portable' : CI_ORACLE ? 'ci-oracle' : CI_SUPPLEMENTAL ? 'ci-supplemental' : (WORKFLOW_ONLY ? 'workflow-only' : 'unregistered'),
     total: tests.length, explicitlyScheduled: registered.length,
     candidateCount: pending.length, shardIndex, shardCount,
-    discoveredForExecution: plan.length, planned: plan,
+    discoveredForExecution: plan.length, externalFixtureSuites: externalFixtures, planned: plan,
   }, null, 2))
   if (!process.argv.includes('--list')) {
     const failures = []

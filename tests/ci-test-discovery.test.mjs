@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { discoverUnregisteredTests, runtimeForTest, workflowRunCommands } from '../build/run-unregistered-tests.mjs'
+import { discoverUnregisteredTests, runtimeForTest, workflowRunCommands, PORTABLE_EXTERNAL_FIXTURES, verifyPortableCoverage } from '../build/run-unregistered-tests.mjs'
 
 test('不再把历史分支工作流和 PR 文件过滤路径当作测试执行', () => {
   const root = mkdtempSync(join(tmpdir(), '333-gate-inventory-'))
@@ -72,4 +72,16 @@ test('GitHub installation integration uses Node-native TypeScript stripping rath
   const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
   assert.match(source, /stripTypeScriptTypes/)
   assert.equal(runtimeForTest(file, source), 'node')
+})
+
+test('离线工具链保留完整回归覆盖：外部依赖套件在真实环境专项中执行', () => {
+  const records = verifyPortableCoverage()
+  assert.equal(records.length, 6)
+  assert.deepEqual([...Object.keys(PORTABLE_EXTERNAL_FIXTURES)].sort(),
+    records.map(([file]) => file).sort())
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url),'utf8'))
+  assert.match(manifest.scripts['verify:portable'], /--ci-supplemental --ci-portable/)
+  assert.match(manifest.scripts.verify, /npm run test:all/)
+  const workflow = readFileSync(new URL('../.github/workflows/dev-toolchain.yml', import.meta.url),'utf8')
+  assert.match(workflowRunCommands(workflow), /npm run verify:portable/)
 })

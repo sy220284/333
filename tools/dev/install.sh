@@ -183,4 +183,4 @@ if [ "$CONFIGURE_SHELL" = true ]; then
   fi
 fi
 bash "$TOOLCHAIN_DIR/setup-toolchain.sh" --check --profile "$PROFILE"
-say "安装完成，执行：source $ENV_FILE；随后 npm run verify"
+say "安装完成，执行：source $ENV_FILE；随后 npm run verify:portable（全套真实环境验收另用 npm run verify）"
