@@ -34,7 +34,7 @@ jobs:
           node --test desktop/tests/desktop-session-feedback.test.mjs
       - name: 验证新 UI 实际主题与桌面打包
         run: |
-          npm ci --prefix desktop --ignore-scripts
+          cd desktop && npm install --no-audit --no-fund
           npm --prefix desktop run typecheck
           npm --prefix desktop test
           npm --prefix desktop run build
