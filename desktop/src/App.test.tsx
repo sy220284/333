@@ -38,6 +38,8 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
     case 'credentials.set':return {saved:true}
     case 'mcp.toggle':return {name:args.name,enabled:args.enabled}
+    case 'external.open':return {opened:true}
+    case 'host.respond':return {requestId:args.requestId,accepted:true}
     case 'tasks.list':return []
     default:return {}
   }
@@ -69,6 +71,36 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'继续原任务'}))
     expect(screen.queryByText(/发送新消息时将恢复原会话/)).not.toBeInTheDocument()
+  })
+
+  it('MCP URL请求提供HTTPS浏览器访问、完成确认与明确拒绝',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await act(async()=>listener({event:'host.request',sessionId:SID,request:{
+      id:'mcp-url-1',request:{subtype:'elicitation',mode:'url',
+        url:'https://mcp.example.org/authorize',mcp_server_name:'测试服务器',message:'完成授权'}
+    }}))
+    const dialog=await screen.findByRole('dialog',{name:'主机交互请求'})
+    expect(within(dialog).getByText(/mcp.example.org\/authorize/)).toBeInTheDocument()
+    expect(within(dialog).queryByRole('button',{name:'提交输入'})).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button',{name:'在浏览器中打开'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('external.open',{url:'https://mcp.example.org/authorize'}))
+    expect(call).not.toHaveBeenCalledWith('host.respond',expect.anything())
+    await user.click(within(dialog).getByRole('button',{name:'已完成，继续'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
+      sessionId:SID,requestId:'mcp-url-1',response:{action:'accept'}
+    }))
+    await act(async()=>listener({event:'host.request',sessionId:SID,request:{
+      id:'mcp-url-2',request:{subtype:'elicitation',mode:'url',
+        url:'javascript:alert(1)',mcp_server_name:'测试服务器',message:'可疑链接'}
+    }}))
+    const suspicious=await screen.findByRole('dialog',{name:'主机交互请求'})
+    expect(within(suspicious).getByRole('button',{name:'在浏览器中打开'})).toBeDisabled()
+    await user.click(within(suspicious).getByRole('button',{name:'拒绝访问'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
+      sessionId:SID,requestId:'mcp-url-2',response:{action:'decline'}
+    }))
   })
 
   it('刷新某项失败会显示具体模块和原因',async()=>{
