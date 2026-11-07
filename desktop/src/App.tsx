@@ -1014,6 +1014,7 @@ export function App(){
         {rightOpen&&<WorkspaceInspector
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
+          smartExecution={smartHistory.find(item=>item.sessionId===sessionId)}
           onClose={()=>setRightOpen(false)} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
         />}
 
