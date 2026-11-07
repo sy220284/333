@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, mkdir, readFile, rm, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createSkillDraft, listSkillDrafts, publishSkillDraft } from '../src/services/agentCenter/skillWorkshop.js'
@@ -51,5 +51,6 @@ test('阻止技能目录软链接逃逸项目',async()=>{
     await mkdir(join(project,'.claude'),{recursive:true})
     await symlink(target,join(project,'.claude','skills'))
     await expect(publishSkillDraft(project,saved.id,root)).rejects.toThrow('超出了项目范围')
+    expect(await readdir(target)).toHaveLength(0)
   })
 })
