@@ -37,6 +37,12 @@ const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'history',label:'历史记录',icon:History},
   {id:'settings',label:'设置与权限',icon:Settings2}
 ]
+const NAV_GROUPS:{label:string;views:View[]}[]=[
+  {label:'工作',views:['dashboard','chat','history']},
+  {label:'智能体与任务',views:['agents','missions']},
+  {label:'开发工作区',views:['files','github']},
+  {label:'扩展与设置',views:['models','integrations','settings']},
+]
 const TITLES:Record<View,[string,string]>={
   dashboard:['工作台概览','从这里继续你的 AI 工作，让每项进展都清晰可见。'],
   chat:['AI 对话','在同一个工作区里进行推理、工具执行和协作。'],
@@ -121,7 +127,7 @@ export function App(){
   const [savedContent,setSavedContent]=useState('')
   const [gitStatus,setGitStatus]=useState('')
   const [gitDiff,setGitDiff]=useState('')
-  const [isDark,setIsDark]=useState(()=>loadPreference('dark',true))
+  const [isDark,setIsDark]=useState(()=>loadPreference('dark',false))
   const [animate,setAnimate]=useState(()=>loadPreference('motion',true))
   const [permissionMode,setPermissionMode]=useState('default')
   const [activity,setActivity]=useState<string[]>([])
@@ -567,32 +573,59 @@ export function App(){
   const filteredCommands=paletteCommands.filter(item=>`${item.title} ${item.detail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   function runCommand(command:typeof paletteCommands[number]){setPaletteOpen(false);setSearch('');command.run()}
   const heading=TITLES[view]
-    return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><img src={brandIconUrl} alt="" width={40} height={40}/></div><div><strong>摇摇车</strong><small>AGENT WORKSPACE</small></div></div>
-      <button type="button" className="workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
-        <div className="workspace-icon"><HardDrive size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'选择工作区'}</strong><small>{workspace?'本地工作区':'选择本地项目'}</small></div><ChevronDown size={14}/>
+    return <div className="app-shell cc-workspace-shell">
+    <aside className="sidebar cc-sidebar">
+      <div className="brand cc-brand"><div className="brand-mark"><img src={brandIconUrl} alt="" width={36} height={36}/></div><div><strong>摇摇车</strong><small>LOCAL AI WORKSPACE</small></div></div>
+      <button type="button" className="workspace-picker cc-workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
+        <div className="workspace-icon"><Folder size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'打开本地项目'}</strong><small>{workspace||'本机项目目录'}</small></div><ChevronDown size={15}/>
       </button>
-      <div className="sidebar-top-label">工作区导航</div>
-      <nav className="nav-links" aria-label="主要导航">{NAV.map(({id,label,icon:Icon})=><button type="button" key={id} className={`nav-item ${view===id?'active':''}`} onClick={()=>setView(id)}><Icon size={17} strokeWidth={1.75}/><span>{label}</span>{id==='settings'&&permissions.length>0&&<b className="nav-counter">{permissions.length}</b>}</button>)}</nav>
-      <div className="sidebar-footer">
+      <button type="button" className="cc-sidebar-action" onClick={()=>void createSession()} disabled={Boolean(busy)}><SquareTerminal size={17}/><span>发起新会话</span><Plus size={16}/></button>
+      <div className="cc-sidebar-scroll">
+        <div className="cc-sidebar-section-head"><span>最近会话</span><button type="button" aria-label="查看全部历史会话" title="查看全部历史会话" onClick={()=>setView('history')}><History size={15}/></button></div>
+        <div className="cc-sidebar-history">
+          {sessions.length===0?<p className="cc-sidebar-empty">尚无本地会话</p>:sessions.slice(0,5).map((item,index)=>{
+            const id=String(item.sessionId||item.id||'')
+            if(!id)return null
+            const label=String(item.summary||item.title||id.slice(0,8))
+            return <button key={id+index} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
+          })}
+        </div>
+        <nav className="nav-links cc-grouped-nav" aria-label="主要导航">
+          {NAV_GROUPS.map(group=><section className="cc-nav-group" key={group.label}><div className="cc-nav-title">{group.label}</div>{group.views.map(id=>{
+            const item=NAV.find(entry=>entry.id===id)
+            if(!item)return null
+            const Icon=item.icon
+            return <button type="button" key={id} className={`nav-item ${view===id?'active':''}`} onClick={()=>setView(id)} aria-current={view===id?'page':undefined}><Icon size={16} strokeWidth={1.8}/><span>{item.label}</span>{id==='settings'&&permissions.length>0&&<b className="nav-counter">{permissions.length}</b>}</button>
+          })}</section>)}
+        </nav>
+      </div>
+      <div className="sidebar-footer cc-sidebar-footer">
         <div className="connection-line"><span className={`connection-light ${connected?'online':'offline'}`}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
-        <span className="muted tiny">摇摇车 Desktop · 本地运行</span>
+        <span className="muted tiny">本地运行 · 数据留在当前设备</span>
       </div>
     </aside>
     <div className="workspace-body">
-      <header className="topbar"><div className="breadcrumbs"><span>工作区</span><ChevronRight size={14}/><strong>{heading[0]}</strong></div><div className="topbar-actions">
-        <button type="button" className="searchbar search-launcher" aria-label="搜索页面与操作" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={15}/><span>搜索页面或操作</span><kbd>Ctrl K</kbd></button>
-        <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
-        <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
-      </div></header>
+      <header className="topbar cc-tabbar">
+        <div className="cc-tabs" role="tablist" aria-label="工作区标签页">
+          {(['chat','files','agents','missions','history'] as View[]).concat(['chat','files','agents','missions','history'].includes(view)?[]:[view]).map(id=>{
+            const item=NAV.find(entry=>entry.id===id)!
+            const Icon=item.icon
+            return <button key={id} type="button" role="tab" aria-selected={view===id} aria-label={`标签页：${item.label}`} className={`cc-tab ${view===id?'active':''}`} onClick={()=>setView(id)}><Icon size={15}/><span>{item.label}</span>{id===view&&<span className="cc-tab-active-mark"/>}</button>
+          })}
+        </div>
+        <div className="topbar-actions">
+          <button type="button" className="searchbar search-launcher cc-search" aria-label="搜索页面与操作" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={15}/><span>搜索操作</span><kbd>Ctrl K</kbd></button>
+          <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
+          <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
+        </div>
+      </header>
       <div className="content-region">
         <main className="main-content" key={view}>
           <div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='dashboard'||view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>
           {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
           {!connected&&<div className="offline-banner"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button type="button" className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
           {view==='dashboard'&&<div className="dashboard-page">
-            <div className="welcome-gradient"><span className="eyebrow">GOOD TO SEE YOU AGAIN</span><h2>让想法持续向前。</h2><p>从一次对话出发，组织智能体、工具与长期任务，把复杂工作变得有条理。</p><div className="welcome-actions"><button type="button" onClick={()=>void createSession()} className="primary-button"><Plus size={16}/>开始新任务</button><button type="button" onClick={()=>setView('missions')} className="ghost-button">查看任务中心<ArrowRight size={16}/></button></div><div className="hero-orb"><Bot size={86} strokeWidth={1}/></div></div>
+            <div className="welcome-gradient cc-welcome"><div className="cc-welcome-copy"><span className="eyebrow">LOCAL · CREATE · CONTINUE</span><h2>从这里，开始新的工作。</h2><p>选择项目，打开会话。代码、文件、模型和智能体在同一个工作区中协同推进。</p><div className="welcome-actions"><button type="button" onClick={()=>void createSession()} className="primary-button"><Plus size={16}/>开始新任务</button><button type="button" onClick={()=>setView('missions')} className="ghost-button">继续已有任务<ArrowRight size={16}/></button></div></div><div className="cc-welcome-graphic" aria-hidden="true"><span>摇</span><span>摇</span><span>车</span></div></div>
             <div className="dashboard-stats"><Panel><div className="stat-icon blue"><MessageSquare/></div><span className="stat-label">历史会话</span><strong>{sessions.length}</strong></Panel><Panel><div className="stat-icon purple"><UsersRound/></div><span className="stat-label">协作模式</span><strong>{mode==='super'?'Super':'主子智能体'}</strong></Panel><Panel><div className="stat-icon mint"><ClipboardList/></div><span className="stat-label">长期任务</span><strong>{missions.length}</strong></Panel><Panel><div className="stat-icon amber"><Cpu/></div><span className="stat-label">可用模型</span><strong>{models.length}</strong></Panel></div>
             <Section title="继续工作" action={<button type="button" className="text-button" onClick={()=>setView('history')}>全部会话<ArrowRight size={15}/></button>}>
               {sessions.length===0?<Empty icon={MessageSquare} title="开始第一段对话" detail="选择模型并创建会话，AI 执行进度将同步到工作台。" action={<button type="button" className="secondary-button" onClick={()=>void createSession()}>创建会话</button>}/>:<div className="item-list">{sessions.slice(0,5).map((s,i)=><button type="button" key={String(s.sessionId||s.id||i)} className="list-row" onClick={()=>void resumeSession(String(s.sessionId||s.id||''))}><div className="row-icon"><MessageSquare size={18}/></div><div className="row-main"><strong>{String(s.summary||s.title||s.sessionId||'历史会话')}</strong><span>点击恢复会话</span></div><ChevronRight size={17}/></button>)}</div>}
