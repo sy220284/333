@@ -629,7 +629,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'team_mailbox', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'agent_activity', 'team_mailbox', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
       case 'budget.project.get': return projectBudget.reconcile()
       case 'budget.project.resolveUnknown':
@@ -846,6 +846,53 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         const broker = requireSession(request.sessionId).runtime.permissions
         if (!broker.settle(request.permissionId, request.decision)) throw new Error('Permission request expired or belongs to another session')
         return { permissionId: request.permissionId, accepted: true }
+      }
+      case 'agents.activity': {
+        // A read-only, cross-mode projection of existing SDK tasks and
+        // durable Mission assignments. It never launches workers or models.
+        type Activity = {
+          id: string; source: 'session-task'|'mission-job'|'mission-assignment';
+          title: string; status: string; updatedAt: string;
+          sessionId?: string; missionId?: string; jobId?: string;
+          kind?: string; model?: string;
+        }
+        const sessionEntries: Activity[] = [...sessions.entries()].flatMap(([sessionId, entry]) =>
+          [...entry.tasks.values()].map(task => ({
+            id: `session:${sessionId}:${task.taskId}`,
+            source: 'session-task' as const,
+            title: task.description || task.taskId,
+            status: task.status,
+            updatedAt: new Date(task.updatedAt).toISOString(),
+            sessionId,
+            ...(entry.model ? { model: entry.model } : {}),
+          })),
+        )
+        const missions = await projectMissions()
+        const entries = await Promise.all(missions.map(async mission => {
+          const jobs = await listMissionJobs(mission.id, cwd, options.missionRoot)
+          const assignments: Activity[] = mission.assignments
+            .filter(assignment => !assignment.id.startsWith('mission-job:'))
+            .map(assignment => ({
+              id: `assignment:${mission.id}:${assignment.id}`,
+              source: 'mission-assignment' as const,
+              title: assignment.title, status: assignment.status,
+              kind: assignment.kind, updatedAt: assignment.updatedAt,
+              missionId: mission.id,
+            }))
+          const tickets: Activity[] = jobs.map(job => ({
+            id: `job:${mission.id}:${job.id}`,
+            source: 'mission-job' as const,
+            title: job.title, status: job.status,
+            updatedAt: job.updatedAt, missionId: mission.id, jobId: job.id,
+            ...(job.sessionId ? { sessionId: job.sessionId } : {}),
+            ...(job.model ? { model: job.model } : {}),
+          }))
+          return [...assignments, ...tickets]
+        }))
+        const activities = [...sessionEntries, ...entries.flat()]
+          .sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))
+          .slice(0,100)
+        return { activities, totalVisible: sessionEntries.length + entries.reduce((n,x) => n+x.length,0) }
       }
       case 'agents.overview': {
         const [missions, teams] = await Promise.all([projectMissions(), listProjectTeams(cwd)])
