@@ -1,55 +1,66 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
-const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8')
-const main=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8')
-const css=readFileSync(new URL('../src/cc-haha-theme.css',import.meta.url),'utf8')
+const from = relative => new URL(relative, import.meta.url)
+const app = readFileSync(from('../src/App.tsx'), 'utf8')
+const main = readFileSync(from('../src/main.tsx'), 'utf8')
+const theme = readFileSync(from('../src/theme/globals.css'), 'utf8')
+const layout = readFileSync(from('../src/theme/yaoyao-layout.css'), 'utf8')
+const packageJson = JSON.parse(readFileSync(from('../package.json'), 'utf8'))
 
-test('新桌面 UI 保留真实会话/工作区入口，不恢复旧仪表盘宣传界面',()=>{
-  for(const marker of ['cc-workspace-shell','cc-sidebar','cc-tabs','cc-home-page','cc-starter-surface','sessions.list','sessions.ensureOpen','missions.jobs.runQueue','permissions.decide']){
-    assert.ok(app.includes(marker),`缺少真实功能或界面入口：${marker}`)
-  }
-  assert.equal(app.includes('GOOD TO SEE YOU AGAIN'),false)
-  assert.equal(app.includes('dashboard-stats'),false)
-  assert.ok(main.includes("import './cc-haha-theme.css'"))
+test('旧界面入口和叠加主题从仓库与加载链路真正删除', () => {
+  assert.equal(existsSync(from('../src/styles.css')), false)
+  assert.equal(existsSync(from('../src/cc-haha-theme.css')), false)
+  assert.ok(main.includes("import './theme/globals.css'"))
+  assert.ok(main.includes("import './theme/yaoyao-layout.css'"))
+  assert.equal(main.includes('styles.css'), false)
+  assert.equal(main.includes('cc-haha-theme.css'), false)
+  assert.equal(app.includes('cc-workspace-shell'), false)
+  assert.equal(app.includes('cc-sidebar'), false)
+  assert.equal(app.includes('cc-tabbar'), false)
+  assert.equal(app.includes('brandIconUrl'), false)
+  assert.equal(app.includes('GOOD TO SEE YOU AGAIN'), false)
 })
-test('六套界面主题和旧偏好同时可用',()=>{
-  for(const theme of ['white','paper','warm-classic','celadon','dark','ink-blue']){
-    assert.ok(css.includes(`[data-cc-theme=${theme}]`),`缺少主题：${theme}`)
-    assert.ok(app.includes(`'${theme}'`),`缺少主题状态：${theme}`)
+test('引入 cc-haha 原生卡片按钮状态及空白页组件和完整主题文件', () => {
+  for (const name of ['Button','Card','Badge','EmptyState']) {
+    assert.ok(existsSync(from(`../src/components/ui/${name}.tsx`)),`${name} 原生组件缺失`)
+    assert.ok(app.includes(`from './components/ui/${name}'`),`${name} 未实际接线`)
   }
-  assert.match(app,/localStorage\.setItem\(`\$\{PREF\}dark`,String\(isDark\)\)/)
-  assert.match(app,/localStorage\.setItem\(`\$\{PREF\}theme`,themeVariant\)/)
+  assert.ok(layout.includes('var(--color-surface-container-lowest)'))
+  assert.ok(layout.includes('var(--shadow-composer)'))
+  assert.ok(theme.includes('@theme {'))
+  assert.ok(theme.includes('@keyframes'))
+  assert.ok(packageJson.devDependencies['@tailwindcss/vite'])
+  assert.ok(packageJson.devDependencies['tailwindcss'])
 })
-
-test('主题选择器覆盖旧暗色规则且窄窗口保留可见导航',()=>{
- for (const name of ['white','paper','warm-classic','celadon','dark','ink-blue'])
-   assert.ok(css.includes(`:root[data-cc-theme=${name}]`))
- assert.ok(css.includes('.cc-grouped-nav .nav-item span{display:inline'))
- assert.ok(css.includes('.cc-workspace-shell .approval-target pre'))
- assert.ok(css.includes('.cc-workspace-shell .command-dialog'))
- assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'))
-})
-
-test('仓库审查入口不绑定指定 PR 编号',()=>{
- assert.equal(app.includes('审查当前 Git 工作区和 PR19'),false)
- assert.ok(app.includes('关联 Pull Request'))
-})
-
-test('六套主题的正文和辅助文字维持可读对比度',()=>{
-  const luminance=color=>{
-    const s=color.slice(1)
-    const channel=x=>{const v=parseInt(x,16)/255;return v<=0.04045?v/12.92:((v+.055)/1.055)**2.4}
-    return .2126*channel(s.slice(0,2))+.7152*channel(s.slice(2,4))+.0722*channel(s.slice(4,6))
+test('源码六套主题通过单一 data-theme 选择器控制，不受旧主题层覆盖', () => {
+  for (const name of ['white','paper','warm-classic','celadon','dark','ink-blue']) {
+    assert.ok(theme.includes(`[data-theme="${name}"]`),`${name} 主题缺失`)
+    assert.ok(app.includes(`'${name}'`),`${name} 主题状态缺失`)
   }
-  const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
-  for (const theme of ['white','paper','warm-classic','celadon','dark','ink-blue']){
-    const style=css.match(new RegExp(':root\\[data-cc-theme='+theme+'\\]\\{([^}]*)\\}'))
-    assert.ok(style,theme+' 缺少样式')
-    const tokens=Object.fromEntries([...style[1].matchAll(/--([a-z-]+):\\s*(#[0-9A-Fa-f]{6})/g)].map(m=>[m[1],m[2]]))
-    for (const textToken of ['text','muted','subtle','accent']){
-      assert.ok(contrast(tokens[textToken],tokens.surface)>=4.5,theme+' '+textToken+' 对比度不足')
-    }
+  assert.match(app,/document\.documentElement\.dataset\.theme=themeVariant/)
+  assert.doesNotMatch(app,/dataset\.ccTheme/)
+  assert.ok(layout.includes('@media(prefers-reduced-motion:reduce)'))
+  assert.ok(layout.includes('[data-motion=off]'))
+})
+test('新布局和全部十个业务入口接入 333 通信层，取消固定 PR19 操作', () => {
+  for (const id of ['dashboard','chat','agents','missions','files','models','integrations','github','history','settings']) {
+    assert.ok(app.includes(`{id:'${id}'`),`${id} 未接入导航`)
   }
+  for (const api of ['sessions.list','sessions.ensureOpen','sessions.send','sessions.interrupt','agents.setMode','missions.jobs.runQueue','workspace.read','workspace.write','models.list','mcp.list','permissions.decide']) {
+    assert.ok(app.includes(api),`丢失调用 ${api}`)
+  }
+  assert.ok(app.includes('id="sidebar-shell"'))
+  assert.ok(app.includes('id="content-area"'))
+  assert.ok(app.includes('yy-tabbar'))
+  assert.ok(app.includes('yy-tab-strip'))
+  assert.equal(app.includes('审查当前 Git 工作区和 PR19'),false)
+})
+test('新 UI 版权与原项目许可已明确保存', () => {
+  const notice=readFileSync(from('../../SOURCE_NOTICES.md'),'utf8')
+  const license=readFileSync(from('../THIRD_PARTY_CC_HAHA_LICENSE.txt'),'utf8')
+  assert.ok(notice.includes('Based on cc-haha'))
+  assert.ok(license.includes('Community Source License 1.0'))
+  assert.ok(app.includes('Copyright (c) 2026 cc-haha'))
 })

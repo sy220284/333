@@ -1,8 +1,8 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
-import './styles.css'
-import './cc-haha-theme.css'
+import './theme/globals.css'
+import './theme/yaoyao-layout.css'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('桌面应用根节点缺失')

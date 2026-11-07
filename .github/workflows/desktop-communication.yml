@@ -10,8 +10,8 @@ permissions:
 # Match the repository-wide PR gating policy. Checkout below remains
 # pinned to the exact head SHA for each run.
 concurrency:
-  group: reusable-desktop-communication-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: reusable-desktop-communication-${{ github.event.pull_request.number || github.ref }}-${{ github.run_attempt == 1 && 'latest' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 
 jobs:
   desktop-contract:
