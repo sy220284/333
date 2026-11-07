@@ -59,7 +59,7 @@ function ModelPickerWrapper(t0) {
       if (effort !== undefined) {
         message = message + ` with ${chalk.bold(effort)} effort`;
       }
-      let wasFastModeToggledOn = undefined;
+      let wasFastModeToggledOn: boolean | undefined;
       if (isFastModeEnabled()) {
         clearFastModeCooldown();
         if (!isFastModeSupportedByModel(model) && isFastMode) {
@@ -150,13 +150,13 @@ function SetModelAndClose({
 
       // @[MODEL LAUNCH]: Update check for 1M access.
       if (model && isOpus1mUnavailable(model)) {
-        onDone(`Opus 4.6 with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`, {
+        onDone(`${renderModelLabel(model)} with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`, {
           display: 'system'
         });
         return;
       }
       if (model && isSonnet1mUnavailable(model)) {
-        onDone(`Sonnet 4.6 with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`, {
+        onDone(`${renderModelLabel(model)} with 1M context is not available for your account. Learn more: https://code.claude.com/docs/en/model-config#extended-context-with-1m`, {
           display: 'system'
         });
         return;
@@ -202,7 +202,7 @@ function SetModelAndClose({
         mainLoopModelForSession: null
       }));
       let message = `Set model to ${chalk.bold(renderModelLabel(modelValue))}`;
-      let wasFastModeToggledOn = undefined;
+      let wasFastModeToggledOn: boolean | undefined;
       if (isFastModeEnabled()) {
         clearFastModeCooldown();
         if (!isFastModeSupportedByModel(modelValue) && isFastMode) {
@@ -239,8 +239,7 @@ function isOpus1mUnavailable(model: string): boolean {
 }
 function isSonnet1mUnavailable(model: string): boolean {
   const m = model.toLowerCase();
-  // Warn about Sonnet and Sonnet 4.6, but not Sonnet 4.5 since that had
-  // a different access criteria.
+  // Legacy opt-in 1M models retain their account-specific access rules.
   return !checkSonnet1mAccess() && (m.includes('sonnet[1m]') || m.includes('sonnet-4-6[1m]'));
 }
 function ShowModelAndClose(t0) {

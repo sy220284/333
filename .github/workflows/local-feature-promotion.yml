@@ -1,0 +1,37 @@
+name: 本地能力转正与旧实验退役专项验收
+on:
+  workflow_call:
+  workflow_dispatch:
+concurrency:
+  group: reusable-local-feature-promotion-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  independent-features:
+    name: 真实技能资源发现与本地功能门禁
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复项目依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 验证正式构建与退役边界
+        run: node --test tests/local-feature-promotion.test.mjs tests/agent-collaboration-build.test.mjs tests/agent-missions-build.test.mjs tests/agent-mission-tool-build.test.mjs tests/agent-mission-continue-build.test.mjs tests/agent-mission-tool-scope-build.test.mjs
+      - name: 验证本地 MCP 技能发现与读取
+        run: bun test tests/local-mcp-skill-discovery.test.ts
+      - name: 验证高级功能本地设置和用户交互
+        run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts tests/agent-missions.test.ts tests/agent-mission-scope.test.ts
+      - name: 核验317团队权限、迟到关停回执及实际收件箱删除竞争
+        run: |
+          node --test tests/m4-teammate-permission-inheritance-317.test.mjs tests/m4-stale-teammate-approval-317.test.mjs
+          bun test tests/m4-team-lifecycle-runtime-317.test.ts
+      - name: 验证本地 Whisper 转写进程与取消处理
+        run: bun test tests/local-voice-stt-317.test.ts

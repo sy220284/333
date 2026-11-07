@@ -14,6 +14,7 @@ import type {
   SDKCompactBoundaryMessage,
   SDKMessage,
   SDKPermissionDenial,
+  SDKResultError,
   SDKStatus,
   SDKUserMessageReplay,
 } from 'src/entrypoints/agentSdkTypes.js'
@@ -325,7 +326,7 @@ export class QueryEngine {
         : null
 
     const coordinatorPrompt =
-      getCoordinatorModule && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+      getCoordinatorModule?.isCoordinatorMode()
         ? getCoordinatorModule.getCoordinatorSystemPrompt()
         : undefined
     const systemPrompt = asSystemPrompt([
@@ -1218,12 +1219,39 @@ export class QueryEngine {
       ).catch(logError)
     }
 
+    if (isApiError) {
+      const failedApiResult: SDKResultError = {
+        type: 'result',
+        // The official 2.1.317 SDK uses the success result envelope even
+        // when an API response has failed. Consumers must inspect is_error
+        // and terminal_reason to determine the actual turn outcome.
+        subtype: 'success',
+        is_error: true,
+        terminal_reason: promptTooLong ? 'prompt_too_long' : 'api_error',
+        ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
+        duration_ms: Date.now() - startTime,
+        duration_api_ms: getTotalAPIDuration(),
+        num_turns: turnCount,
+        stop_reason: lastStopReason,
+        session_id: this.sessionId,
+        total_cost_usd: getTotalCost(),
+        usage: this.totalUsage,
+        modelUsage: getModelUsage(),
+        permission_denials: this.permissionDenials,
+        fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
+        uuid: randomUUID(),
+        // Preserve the 2.1.317 JSON error text alongside SDK diagnostics.
+        result: textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`,
+        errors: [textResult || `API request failed (stop_reason=${lastStopReason ?? 'unknown'})`],
+      }
+      yield failedApiResult
+      return
+    }
     yield {
       type: 'result',
       subtype: 'success',
-      is_error: isApiError,
-      terminal_reason: promptTooLong ? 'prompt_too_long' : isApiError ? 'api_error' : 'completed',
-      ...(apiErrorStatus !== undefined && { api_error_status: apiErrorStatus }),
+      is_error: false,
+      terminal_reason: 'completed',
       duration_ms: Date.now() - startTime,
       duration_api_ms: getTotalAPIDuration(),
       num_turns: turnCount,

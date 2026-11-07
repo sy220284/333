@@ -1,0 +1,171 @@
+import { readProviderApiKey } from '../../auth/apiKeyVault.js'
+/**
+ * 333 model registry. Qualified IDs such as openai/gpt-6.1-sol or
+ * deepseek/deepseek-chat select an independent remote API. Unqualified
+ * model IDs keep the existing Anthropic behavior and prompt content.
+ */
+export type IndependentProvider =
+  | 'openai' | 'chatgpt' | 'deepseek'
+  | 'qwen' | 'kimi' | 'zhipu' | 'minimax'
+export type Protocol = 'responses' | 'chat-completions'
+export interface ProviderRoute {
+  provider: IndependentProvider
+  model: string
+  protocol: Protocol
+  endpoint: string
+  keyEnvironment?: string
+}
+type Definition = { protocol: Protocol; endpoint: string; keyEnvironment?: string }
+const MINIMAX_API_ORIGIN = 'https://api.minimaxi.com'
+
+export const PROVIDERS: Readonly<Record<IndependentProvider, Definition>> = {
+  openai: { protocol: 'responses', endpoint: 'https://api.openai.com/v1/responses', keyEnvironment: 'OPENAI_API_KEY' },
+  chatgpt: { protocol: 'responses', endpoint: 'https://api.openai.com/v1/responses' },
+  deepseek: { protocol: 'chat-completions', endpoint: 'https://api.deepseek.com/chat/completions', keyEnvironment: 'DEEPSEEK_API_KEY' },
+  qwen: { protocol: 'chat-completions', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', keyEnvironment: 'DASHSCOPE_API_KEY' },
+  kimi: { protocol: 'chat-completions', endpoint: 'https://api.moonshot.cn/v1/chat/completions', keyEnvironment: 'MOONSHOT_API_KEY' },
+  zhipu: { protocol: 'chat-completions', endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', keyEnvironment: 'ZHIPU_API_KEY' },
+  minimax: { protocol: 'chat-completions', endpoint: `${MINIMAX_API_ORIGIN}/v1/chat/completions`, keyEnvironment: 'MINIMAX_API_KEY' },
+}
+/** Explicit migration marker for previously saved provider entries. */
+export function isRetiredIndependentProvider(provider: unknown): boolean {
+  return provider === 'gemini' || provider === 'xai' || provider === 'openrouter'
+}
+/** Apply model removals even when a gateway exposes those families. */
+export function isRemovedIndependentModel(model: string): boolean {
+  const slash = model.indexOf('/')
+  if (slash < 1) return false
+  const provider = model.slice(0, slash).toLowerCase()
+  if (isRetiredIndependentProvider(provider)) return true
+  const id = model.slice(slash + 1).toLowerCase()
+  return /(?:^|\/)(?:gemini|grok)(?:[-_.]|$)/.test(id)
+}
+export function resolveIndependentModel(model: string | undefined): ProviderRoute | null {
+  if (!model) return null
+  const index = model.indexOf('/')
+  if (index < 1 || index === model.length - 1) return null
+  const provider = model.slice(0, index).toLowerCase() as IndependentProvider
+  if (isRemovedIndependentModel(model) || !Object.hasOwn(PROVIDERS, provider)) return null
+  const config = PROVIDERS[provider]
+  return {
+    provider,
+    model: model.slice(index + 1),
+    protocol: config.protocol,
+    endpoint: config.endpoint,
+    ...(config.keyEnvironment ? { keyEnvironment: config.keyEnvironment } : {}),
+  }
+}
+export function getIndependentApiKey(route: ProviderRoute, env: NodeJS.ProcessEnv = process.env): string {
+  if (route.provider === 'chatgpt') {
+    throw new Error('ChatGPT requires the dedicated OAuth credential manager')
+  }
+  const key = (route.keyEnvironment && env[route.keyEnvironment]) || readProviderApiKey(route.provider)
+  if (!key) throw new Error(`Missing ${route.keyEnvironment ?? 'API key'} for ${route.provider}/${route.model}`)
+  return key
+}
+/** Live provider discovery is the authority for available model names. */
+export type IndependentModelDetail = {
+  id: string
+  displayName?: string
+  contextWindow?: number
+  maxOutputTokens?: number
+  supportsTools?: boolean
+  supportsVision?: boolean
+  supportedEffort?: string[]
+  defaultEffort?: string
+}
+function positiveInteger(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined
+}
+export async function discoverIndependentModelDetails(
+  provider: IndependentProvider,
+  token: string,
+  fetcher: typeof fetch = fetch,
+): Promise<IndependentModelDetail[]> {
+  const addresses: Record<IndependentProvider, string> = {
+    openai: 'https://api.openai.com/v1/models',
+    chatgpt: 'https://api.openai.com/v1/models',
+    deepseek: 'https://api.deepseek.com/models',
+    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1/models',
+    kimi: 'https://api.moonshot.cn/v1/models',
+    zhipu: 'https://open.bigmodel.cn/api/paas/v4/models',
+    minimax: `${MINIMAX_API_ORIGIN}/v1/models`,
+  }
+  const response = await fetcher(addresses[provider], {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(15_000),
+    // The catalog is a credentialed request; redirects can cross the
+    // authentication boundary. Every provider uses a fixed trusted URL.
+    redirect: 'error',
+  })
+  if (!response.ok) throw new Error(`Model discovery failed for ${provider}: HTTP ${response.status}`)
+  const data = await response.json() as Record<string, unknown>
+  // ChatGPT plan discovery has its own documented catalog schema.
+  // Do not treat the API-key /models data[] as an entitlement for this account.
+  const list = provider === 'chatgpt' ? data.models : data.data
+  if (!Array.isArray(list)) throw new Error(`Invalid model discovery response from ${provider}`)
+  return list.flatMap(entry => {
+    if (!entry || typeof entry !== 'object') return []
+    if (provider === 'chatgpt' && entry.visibility !== 'list') return []
+    const value = provider === 'chatgpt' ? entry.slug : entry.id
+    if (typeof value !== 'string') return []
+    const id = value
+    if (!id || id.length > 300 || isRemovedIndependentModel(`${provider}/${id}`) ||
+        Array.from(id).some(character => character.charCodeAt(0) < 32)) return []
+    const top = typeof entry.top_provider === 'object' && entry.top_provider !== null ? entry.top_provider : {}
+    const limits = typeof entry.limits === 'object' && entry.limits !== null ? entry.limits : {}
+    const capabilities = typeof entry.capabilities === 'object' && entry.capabilities !== null ? entry.capabilities : {}
+    // DashScope returns limits in model_info, while DeepSeek returns them
+    // at the root. The input-only cap is not a total context-window size.
+    const modelInfo = typeof entry.model_info === 'object' && entry.model_info !== null ? entry.model_info : {}
+    const contextWindow = positiveInteger(
+      entry.context_window ?? entry.context_length ?? entry.max_context_tokens ??
+      entry.max_model_len ?? modelInfo.context_window ??
+      limits.context_window ?? capabilities.context_window)
+    const maxOutputTokens = positiveInteger(
+      entry.max_output_tokens ?? entry.max_completion_tokens ?? entry.max_tokens ??
+      modelInfo.max_output_tokens ?? modelInfo.reasoning_max_output_tokens ??
+      limits.max_output_tokens ?? limits.max_completion_tokens ??
+      top.max_output_tokens ?? top.max_completion_tokens)
+    const inference = typeof entry.inference_metadata === 'object' && entry.inference_metadata !== null
+      ? entry.inference_metadata : {}
+    const modalities: unknown = entry.input_modalities ?? inference.request_modality ??
+      entry.architecture?.input_modalities
+    // The DeepSeek /models contract publishes authoritative effort levels
+    // per model, including updates which cannot be inferred from model names.
+    const effort = entry.effort && typeof entry.effort === 'object' ? entry.effort : {}
+    const allowedEffort = new Set(['low', 'medium', 'high', 'xhigh', 'max'])
+    const supportedEffort: string[] | undefined = Array.isArray(effort.supported_levels) &&
+      effort.supported_levels.every(level => typeof level === 'string' && allowedEffort.has(level))
+      ? [...new Set(effort.supported_levels as string[])] : undefined
+    const defaultEffort = typeof effort.default_level === 'string' &&
+      supportedEffort?.includes(effort.default_level)
+      ? effort.default_level : undefined
+    const advertisedFeatures: unknown = entry.features
+    const supportsTools = Array.isArray(entry.supported_parameters)
+      ? entry.supported_parameters.includes('tools')
+      : Array.isArray(advertisedFeatures)
+        ? advertisedFeatures.some(x => x === 'tools' || x === 'function_calling')
+        : undefined
+    const supportsVision = Array.isArray(modalities)
+      ? modalities.some(x => typeof x === 'string' && x.toLowerCase() === 'image') : undefined
+    return [{ id,
+      ...((typeof entry.display_name === 'string' && entry.display_name.trim())
+        || (typeof entry.name === 'string' && entry.name.trim())
+        ? { displayName: String(entry.display_name || entry.name).trim() } : {}),
+      ...(contextWindow ? { contextWindow } : {}),
+      ...(maxOutputTokens ? { maxOutputTokens } : {}),
+      ...(supportsTools !== undefined ? { supportsTools } : {}),
+      ...(supportsVision !== undefined ? { supportsVision } : {}),
+      ...(supportedEffort !== undefined ? { supportedEffort } : {}),
+      ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+    }]
+  })
+}
+export async function discoverIndependentModels(
+  provider: IndependentProvider,
+  token: string,
+  fetcher: typeof fetch = fetch,
+): Promise<string[]> {
+  return (await discoverIndependentModelDetails(provider, token, fetcher)).map(model => model.id)
+}

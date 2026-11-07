@@ -381,7 +381,7 @@ class GitFileWatcher {
 
   private watchPath(path: string, callback: () => void): void {
     this.watchedPaths.push(path)
-    watchFile(path, { interval: WATCH_INTERVAL_MS }, callback)
+    watchFile(path, { interval: WATCH_INTERVAL_MS, persistent: false }, callback)
   }
 
   /**

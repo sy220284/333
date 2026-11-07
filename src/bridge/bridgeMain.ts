@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto'
 import { hostname, tmpdir } from 'os'
 import { basename, join, resolve } from 'path'
 import { getRemoteSessionUrl } from '../constants/product.js'
-import { shutdownDatadog } from '../services/analytics/datadog.js'
 import { shutdown1PEventLogging } from '../services/analytics/firstPartyEventLogger.js'
 import { checkGate_CACHED_OR_BLOCKING } from '../services/analytics/growthbook.js'
 import {
@@ -1658,7 +1657,7 @@ async function stopWorkWithRetry(
       }
       const errMsg = errorMessage(err)
       if (attempt < MAX_ATTEMPTS) {
-        const delay = addJitter(baseDelayMs * Math.pow(2, attempt - 1))
+        const delay = addJitter(baseDelayMs * 2 ** (attempt - 1))
         logger.logVerbose(
           `Failed to stop work ${workId} (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${formatDelay(delay)}: ${errMsg}`,
         )
@@ -2064,7 +2063,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
     // (sleep() doesn't unref its timer, but process.exit() follows immediately
     // so the ref'd timer can't delay shutdown.)
     await Promise.race([
-      Promise.all([shutdown1PEventLogging(), shutdownDatadog()]),
+      shutdown1PEventLogging(),
       sleep(500, undefined, { unref: true }),
     ]).catch(() => {})
     // biome-ignore lint/suspicious/noConsole: intentional error output

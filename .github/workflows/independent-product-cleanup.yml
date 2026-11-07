@@ -1,0 +1,23 @@
+name: 333 独立产品功能删改与入口专项验收
+on:
+  workflow_call:
+  workflow_dispatch:
+concurrency:
+  group: reusable-independent-product-cleanup-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  independent-product:
+    name: 333 独立化功能与统一入口校验
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: 全量扫描源码引用、界面残留和已删功能引用
+        run: node build/audit-independent-sources.mjs
+      - name: 测试审查模式、命令入口及禁用的官方回传
+        run: node --test tests/independent-product-cleanup.test.mjs tests/brand-runtime-cleanup.test.mjs tests/brand-animation.test.mjs tests/independent-ui-model-attribution.test.mjs tests/github-generic-review.test.mjs tests/github-integration-flow.test.mjs tests/github-task-runtime.test.mjs tests/github-model-credentials.test.mjs

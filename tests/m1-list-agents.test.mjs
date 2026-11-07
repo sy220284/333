@@ -81,7 +81,7 @@ test('tools registration, alias, output, gate and receiver are wired',async()=>{
   assert.match(mod,/isEnabled\(\) \{ return isCrossSessionMessagingEnabled\(\) \}/)
   assert.match(pool,/ListAgentsTool,/)
   assert.match(setup,/startCrossSessionInbox\(/)
-  assert.match(sender,/resolveUnifiedPeerRecipient\(/)
+  assert.match(sender,/resolveLocalPeerRecipient\(/)
   assert.match(recv,/enqueuePendingNotification\(/)
 })
 test('cross-session gate and acknowledgements are explicit',async()=>{

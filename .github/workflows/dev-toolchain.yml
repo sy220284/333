@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: main-ci-dev-toolchain-${{ github.event.pull_request.number || github.ref }}
+  group: 333-dev-toolchain-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
           bun build/rebuild.mjs
           node build/compile-standalone.mjs
           node build/package-release.mjs
-          npm run test:all
+          node --test tests/release-integrity.test.mjs tests/distribution-isolation.test.mjs
       - name: 准备固定版本 actionlint
         run: |
           set -euo pipefail
@@ -207,7 +207,10 @@ jobs:
           set -euo pipefail
           # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
-          npm run verify
+          # 独立离线回装验收只使用随 Artifact 分发的工具和源码。
+          # PostgreSQL、AST5.9 及图形 Electron 安装版由真实环境专项运行，
+          # 且 portable 测试计划强制验证每个套件的工作流覆盖。
+          npm run verify:portable
           git diff --exit-code
       - name: full 档验证研究索引与工作流检查
         if: matrix.profile == 'full'
@@ -218,4 +221,4 @@ jobs:
           # shellcheck source=/dev/null
           source "$DEV333_TOOLCHAIN_ENV_FILE"
           python3 research/claude-code-2.1.88/generate.py --verify
-          actionlint .github/workflows/dev-toolchain.yml
+          actionlint .github/workflows/*.yml

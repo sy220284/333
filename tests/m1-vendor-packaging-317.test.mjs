@@ -39,15 +39,18 @@ function fixture(run) {
       // script; the production verifier checks both hashes before packaging.
       ...manifest.resources.flatMap(item => item.upstream_backup ? [item.upstream_backup] : []),
     ])
-    const fakeFiles = ['build/public-dependencies.lock.json', 'LICENSE.md',
-      'package.json', 'dist/cli.js', nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']
+    const fakeFiles = ['build/public-dependencies.lock.json', 'SOURCE_NOTICES.md',
+      'package.json', 'dist/cli.js', 'dist/desktopHost.js', 'dist/desktopHost.js.map',
+      nativeAudio, nativeRg, 'vendor/ripgrep/COPYING']
     for (const file of [...officialFiles, ...fakeFiles]) {
       const dest = join(dir, file)
       mkdirSync(dirname(dest), { recursive: true })
       if (officialFiles.has(file)) copyFileSync(join(root, file), dest)
       else writeFileSync(dest, file === 'package.json' ? '{"version":"2.1.317"}\n' : file)
     }
-    writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'claude.exe' : 'claude'), 'isolated release executable fixture')
+    writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche'), 'isolated release executable fixture')
+    writeFileSync(join(dir, 'dist', process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost'),
+      'isolated desktop host executable fixture')
     run(dir)
   } finally {
     rmSync(dir, { recursive: true, force: true })

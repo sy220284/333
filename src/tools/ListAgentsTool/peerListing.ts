@@ -21,6 +21,7 @@ export type AgentListingOptions317 = {
   self?: string
   subagents?: AgentListEntry317[]
   teammates?: AgentListEntry317[]
+  teams?: AgentListEntry317[]
   sessions?: AgentListEntry317[]
   query?: string
   localUnreadable?: boolean
@@ -97,7 +98,7 @@ export function hideTeammateNamesInSubagents(
 }
 /** Text and structured output are produced from the same filtered records. */
 export function buildAgentListing({
-  self, subagents = [], teammates = [], sessions = [], query,
+  self, subagents = [], teammates = [], teams = [], sessions = [], query,
   localUnreadable = false, accountNotes = [], canSend = true,
 }: AgentListingOptions317): AgentListingResult317 {
   const q = query?.trim().toLowerCase()
@@ -105,6 +106,7 @@ export function buildAgentListing({
   const groups = [
     { kind: 'subagents', title: 'Subagents', values: subagents.filter(matches) },
     { kind: 'teammates', title: 'Teammates', values: teammates.filter(matches) },
+    { kind: 'teams', title: 'Local project teams (informational)', values: teams.filter(matches) },
     { kind: 'sessions', title: 'Peer sessions', values: sessions.filter(matches) },
   ]
   const sections: AgentListingResult317['sections'] = []

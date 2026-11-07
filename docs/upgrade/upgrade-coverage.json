@@ -535,13 +535,13 @@
     },
     {
       "id": "C20",
-      "name": "Slack Claude Tag/Code Review外部服务",
+      "name": "代码审查与原平台外部服务的独立化迁移",
       "layer": "M6",
       "features": [
         "F101",
         "F102"
       ],
-      "status": "PENDING_317_CODE_ALIGNMENT"
+      "status": "REPLACED_BY_LOCAL_PRODUCT_REVIEW"
     }
   ],
   "features": [

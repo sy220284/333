@@ -23,18 +23,26 @@ import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import { getInitialSettings } from '../settings/settings.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getAPIProvider } from './providers.js'
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js'
+import { getSavedModelOptions } from '../../services/api/multimodel/catalog.js'
+import { readProviderApiKey } from '../../services/auth/apiKeyVault.js'
+import { hasSavedChatGPTAuthorization } from '../../services/auth/chatgptOAuth.js'
 import { getAntModelOverrideConfig, resolveAntModel } from './antModels.js'
 import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { type ModelAlias, isModelAlias } from './aliases.js'
 import { capitalize } from '../stringUtils.js'
-import { canonicalizeCatalogModel, getCatalogAliasModel, getCatalogModel } from './modelCatalog.js'
+import { MODEL_CATALOG, canonicalizeCatalogModel, getCatalogAliasModel, getCatalogModel } from './modelCatalog.js'
 
 export type ModelShortName = string
 export type ModelName = string
 export type ModelSetting = ModelName | ModelAlias | null
 
 export function getSmallFastModel(): ModelName {
+  const active = getMainLoopModel()
+  if (resolveIndependentModel(active)) {
+    return process.env.AGENT333_SMALL_FAST_MODEL || active
+  }
   return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
 }
 
@@ -99,7 +107,10 @@ export function getMainLoopModel(): ModelName {
 }
 
 export function getBestModel(): ModelName {
-  return getDefaultOpusModel()
+  const family = MODEL_CATALOG.best
+  return family === 'fable'
+    ? getDefaultFableModel()
+    : resolveDefaultAlias(family, undefined)
 }
 
 // @[MODEL LAUNCH]: Update the default Opus model (3P providers may lag so keep defaults unchanged).
@@ -149,6 +160,7 @@ export function getRuntimeMainLoopModel(params: {
   exceeds200kTokens?: boolean
 }): ModelName {
   const { permissionMode, mainLoopModel, exceeds200kTokens = false } = params
+  if (resolveIndependentModel(mainLoopModel)) return mainLoopModel
 
   // opusplan uses Opus in plan mode without [1m] suffix.
   if (
@@ -178,6 +190,27 @@ export function getRuntimeMainLoopModel(params: {
  * @returns The default model setting to use
  */
 export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
+  // An independent account can be the first and only configured provider.
+  // Use an explicit 333 default first, otherwise the first actually
+  // discoverable model for which local credentials are already present.
+  const configured = process.env.AGENT333_DEFAULT_MODEL
+  if (configured) {
+    if (!resolveIndependentModel(configured)) throw new Error('AGENT333_DEFAULT_MODEL must use provider/model format')
+    return configured
+  }
+  if (!isClaudeAISubscriber()) {
+    for (const option of getSavedModelOptions()) {
+      if (typeof option.value !== 'string') continue
+      const route = resolveIndependentModel(option.value)
+      if (!route) continue
+      if (route.provider === 'chatgpt') {
+        if (hasSavedChatGPTAuthorization()) return option.value
+      } else if ((route.keyEnvironment && process.env[route.keyEnvironment]) ||
+        readProviderApiKey(route.provider)) {
+        return option.value
+      }
+    }
+  }
   // Ants default to defaultModel from flag config, or Opus 1M if not configured
   if (process.env.USER_TYPE === 'ant') {
     return (
@@ -233,6 +266,7 @@ export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
  * @returns The short name (e.g., 'claude-3-5-haiku') if found, or the original name if no mapping exists
  */
 export function getCanonicalName(fullModelName: ModelName): ModelShortName {
+  if (resolveIndependentModel(fullModelName)) return fullModelName
   // Resolve overridden model IDs (e.g. Bedrock ARNs) back to canonical names.
   // resolved is always a 1P-format ID, so firstPartyNameToCanonical can handle it.
   return firstPartyNameToCanonical(resolveOverriddenModel(fullModelName))
@@ -342,6 +376,8 @@ export function renderModelName(model: ModelName): string {
  * @returns "Claude {ModelName}" for public models, or "Claude ({model})" for non-public models
  */
 export function getPublicModelName(model: ModelName): string {
+  const independent = resolveIndependentModel(model)
+  if (independent) return `${independent.provider} ${independent.model}`
   const publicName = getPublicModelDisplayName(model)
   if (publicName) {
     return `Claude ${publicName}`
@@ -365,6 +401,8 @@ export function parseUserSpecifiedModel(
   modelInput: ModelName | ModelAlias,
 ): ModelName {
   const modelInputTrimmed = modelInput.trim()
+  const independent = resolveIndependentModel(modelInputTrimmed)
+  if (independent) return `${independent.provider}/${independent.model}`
   const normalizedModel = modelInputTrimmed.toLowerCase()
 
   const has1mTag = has1mContext(normalizedModel)
@@ -504,5 +542,6 @@ export function getMarketingNameForModel(modelId: string): string | undefined {
 }
 
 export function normalizeModelStringForAPI(model: string): string {
+  if (resolveIndependentModel(model)) return model
   return model.replace(/\[(1|2)m\]/gi, '')
 }

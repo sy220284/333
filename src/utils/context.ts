@@ -8,6 +8,8 @@ import { getModelCapability } from './model/modelCapabilities.js'
 import { getModelBehavior317 } from './model/modelBehavior317.js'
 import { getCatalogModel } from './model/modelCatalog.js'
 import { getAPIProvider } from './model/providers.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
+import { getIndependentProfile } from '../services/api/multimodel/profiles.js'
 
 // Model context window size (200k tokens for all models right now)
 export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
@@ -45,6 +47,7 @@ export function has1mContext(model: string): boolean {
 
 // @[MODEL LAUNCH]: Update this pattern if the new model supports 1M context
 export function modelSupports1M(model: string): boolean {
+  if (resolveIndependentModel(model)) return getContextWindowForModel(model) >= 1_000_000
   if (is1mContextDisabled()) {
     return false
   }
@@ -59,6 +62,16 @@ export function getContextWindowForModel(
   model: string,
   betas?: string[],
 ): number {
+  const independent = resolveIndependentModel(model)
+  if (independent) {
+    // Provider discovery or an explicit user profile is authoritative.
+    // Unpublished limits get a conservative interim limit until configured.
+    const manual = Number(process.env.AGENT333_MAX_CONTEXT_TOKENS)
+    if (Number.isSafeInteger(manual) && manual > 0) return manual
+    const published = independent.provider === 'minimax' &&
+      independent.model.toLowerCase() === 'minimax-m3.1-flash' ? 1_000_000 : undefined
+    return getIndependentProfile(model)?.contextWindow ?? published ?? 32_768
+  }
   const configured = Number(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS)
   const canonical = getCanonicalName(model)
   const custom = !getCatalogModel(getModelBehavior317(model)) && !canonical.startsWith('claude-3-') &&
@@ -153,6 +166,19 @@ export function getModelMaxOutputTokens(model: string): {
   default: number
   upperLimit: number
 } {
+  const independentRoute = resolveIndependentModel(model)
+  if (independentRoute) {
+    const profile = getIndependentProfile(model)
+    // Prefer the provider's published model profile. The M3.1 Flash
+    // 512K ceiling is a documented reference if /models omits that field.
+    const referenceMaximum = independentRoute.provider === 'minimax' &&
+      /^minimax-m3\.1-flash$/i.test(independentRoute.model) ? 524_288 : undefined
+    const maximum = profile?.maxOutputTokens ?? referenceMaximum ?? 4_096
+    // Reasoning tokens share the completion budget. The MiniMax reference
+    // recommends 128K for longer agent tasks, while permitting 512K explicitly.
+    const recommendedDefault = referenceMaximum ? 131_072 : 32_768
+    return { default: Math.min(maximum, recommendedDefault), upperLimit: maximum }
+  }
   let defaultTokens: number
   let upperLimit: number
 

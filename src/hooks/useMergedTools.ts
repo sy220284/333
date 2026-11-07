@@ -1,5 +1,7 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { useMemo } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
+import { onGrowthBookRefresh } from '../services/analytics/growthbook.js'
+import { getActiveAgentMode } from '../utils/agentMode.js'
 import type { Tools, ToolPermissionContext } from '../Tool.js'
 import { assembleToolPool } from '../tools.js'
 import { useAppState } from '../state/AppState.js'
@@ -22,6 +24,7 @@ export function useMergedTools(
   mcpTools: Tools,
   toolPermissionContext: ToolPermissionContext,
 ): Tools {
+  const agentMode = useSyncExternalStore(onGrowthBookRefresh, getActiveAgentMode, () => 'master' as const)
   let replBridgeEnabled = false
   let replBridgeOutboundOnly = false
   return useMemo(() => {
@@ -40,5 +43,6 @@ export function useMergedTools(
     toolPermissionContext,
     replBridgeEnabled,
     replBridgeOutboundOnly,
+    agentMode,
   ])
 }

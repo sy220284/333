@@ -6,6 +6,8 @@ import { join } from 'path'
 import { z } from 'zod/v4'
 import { OAUTH_BETA_HEADER } from '../../constants/oauth.js'
 import { getAnthropicClient } from '../../services/api/client.js'
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js'
+import { getMainLoopModel } from './model.js'
 import { isClaudeAISubscriber } from '../auth.js'
 import { logForDebugging } from '../debug.js'
 import { getClaudeConfigHomeDir } from '../envUtils.js'
@@ -93,6 +95,9 @@ export function getModelCapability(model: string): ModelCapability | undefined {
 }
 
 export async function refreshModelCapabilities(): Promise<void> {
+  // The Anthropic-specific catalog is refreshed only for Anthropic models.
+  // Independent models are discovered through their own provider catalogs.
+  if (resolveIndependentModel(getMainLoopModel())) return
   if (!isModelCapabilitiesEligible()) return
   if (isEssentialTrafficOnly()) return
 

@@ -130,6 +130,8 @@ type State = {
   inMemoryErrorLog: Array<{ error: string; timestamp: string }>
   // Session-only plugins from --plugin-dir flag
   inlinePlugins: Array<string>
+  // Session-only plugins with MCP discovery explicitly disabled.
+  inlinePluginsWithoutMcp: Array<string>
   // Explicit --chrome / --no-chrome flag value (undefined = not set on CLI)
   chromeFlagOverride: boolean | undefined
   // Use cowork_plugins directory instead of plugins (--cowork flag or env var)
@@ -356,6 +358,7 @@ function getInitialState(): State {
     inMemoryErrorLog: [],
     // Session-only plugins from --plugin-dir flag
     inlinePlugins: [],
+    inlinePluginsWithoutMcp: [],
     // Explicit --chrome / --no-chrome flag value (undefined = not set on CLI)
     chromeFlagOverride: undefined,
     // Use cowork_plugins directory instead of plugins
@@ -1284,6 +1287,14 @@ export function getInlinePlugins(): Array<string> {
   return STATE.inlinePlugins
 }
 
+export function setInlinePluginsWithoutMcp(paths: Array<string>): void {
+  STATE.inlinePluginsWithoutMcp = paths
+}
+
+export function getInlinePluginsWithoutMcp(): Array<string> {
+  return STATE.inlinePluginsWithoutMcp
+}
+
 export function setChromeFlagOverride(value: boolean | undefined): void {
   STATE.chromeFlagOverride = value
 }
@@ -1471,6 +1482,26 @@ export function registerHookCallbacks(
     }
     STATE.registeredHooks[eventKey]!.push(...matchers)
   }
+}
+
+/** Replace only matchers owned by the SDK stream that re-initialized.
+ * Plugin and locally configured hooks remain registered and in their order. */
+export function replaceSdkHookCallbacks(
+  previous: Partial<Record<HookEvent, HookCallbackMatcher[]>>,
+  next: Partial<Record<HookEvent, HookCallbackMatcher[]>>,
+): void {
+  if (STATE.registeredHooks) {
+    for (const [event, matchers] of Object.entries(previous)) {
+      const key = event as HookEvent
+      const retired = new Set(matchers)
+      const current = STATE.registeredHooks[key]
+      if (!current) continue
+      const remaining = current.filter(matcher => !retired.has(matcher as HookCallbackMatcher))
+      if (remaining.length) STATE.registeredHooks[key] = remaining
+      else delete STATE.registeredHooks[key]
+    }
+  }
+  registerHookCallbacks(next)
 }
 
 export function getRegisteredHooks(): Partial<

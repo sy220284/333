@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle';
+import { getStrictCommandScopeError } from '../../utils/permissions/strictCommandScope.js';
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'node:fs/promises';
 // biome-ignore lint/correctness/noUnusedImports: The classic JSX transform references React as its implicit factory.
@@ -640,6 +641,9 @@ export const BashTool = buildTool({
     };
   },
   async call(input: BashToolInput, toolUseContext, _canUseTool?: CanUseToolFn, parentMessage?: AssistantMessage, onProgress?: ToolCallProgress<BashProgress>) {
+    // The final input must still match after any other permission handling.
+    const scopeError = getStrictCommandScopeError(BASH_TOOL_NAME, input);
+    if (scopeError) throw new Error(scopeError);
     // Handle simulated sed edit - apply directly instead of running sed
     // This ensures what the user previewed is exactly what gets written
     if (input._simulatedSedEdit) {

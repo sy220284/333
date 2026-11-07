@@ -1,0 +1,1399 @@
+import { randomUUID } from 'node:crypto'
+import { resolve } from 'node:path'
+import { execFileNoThrowWithCwd } from '../../utils/execFileNoThrow.js'
+import { getActiveAgentMode, setAgentMode } from '../../utils/agentMode.js'
+import {
+  createMission, getMission, getSelectedMissionId, listMissions,
+  saveMissionCheckpoint, selectMission, updateMissionStatus,
+  linkMissionAssignment, finishMissionAssignment,
+} from '../../utils/agentMissions.js'
+import { getTeammateStatuses, listProjectTeams } from '../../utils/teamDiscovery.js'
+import { readProjectTeamInbox, sendProjectTeamMessage } from './teamOperations.js'
+import {
+  missionJobAssignmentId, listMissionJobs, enqueueMissionJob, claimMissionJob,
+  bindMissionJobTurn, bindMissionJobWorkspace, settleMissionJob, approveMissionJob, retryMissionJob,
+  cancelMissionJob, recoverMissionJob, markMissionJobIntegrated, type MissionJob,
+} from '../agentCenter/missionJobs.js'
+import { reconcileMissionTerminalJobs } from '../agentCenter/missionReconciliation.js'
+import { createProjectBudget } from '../agentCenter/projectBudget.js'
+import { previewWorktreeIntegration, integrateWorktree } from '../agentCenter/worktreeIntegration.js'
+import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { AgentInfoSchema, ModelInfoSchema } from '../../entrypoints/sdk/coreSchemas.js'
+import type { getSessionInfo, getSessionMessages, listSessions } from '../../entrypoints/agentSdkTypes.js'
+import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
+import { createHeadlessConversationSession } from '../conversation/headlessSession.js'
+import { createDesktopTaskJournal, type DesktopTaskJournal } from './taskJournal.js'
+import { createDesktopSessionSettingsJournal, type DesktopSessionSettings, type DesktopPermissionMode } from './sessionSettingsJournal.js'
+import { createSmartExecutionJournal, type SmartExecutionJournal } from './smartExecutionJournal.js'
+import { isAgentProgress, projectBackgroundTasks, projectTask, type DesktopTask } from './taskProjection.js'
+import { DESKTOP_PROTOCOL_VERSION, type DesktopEvent, type DesktopRequest } from './protocol.js'
+import { z } from 'zod/v4'
+
+type Headless = ReturnType<typeof createHeadlessConversationSession>
+type SessionFactory = (options: SDKSessionOptions | InternalOptions, resume?: string) => Headless
+type HistoryService = {
+  listSessions: typeof listSessions
+  getSessionInfo: typeof getSessionInfo
+  getSessionMessages: typeof getSessionMessages
+}
+type Entry = {
+  model: string | null
+  permissionMode: DesktopPermissionMode | null
+  runtime: Headless
+  tasks: Map<string, DesktopTask>
+  seenPermissions: Set<string>
+  seenHostRequests: Set<string>
+  unsubscribe: Array<() => void>
+  consuming?: Promise<void>
+  persisting?: Promise<void>
+  sending?: Promise<void>
+  cancelSend?: (error: Error) => void
+  closing?: boolean
+}
+export type DesktopGatewayOptions = {
+  cwd?: string
+  model?: string
+  sessionOptions?: Omit<InternalOptions, 'canUseTool' | 'resume' | 'continue' | 'cwd' | 'model'>
+  dataDir?: string
+  /** Optional task-diary root for isolated local hosts and tests. */
+  missionRoot?: string
+  journal?: DesktopTaskJournal
+  smartJournal?: SmartExecutionJournal
+  /** Inject the actual project budget ledger for failure-injection tests. */
+  projectBudget?: ReturnType<typeof createProjectBudget>
+  createSession?: SessionFactory
+  history?: HistoryService
+  /** Test seam; production uses the original AgentTool worktree creator. */
+  prepareMissionJobWorkspace?: (
+    job: MissionJob, projectDir: string,
+  ) => Promise<{ cwd: string; worktreePath?: string; worktreeBranch?: string; worktreeHead?: string }>
+}
+const modelListSchema = z.array(ModelInfoSchema())
+const agentListSchema = z.array(AgentInfoSchema())
+
+/** The SDK child owns the model loop and control protocol; the gateway only
+ * translates local desktop requests into SDK control and stream-json events. */
+export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
+  const cwd = resolve(options.cwd ?? process.cwd())
+  const model = options.model
+  const launch = options.createSession ?? createHeadlessConversationSession
+  // Only load the full Agent SDK history entrypoint when actually needed.
+  // Desktop sessions with injected or cached history stay renderer-neutral and
+  // do not initialize unrelated SDK modules merely by importing the gateway.
+  const history: HistoryService = options.history ?? {
+    async listSessions(...args: Parameters<typeof listSessions>) {
+      return (await import('../../entrypoints/agentSdkTypes.js')).listSessions(...args)
+    },
+    async getSessionInfo(...args: Parameters<typeof getSessionInfo>) {
+      return (await import('../../entrypoints/agentSdkTypes.js')).getSessionInfo(...args)
+    },
+    async getSessionMessages(...args: Parameters<typeof getSessionMessages>) {
+      return (await import('../../entrypoints/agentSdkTypes.js')).getSessionMessages(...args)
+    },
+  }
+  const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
+  const sessionSettings = createDesktopSessionSettingsJournal(cwd, options.dataDir)
+  const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
+  const projectBudget = options.projectBudget ?? createProjectBudget(cwd, options.dataDir)
+  const sessionBudgets = new Map<string,{
+    leaseId: string; awaitingResult: boolean; accountingError?: string
+  }>()
+  const smartActive = new Set<string>()
+  const smartPrepared = new Map<string, string>()
+  const sessions = new Map<string, Entry>()
+  let pendingPurge: { token: string; createdAt: number; plan: import('./maintenance.js').LocalPurgePlan } | undefined
+  let purgeRunning = false
+  const opening = new Set<string>()
+  const ensuring = new Map<string, ReturnType<typeof openSession>>()
+  const ownerKey = randomUUID()
+  const executingMissionJobs = new Map<string, { missionId: string; jobId: string; runId: string }>()
+  // Opt-in, event-driven queue runner: no timers, scheduled tasks or implicit
+  // recovery. It exists only while the trusted local desktop host is alive.
+  const activeMissionQueues = new Set<string>()
+  const drainingMissionQueues = new Set<string>()
+  const pendingQueueDrains = new Set<string>()
+  const listeners = new Set<(event: DesktopEvent) => void>()
+  let closed = false
+
+  function emit(event: DesktopEvent): void {
+    for (const listener of listeners) listener(event)
+  }
+  // State persistence runs in order but never blocks SDK event delivery. A
+  // failed snapshot is visible to the host and the next complete snapshot
+  // can repair it without poisoning subsequent writes.
+  function scheduleTaskSnapshot(sessionId: string, entry: Entry): void {
+    const snapshot = [...entry.tasks.values()]
+    entry.persisting = (entry.persisting ?? Promise.resolve())
+      .then(() => journal.write(sessionId, snapshot))
+      .catch(error => emit({
+        event: 'task.persistence.error', sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      }))
+  }
+  function subscribe(listener: (event: DesktopEvent) => void): () => void {
+    if (closed) throw new Error('Desktop gateway is closed')
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+  }
+  function requireSession(sessionId: string): Entry {
+    const entry = sessions.get(sessionId)
+    if (!entry) throw new Error(`Desktop session is not open: ${sessionId}`)
+    return entry
+  }
+  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>, sessionCwd = cwd,
+    smartPolicy?: Pick<InternalOptions, 'maxBudgetUsd' | 'permissionMode'>): InternalOptions {
+    return {
+      ...options.sessionOptions,
+      ...smartPolicy,
+      ...(sessionEnv ? { env: { ...options.sessionOptions?.env, ...sessionEnv } } : {}),
+      cwd: sessionCwd,
+      ...(selectedModel || model ? { model: selectedModel ?? model } : {}),
+      includePartialMessages: true,
+      forwardSubagentText: true,
+      // Display native background-agent summaries in the desktop task surface.
+      // Preserve an explicit host opt-out when summaries are undesirable.
+      agentProgressSummaries: options.sessionOptions?.agentProgressSummaries ?? true,
+    }
+  }
+  function initializeModels(runtime: Headless) {
+    return runtime.initialization.then(info => ({
+      models: modelListSchema.parse(info.models),
+      agents: agentListSchema.parse(info.agents),
+    }))
+  }
+
+  async function sessionWorktree(sessionId: string): Promise<string | undefined> {
+    const missions = (await listMissions(options.missionRoot))
+      .filter(mission => resolve(mission.projectDir) === cwd)
+    for (const mission of missions) {
+      const jobs = await listMissionJobs(mission.id, cwd, options.missionRoot)
+      const job = jobs.find(item => item.sessionId === sessionId ||
+        item.history.some(record => record.sessionId === sessionId))
+      if (!job?.worktreePath) continue
+      const { verifyResumedAgentWorktree } = await import('../../tools/AgentTool/resumeWorktree.js')
+      return verifyResumedAgentWorktree(job.worktreePath)
+    }
+    return undefined
+  }
+
+  async function prepareMissionWorkspace(job: MissionJob) {
+    if (options.prepareMissionJobWorkspace)
+      return options.prepareMissionJobWorkspace(job, cwd)
+    if (job.worktreePath) {
+      const { verifyResumedAgentWorktree } = await import('../../tools/AgentTool/resumeWorktree.js')
+      const verified = await verifyResumedAgentWorktree(job.worktreePath)
+      if (!verified) throw new Error('原工作项工作树路径丢失')
+      return { cwd: verified, worktreePath: verified, worktreeBranch: job.worktreeBranch, worktreeHead: job.worktreeHead }
+    }
+    // Preserve native worktree hooks, setup and namespacing.
+    const { createAgentWorktree } = await import('../../utils/worktree.js')
+    const created = await createAgentWorktree(`mission-${job.id.slice(4)}`)
+    return {
+      cwd: created.worktreePath, worktreePath: created.worktreePath,
+      worktreeBranch: created.worktreeBranch, worktreeHead: created.headCommit,
+    }
+  }
+
+  async function openSession(
+    selectedModel?: string, resume?: string,
+    sessionEnv?: Record<string, string | undefined>, requestedCwd?: string,
+    smartPolicy?: Pick<InternalOptions, 'maxBudgetUsd' | 'permissionMode'>,
+  ) {
+    if (closed) throw new Error('Desktop gateway is closed')
+    if (resume) {
+      if (sessions.has(resume) || opening.has(resume)) throw new Error(`Session is already open: ${resume}`)
+      opening.add(resume)
+    }
+    let runtime: Headless | undefined
+    let preparedBudget: {id?:string;maxBudgetUsd?:number}|undefined
+    try {
+      const sessionCwd = requestedCwd ?? (resume ? await sessionWorktree(resume) : undefined) ?? cwd
+      // A resume ID must be tied to a real transcript in this workspace.
+      if (resume) {
+        const known = options.sessionOptions?.sessionStore
+          ? (await options.sessionOptions.sessionStore.listSessions(
+              (await import('../../utils/sessionStoragePortable.js')).sanitizePath(
+                await (await import('../../utils/sessionStoragePortable.js')).canonicalizePath(sessionCwd),
+              ),
+            )).some(entry => entry.sessionId === resume)
+          : !!await history.getSessionInfo(resume, { dir: sessionCwd })
+        if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
+      }
+      const tasks = resume ? await journal.read(resume) : []
+      const storedSettings = resume ? await sessionSettings.read(resume) : null
+      const resolvedModel = selectedModel ?? storedSettings?.model ?? undefined
+      const resolvedPermission = smartPolicy?.permissionMode ?? storedSettings?.permissionMode ?? options.sessionOptions?.permissionMode ?? (resume ? undefined : 'default')
+      if(resolvedPermission==='bypassPermissions'&&!options.sessionOptions?.allowDangerouslySkipPermissions)
+        throw new Error('Cannot restore bypassPermissions without explicit host permission')
+      const actualSettings: DesktopSessionSettings = { model: resolvedModel ?? options.model ?? null, permissionMode: resolvedPermission ?? null }
+      // Reserve once for the entire SDK session. Cross-host capacity is checked
+      // under a filesystem lock before any model turn starts.
+      const budgetState=await projectBudget.get()
+      if(budgetState.limitUsd!==null){
+        const inspection=await inspectSmartModel(resolvedModel)
+        if('hasPricing' in inspection && !inspection.hasPricing)
+          throw new Error('项目已启用共享预算，当前模型缺少可靠费率，请先完善模型价格')
+      }
+      preparedBudget=await projectBudget.reserve(randomUUID(),
+        smartPolicy?.maxBudgetUsd ?? options.sessionOptions?.maxBudgetUsd)
+      runtime = launch(sdkOptions(resolvedModel, sessionEnv, sessionCwd, {
+        ...smartPolicy,
+        ...(resolvedPermission ? { permissionMode: resolvedPermission } : {}),
+        ...(preparedBudget.maxBudgetUsd===undefined?{}:{maxBudgetUsd:preparedBudget.maxBudgetUsd}),
+      }), resume)
+      const info = await initializeModels(runtime)
+      if (closed) throw new Error('Desktop gateway closed during session initialization')
+      const id = runtime.sessionId
+      if (sessions.has(id)) throw new Error(`Desktop session already open: ${id}`)
+      const activeRuntime = runtime
+      const entry: Entry = {
+        ...actualSettings,
+        runtime: activeRuntime,
+        tasks: new Map(tasks.map(task => [task.taskId, task])),
+        seenPermissions: new Set(),
+        seenHostRequests: new Set(),
+        unsubscribe: [],
+      }
+      await sessionSettings.write(id, actualSettings)
+      sessions.set(id, entry)
+      if(preparedBudget.id)sessionBudgets.set(id,{leaseId:preparedBudget.id,awaitingResult:false})
+      entry.unsubscribe.push(activeRuntime.state.subscribe(() => emit({
+        event: 'session.state', sessionId: id, state: activeRuntime.state.getState(),
+      })))
+      entry.unsubscribe.push(activeRuntime.permissions.subscribe(() => {
+        const pending = activeRuntime.permissions.getPending()
+        const current = new Set(pending.map(item => item.id))
+        for (const item of pending) if (!entry.seenPermissions.has(item.id)) {
+          emit({ event: 'permission.request', sessionId: id, permission: item })
+        }
+        for (const prior of entry.seenPermissions) if (!current.has(prior)) {
+          emit({ event: 'permission.resolved', sessionId: id, permissionId: prior })
+        }
+        entry.seenPermissions = current
+      }))
+      entry.unsubscribe.push(activeRuntime.hostControls.subscribe(() => {
+        const pending = activeRuntime.hostControls.getPending()
+        const current = new Set(pending.map(item => item.id))
+        for (const item of pending) if (!entry.seenHostRequests.has(item.id)) {
+          emit({ event: 'host.request', sessionId: id, request: item })
+        }
+        for (const prior of entry.seenHostRequests) if (!current.has(prior)) {
+          emit({ event: 'host.resolved', sessionId: id, requestId: prior })
+        }
+        entry.seenHostRequests = current
+      }))
+      emit({ event: 'session.state', sessionId: id, state: runtime.state.getState() })
+      return { sessionId: id, resumed: !!resume, ...info, tasks, ...actualSettings }
+    } catch (error) {
+      if (preparedBudget?.id){
+        await projectBudget.finish(preparedBudget.id,false)
+        if(runtime)sessionBudgets.delete(runtime.sessionId)
+      }
+      if (runtime) {
+        const active = sessions.get(runtime.sessionId)
+        if (active?.runtime === runtime) {
+          for (const stop of active.unsubscribe) stop()
+          sessions.delete(runtime.sessionId)
+        }
+        await runtime.closeAndWait()
+      }
+      throw error
+    } finally {
+      if (resume) opening.delete(resume)
+    }
+  }
+
+  async function models(sessionId?: string) {
+    if (sessionId) return initializeModels(requireSession(sessionId).runtime)
+    const probe = launch(sdkOptions())
+    try { return await initializeModels(probe) }
+    finally { await probe.closeAndWait() }
+  }
+
+  function notifyJob(missionId: string, job: MissionJob): void {
+    emit({ event: 'mission.job.updated', missionId, job })
+  }
+  async function settleExecutingJob(
+    sessionId: string, status: 'review' | 'failed' | 'interrupted', summary: string,
+  ): Promise<void> {
+    const active = executingMissionJobs.get(sessionId)
+    if (!active) return
+    const job = await settleMissionJob(
+      active.missionId, cwd, active.jobId, active.runId, status,
+      summary.slice(0, 4000), options.missionRoot,
+    )
+    executingMissionJobs.delete(sessionId)
+    notifyJob(active.missionId, job)
+    triggerMissionQueue(active.missionId)
+  }
+
+  function notifyQueue(missionId: string, active: boolean, message?: string): void {
+    emit({ event: 'mission.queue.state', missionId, active, ...(message && { message }) })
+  }
+  function haltMissionQueue(missionId: string, message: string): void {
+    if (!activeMissionQueues.delete(missionId)) return
+    pendingQueueDrains.delete(missionId)
+    notifyQueue(missionId, false, message)
+  }
+  function triggerMissionQueue(missionId: string): void {
+    if (closed || !activeMissionQueues.has(missionId)) return
+    if (drainingMissionQueues.has(missionId)) {
+      pendingQueueDrains.add(missionId)
+      return
+    }
+    // A callback must never block the SDK stream waiting for another worker
+    // to initialize. Persist its terminal state first, then fill queue slots.
+    void drainMissionQueue(missionId).catch(error =>
+      haltMissionQueue(missionId, `自动派发停止：${String(error)}`))
+  }
+  async function drainMissionQueue(missionId: string): Promise<void> {
+    if (drainingMissionQueues.has(missionId)) return
+    drainingMissionQueues.add(missionId)
+    try {
+      do {
+        pendingQueueDrains.delete(missionId)
+        if (closed || !activeMissionQueues.has(missionId)) break
+        const mission = await getScopedMission(missionId)
+        if (mission.status !== 'active') {
+          haltMissionQueue(missionId, '长期任务已暂停或完成，停止派发新工作项')
+          break
+        }
+        const jobs = await listMissionJobs(missionId, cwd, options.missionRoot)
+        const running = jobs.filter(job => job.status === 'running').length
+        const queued = jobs.filter(job => job.status === 'queued')
+        if (running === 0 && queued.length === 0) {
+          haltMissionQueue(missionId, '工作队列本轮已执行完毕；结果保留待审核')
+          break
+        }
+        const available = Math.max(0, 3 - running)
+        if (available > 0 && queued.length > 0) {
+          const launched = await Promise.allSettled(queued.slice(0, available).map(job =>
+            handle({ id: randomUUID(), method: 'missions.jobs.start', missionId, jobId: job.id }),
+          ))
+          const failure = launched.find((item): item is PromiseRejectedResult => item.status === 'rejected')
+          if (failure) {
+            haltMissionQueue(missionId, `工作项启动失败：${String(failure.reason)}`)
+            break
+          }
+        }
+      } while (pendingQueueDrains.has(missionId))
+    } finally {
+      drainingMissionQueues.delete(missionId)
+      if (activeMissionQueues.has(missionId) && pendingQueueDrains.has(missionId))
+        triggerMissionQueue(missionId)
+    }
+  }
+
+  async function inspectSmartModel(selectedModel?: string) {
+    const activeModel = selectedModel ?? model
+    if (!activeModel) return {
+      model: '默认模型', status: 'inherited' as const, checkedOffline: true,
+      message: '继承本机当前模型和已有权限，不会自动切换到其他服务商',
+    }
+    const { isRemovedIndependentModel, resolveIndependentModel } =
+      await import('../api/multimodel/registry.js')
+    if (isRemovedIndependentModel(activeModel)) throw new Error('该模型服务商已退出个人版支持范围')
+    const route = resolveIndependentModel(activeModel)
+    if (!route) return {
+      model: activeModel, status: 'native' as const, checkedOffline: true,
+      message: '沿用现有模型配置；实际可用性在执行时由服务商确认',
+    }
+    const { getConfiguredModelProviders, getConfiguredModelSnapshots } =
+      await import('../api/multimodel/catalog.js')
+    const { getSavedCapabilityReport } = await import('../api/multimodel/capabilityProbe.js')
+    const { readIndependentPricing } = await import('../api/multimodel/pricing.js')
+    const configured = getConfiguredModelProviders().includes(route.provider)
+    const snapshot = getConfiguredModelSnapshots().find(item => item.model === activeModel)
+    const probe = getSavedCapabilityReport(activeModel)
+    const hasPricing = readIndependentPricing()[activeModel] !== undefined
+    return {
+      model: activeModel, provider: route.provider,
+      status: configured ? 'configured' as const : 'missing-credential' as const,
+      checkedOffline: true, hasPricing,
+      contextWindow: snapshot?.contextWindow ?? null,
+      maxOutputTokens: snapshot?.maxOutputTokens ?? null,
+      outputSource: snapshot?.outputSource ?? 'unverified',
+      toolRoundTrip: probe?.toolRoundTrip ?? null,
+      probeTime: probe?.timestamp ?? null,
+      message: !configured ? '请先在模型管理中配置该服务商的凭证'
+        : '本地配置已就绪；在线工具能力测试可在需要时手动运行',
+    }
+  }
+
+
+  async function finishSmartExecution(
+    sessionId: string, status: 'completed' | 'failed' | 'interrupted', costUsd?: number,
+  ): Promise<void> {
+    if (!smartActive.has(sessionId)) return
+    await smartJournal.finish(sessionId, status, costUsd)
+    smartActive.delete(sessionId)
+    smartPrepared.delete(sessionId)
+    emit({ event: 'smart.finished', sessionId, status,
+      ...(costUsd === undefined ? {} : { costUsd }) })
+  }
+
+  async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
+    const entry = requireSession(sessionId)
+    const sessionBudget = sessionBudgets.get(sessionId)
+    if (sessionBudget?.accountingError)
+      throw new Error(`本会话预算记账失败，需先关闭会话核对实际费用：${sessionBudget.accountingError}`)
+    if (entry.closing || entry.consuming || entry.sending)
+      throw new Error('A turn is already being consumed or the session is closing')
+    // Reserve the session before the first await: concurrent desktop callers
+    // must never enqueue two turns into a single SDK stream simultaneously.
+    let finishSend!: () => void
+    entry.sending = new Promise<void>(resolve => { finishSend = resolve })
+    // Closing the host must not wait for a stuck SDK send/transport promise.
+    // Keep the SDK send observed by Promise.race and close the underlying
+    // runtime independently; a late send result cannot resurrect the turn.
+    const cancelled = new Promise<never>((_, reject) => { entry.cancelSend = reject })
+    const turnId = randomUUID()
+    try {
+      if(sessionBudget && await projectBudget.remaining(sessionBudget.leaseId)<=0)
+        throw new Error('本会话已用尽预占的共享预算额度，请关闭会话并重新分配预算')
+      if(sessionBudget)sessionBudget.awaitingResult=true
+      await Promise.race([entry.runtime.send(message), cancelled])
+      if (entry.closing || closed) throw new Error('Desktop session closed during send')
+    } catch (error) {
+      entry.cancelSend = undefined
+      entry.sending = undefined
+      finishSend()
+      throw error
+    }
+    const pump = async () => {
+      let pendingReviewSummary: string | undefined
+      let pendingSmartResult: { status: 'completed'|'failed'|'interrupted'; costUsd?: number } | undefined
+      try {
+        for await (const sdkMessage of entry.runtime.stream()) {
+          emit({ event: 'session.message', sessionId, turnId, message: sdkMessage })
+          if(sdkMessage.type==='result' && sessionBudget){
+            const cost=sdkMessage.total_cost_usd
+            if(typeof cost==='number' && Number.isFinite(cost) && cost>=0){
+              try {
+                await projectBudget.charge(sessionBudget.leaseId,cost)
+                sessionBudget.awaitingResult=false
+              } catch (error) {
+                // The model already produced a result. A ledger I/O failure
+                // must not discard subsequent SDK notifications or relabel
+                // successful execution as interrupted. Preserve the lease as
+                // uncertain and refuse further paid turns until reconciliation.
+                sessionBudget.accountingError=error instanceof Error ? error.message : String(error)
+                emit({event:'session.error',sessionId,turnId,
+                  error:`预算记账失败，实际费用待核对；本会话后续请求已暂停：${sessionBudget.accountingError}`})
+              }
+            } // Missing usage remains reserved for explicit reconciliation.
+          }
+          if (sdkMessage.type === 'result' && smartActive.has(sessionId)) {
+            const interrupted = sdkMessage.terminal_reason === 'aborted_tools' ||
+              sdkMessage.terminal_reason === 'aborted_streaming'
+            const status = interrupted ? 'interrupted'
+              : (!sdkMessage.is_error && sdkMessage.subtype === 'success' ? 'completed' : 'failed')
+            const cost = typeof sdkMessage.total_cost_usd === 'number' &&
+              Number.isFinite(sdkMessage.total_cost_usd) && sdkMessage.total_cost_usd >= 0
+                ? sdkMessage.total_cost_usd : undefined
+            if (status === 'completed' && [...entry.tasks.values()].some(task => task.status === 'running')) {
+              pendingSmartResult = { status, ...(cost === undefined ? {} : { costUsd: cost }) }
+            } else {
+              await finishSmartExecution(sessionId, status, cost)
+            }
+          }
+          if (sdkMessage.type === 'result' && executingMissionJobs.has(sessionId)) {
+            const success = !sdkMessage.is_error && sdkMessage.subtype === 'success'
+            const summary = typeof sdkMessage.result === 'string' && sdkMessage.result.trim()
+              ? sdkMessage.result : success ? '模型执行已结束，等待人工核查' : '模型执行返回失败'
+            if (success && [...entry.tasks.values()].some(task => task.status === 'running')) {
+              // The coordinator may finish while its background agents are
+              // still working. Wait for native task notifications before
+              // reporting an auditable result; an ended stream is interrupted.
+              pendingReviewSummary = summary
+            } else {
+              await settleExecutingJob(sessionId, success ? 'review' : 'failed', summary)
+            }
+          }
+          if (isAgentProgress(sdkMessage)) {
+            const background = projectBackgroundTasks(sdkMessage, entry.tasks)
+            for (const task of background) {
+              entry.tasks.set(task.taskId, task)
+              emit({ event: 'task.updated', sessionId, task })
+            }
+            if (background.length) scheduleTaskSnapshot(sessionId, entry)
+            const oldTask = sdkMessage.type === 'system' && 'task_id' in sdkMessage
+              ? entry.tasks.get(sdkMessage.task_id) : undefined
+            const task = projectTask(sdkMessage, oldTask)
+            if (task) {
+              entry.tasks.set(task.taskId, task)
+              emit({ event: 'task.updated', sessionId, task })
+              scheduleTaskSnapshot(sessionId, entry)
+            }
+            emit({ event: 'agent.progress', sessionId, turnId, message: sdkMessage, ...(task && { task }) })
+            const job = executingMissionJobs.get(sessionId)
+            if (job && task) emit({
+              event: 'mission.activity', missionId: job.missionId, jobId: job.jobId,
+              sessionId, task,
+            })
+            if (pendingSmartResult && smartActive.has(sessionId) &&
+                ![...entry.tasks.values()].some(item => item.status === 'running')) {
+              await finishSmartExecution(sessionId, pendingSmartResult.status, pendingSmartResult.costUsd)
+              pendingSmartResult = undefined
+            }
+            if (pendingReviewSummary && executingMissionJobs.has(sessionId) &&
+                ![...entry.tasks.values()].some(item => item.status === 'running')) {
+              await settleExecutingJob(sessionId, 'review', pendingReviewSummary)
+              pendingReviewSummary = undefined
+            }
+          }
+        }
+      } catch (error) {
+        emit({
+          event: 'session.error', sessionId, turnId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      } finally {
+        if (smartActive.has(sessionId)) {
+          try {
+            await finishSmartExecution(sessionId, 'interrupted', pendingSmartResult?.costUsd)
+          } catch (error) {
+            emit({ event: 'session.error', sessionId, turnId,
+              error: `智能执行记录写入失败：${String(error)}` })
+          }
+        }
+        if (executingMissionJobs.has(sessionId)) {
+          try {
+            await settleExecutingJob(sessionId, 'interrupted',
+              pendingReviewSummary
+                ? '主会话已完成，但后台智能体仍有未确认的运行任务；请检查任务通知与文件改动后手动恢复'
+                : '执行流结束前未取得完整结果；请核对实际改动后手动重试')
+          } catch (error) {
+            emit({ event: 'session.error', sessionId, turnId,
+              error: `长期任务恢复记录失败：${String(error)}` })
+          }
+        }
+        entry.consuming = undefined
+      }
+    }
+    entry.consuming = pump()
+    entry.cancelSend = undefined
+    entry.sending = undefined
+    finishSend()
+    return { sessionId, turnId }
+  }
+
+  async function restoreTask(sessionId: string, taskId: string, prompt?: string) {
+    const existing = sessions.get(sessionId)
+    const tasks = existing ? [...existing.tasks.values()] : await journal.read(sessionId)
+    const task = tasks.find(item => item.taskId === taskId)
+    if (!task) throw new Error(`Task is not in the stored session: ${taskId}`)
+    if (task.status === 'completed') throw new Error('Completed tasks do not require recovery')
+    if (task.status === 'running') throw new Error('Task is already running')
+    const restored = existing ? undefined : await openSession(undefined, sessionId)
+    // The SDK restores the parent transcript. The original decompiled
+    // SendMessage tool resumes a stopped Agent from its real agent transcript;
+    // Workflow uses its own resumeFromRunId. Ask for that native tool rather
+    // than claiming a generic prompt already restarted an agent.
+    const guidance = task.taskType === 'local_agent'
+      ? `请使用原生 SendMessage(to=${JSON.stringify(taskId)}) 对原智能体发送继续指令，复用它已有的执行上下文。先核对隔离工作树和工具结果。`
+      : task.taskType === 'local_workflow' && task.runId
+        ? `请使用原生 Workflow 工具的 resumeFromRunId=${JSON.stringify(task.runId)} 恢复已归档阶段，核对脚本和历史记录。`
+        : `请在原 SDK 会话中核对任务 ${taskId}（${task.description}）的实际进度和副作用，再处理剩余工作。`
+    const turn = prompt ? await send(sessionId, `${guidance} 用户授权的继续要求：${prompt}`) : undefined
+    return { sessionId, task, restored: !!restored,
+      action: turn ? 'continuation_requested' : 'context_restored',
+      ...(turn && { turnId: turn.turnId }) }
+  }
+
+  async function closeSession(sessionId: string) {
+    requireSession(sessionId)
+    await closeSessionInternal(sessionId)
+    return { sessionId, closed: true }
+  }
+
+  async function getScopedMission(missionId: string) {
+    const mission = await getMission(missionId, options.missionRoot)
+    if (resolve(mission.projectDir) !== cwd)
+      throw new Error('This mission belongs to a different workspace')
+    await reconcileMissionTerminalJobs(mission.id, cwd, options.missionRoot)
+    return getMission(mission.id, options.missionRoot)
+  }
+  async function projectMissions() {
+    const missions = (await listMissions(options.missionRoot))
+      .filter(mission => resolve(mission.projectDir) === cwd)
+    return Promise.all(missions.map(async mission => {
+      await reconcileMissionTerminalJobs(mission.id, cwd, options.missionRoot)
+      return getMission(mission.id, options.missionRoot)
+    }))
+  }
+
+  async function handle(request: DesktopRequest): Promise<unknown> {
+    if (closed) throw new Error('Desktop gateway is closed')
+    if (purgeRunning) throw new Error('本地项目记录正在清理，请完成当前操作后再试')
+    switch (request.method) {
+      case 'hello':
+        return {
+          protocolVersion: DESKTOP_PROTOCOL_VERSION,
+          transport: 'stdio-jsonl',
+          stream: 'sdk-stream-json',
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'agent_activity', 'team_mailbox', 'capability_catalog', 'experience_memory', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
+        }
+      case 'budget.project.get': return projectBudget.reconcile()
+      case 'budget.project.resolveUnknown':
+        return projectBudget.resolveUnknown(request.unknownId,request.costUsd)
+      case 'budget.project.set':
+        if (opening.size || sessions.size || executingMissionJobs.size || activeMissionQueues.size)
+          throw new Error('修改项目共享预算前，请关闭当前工作区的会话和任务执行')
+        return projectBudget.configure(request.limitUsd)
+      case 'smart.inspect': return inspectSmartModel(request.model)
+      case 'smart.history': {
+        await smartJournal.reconcile(ownerKey, new Set(sessions.keys()))
+        return smartJournal.list()
+      }
+      case 'smart.execute': {
+        const inspection = await inspectSmartModel(request.model)
+        if (inspection.status === 'missing-credential') throw new Error(inspection.message)
+        if (request.maxBudgetUsd !== undefined &&
+            'hasPricing' in inspection && !inspection.hasPricing) {
+          throw new Error('该模型尚未配置费率，请先设置价格，才能使用费用上限')
+        }
+        const policy = {
+          ...(request.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: request.maxBudgetUsd }),
+          ...(request.permissionMode === undefined ? {} : { permissionMode: request.permissionMode }),
+        }
+        const opened = await openSession(request.model, undefined, undefined, undefined, policy)
+        try {
+          await smartJournal.start({
+            sessionId: opened.sessionId, status: 'running',
+            model: inspection.model, ownerPid: process.pid, ownerId: ownerKey,
+            permissionMode: request.permissionMode ?? options.sessionOptions?.permissionMode ?? 'default',
+            startedAt: new Date().toISOString(),
+            ...(request.maxBudgetUsd === undefined ? {} : { budgetUsd: request.maxBudgetUsd }),
+          })
+          smartActive.add(opened.sessionId)
+          if (request.deferStart) {
+            smartPrepared.set(opened.sessionId, request.prompt)
+            return { sessionId: opened.sessionId, prepared: true, model: inspection.model }
+          }
+          const turn = await send(opened.sessionId, request.prompt)
+          return { sessionId: opened.sessionId, turnId: turn.turnId, model: inspection.model,
+            budgetUsd: request.maxBudgetUsd ?? null }
+        } catch (error) {
+          if (smartActive.has(opened.sessionId)) await finishSmartExecution(opened.sessionId, 'failed')
+          await closeSessionInternal(opened.sessionId)
+          throw error
+        }
+      }
+      case 'smart.start': {
+        const prompt = smartPrepared.get(request.sessionId)
+        if (!prompt || !smartActive.has(request.sessionId)) throw new Error('该智能执行任务未准备或已启动')
+        smartPrepared.delete(request.sessionId)
+        try {
+          const turn = await send(request.sessionId, prompt)
+          return { sessionId: request.sessionId, turnId: turn.turnId }
+        } catch (error) {
+          await finishSmartExecution(request.sessionId, 'failed')
+          await closeSessionInternal(request.sessionId)
+          throw error
+        }
+      }
+      case 'system.diagnostics': {
+        const { getDoctorDiagnostic } = await import('../../utils/doctorDiagnostic.js')
+        const { listProviderApiKeyAccounts } = await import('../auth/apiKeyVault.js')
+        const { getMcpConfigsByScope } = await import('../mcp/config.js')
+        const installation = await getDoctorDiagnostic()
+        const mcp = (['project', 'user', 'local'] as const).map(scope => {
+          const result = getMcpConfigsByScope(scope)
+          return { scope, count: Object.keys(result.servers).length, errors: result.errors.map(error => error.message) }
+        })
+        return {
+          installation,
+          runtime: { cwd, activeSessions: sessions.size, activeTasks: [...sessions.values()].flatMap(item => [...item.tasks.values()]).filter(task => task.status === 'running').length },
+          configuredProviders: listProviderApiKeyAccounts(),
+          mcp,
+          note: '模型凭证及 MCP 配置检查不会主动发起付费模型请求',
+        }
+      }
+      case 'data.purge.preview': {
+        const { planLocalProjectPurge } = await import('./maintenance.js')
+        const plan = await planLocalProjectPurge(cwd, options.dataDir)
+        const token = randomUUID()
+        pendingPurge = { token, createdAt: Date.now(), plan }
+        return { token, workspace: plan.workspace, items: plan.items.map(item => ({ kind: item.kind, path: item.path, reason: item.reason })), warnings: plan.warnings, activeSessions: sessions.size }
+      }
+      case 'data.purge.apply': {
+        const pending = pendingPurge
+        if (!pending || pending.token !== request.token || Date.now() - pending.createdAt > 300000)
+          throw new Error('清理预览已失效，请重新检查删除清单')
+        pendingPurge = undefined
+        if (opening.size || activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
+            [...sessions.values()].some(entry => entry.sending || entry.consuming ||
+              [...entry.tasks.values()].some(task => task.status === 'running')))
+          throw new Error('当前仍有启动中或执行中的会话、智能体或任务队列。请先停止执行再清理')
+        purgeRunning = true
+        try {
+          const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
+          const current = await planLocalProjectPurge(cwd, options.dataDir)
+          const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
+          if (signature(current.items) !== signature(pending.plan.items))
+            throw new Error('清理内容已变化，请重新预览后确认')
+          // Close only idle sessions after verifying that the plan is still valid.
+          for (const sessionId of [...sessions.keys()]) await closeSessionInternal(sessionId)
+          return await executeLocalProjectPurge(current.items)
+        } finally {
+          purgeRunning = false
+        }
+      }
+      case 'capabilities.refresh': {
+        const { clearCommandsCache } = await import('../../commands.js')
+        clearCommandsCache()
+        const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
+        return listCapabilityCatalog(cwd)
+      }
+      case 'capabilities.skills.drafts': {
+        const { listSkillDrafts } = await import('../agentCenter/skillWorkshop.js')
+        return { drafts: await listSkillDrafts(cwd, options.dataDir) }
+      }
+      case 'capabilities.skills.createDraft': {
+        const { createSkillDraft } = await import('../agentCenter/skillWorkshop.js')
+        return createSkillDraft(cwd, {
+          slug: request.slug, description: request.description, instructions: request.instructions,
+        }, options.dataDir)
+      }
+      case 'capabilities.skills.publish': {
+        const { publishSkillDraft } = await import('../agentCenter/skillWorkshop.js')
+        const result = await publishSkillDraft(cwd, request.draftId, options.dataDir)
+        const { clearCommandsCache } = await import('../../commands.js')
+        clearCommandsCache()
+        return result
+      }
+      case 'capabilities.list': {
+        const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
+        return listCapabilityCatalog(cwd)
+      }
+      case 'experience.list': {
+        const { listProjectExperiences } = await import('../agentCenter/experienceMemory.js')
+        return { experiences: await listProjectExperiences(cwd, { includeCandidates: request.includeCandidates, root: options.dataDir }) }
+      }
+      case 'experience.search': {
+        const { findRelevantExperiences } = await import('../agentCenter/experienceMemory.js')
+        return { experiences: await findRelevantExperiences(cwd, request.query, options.dataDir) }
+      }
+      case 'experience.propose': {
+        const { proposeProjectExperience, validateExperienceDraft } =
+          await import('../agentCenter/experienceMemory.js')
+        return proposeProjectExperience(cwd, validateExperienceDraft(request.draft), options.dataDir)
+      }
+      case 'experience.evidence.preview': {
+        const { previewProjectExperienceEvidence } = await import('../agentCenter/experienceMemory.js')
+        return previewProjectExperienceEvidence(cwd, request.experienceId, options.dataDir)
+      }
+      case 'experience.approve': {
+        const { approveProjectExperience } = await import('../agentCenter/experienceMemory.js')
+        return approveProjectExperience(cwd, request.experienceId, request.reviewer, options.dataDir, request.reviewNote)
+      }
+      case 'experience.retire': {
+        const { retireProjectExperience } = await import('../agentCenter/experienceMemory.js')
+        return retireProjectExperience(cwd, request.experienceId, request.reason, options.dataDir)
+      }
+      case 'models.list': return models(request.sessionId)
+      case 'mcp.list': {
+        const { getMcpConfigsByScope, isMcpServerDisabled } = await import('../mcp/config.js')
+        const output: Array<{name:string;scope:string;type:string;disabled:boolean;url?:string}> = []
+        const errors: string[] = []
+        for(const scope of ['project','user','local'] as const){
+          const result=getMcpConfigsByScope(scope)
+          for(const [name,config] of Object.entries(result.servers)){
+            output.push({name,scope,type:config.type||'stdio',disabled:isMcpServerDisabled(name),...('url' in config&&typeof config.url==='string'?{url:config.url}:{})})
+          }
+          errors.push(...result.errors.map(e=>e.message))
+        }
+        return {servers:output,errors}
+      }
+      case 'mcp.add': {
+        const { addMcpConfig } = await import('../mcp/config.js')
+        await addMcpConfig(request.name,request.config,request.scope)
+        return {name:request.name,added:true}
+      }
+      case 'mcp.remove': {
+        const { removeMcpConfig } = await import('../mcp/config.js')
+        await removeMcpConfig(request.name,request.scope)
+        return {name:request.name,removed:true}
+      }
+      case 'mcp.toggle': {
+        const { getMcpConfigsByScope, setMcpServerEnabled } = await import('../mcp/config.js')
+        const configured=(['project','user','local'] as const).some(scope=>getMcpConfigsByScope(scope).servers[request.name])
+        if(!configured)throw new Error(`MCP 服务器不存在：${request.name}`)
+        setMcpServerEnabled(request.name,request.enabled)
+        return {name:request.name,enabled:request.enabled}
+      }
+      case 'sessions.open': return openSession(request.model)
+      case 'sessions.resume': return openSession(undefined, request.sessionId)
+      case 'sessions.ensureOpen': {
+        const existing = sessions.get(request.sessionId)
+        if(existing) return {
+          sessionId: request.sessionId, resumed: false, tasks: [...existing.tasks.values()],
+          model: existing.model, permissionMode: existing.permissionMode,
+        }
+        // Multiple clicks may request the same session while the disk transcript
+        // and runtime are still opening. Reuse that one SDK launch.
+        const running = ensuring.get(request.sessionId)
+        if(running)return running
+        const pending = openSession(undefined, request.sessionId)
+        ensuring.set(request.sessionId,pending)
+        try{return await pending}
+        finally{
+          if(ensuring.get(request.sessionId)===pending)ensuring.delete(request.sessionId)
+        }
+      }
+      case 'sessions.list': return history.listSessions({ dir: cwd, limit: request.limit, offset: request.offset })
+      case 'sessions.history': {
+        const dir = await sessionWorktree(request.sessionId) ?? cwd
+        if (request.tail) {
+          const all = await history.getSessionMessages(request.sessionId, { dir, includeSystemMessages: true })
+          const end = Math.max(0, all.length - (request.offset ?? 0))
+          const offset = Math.max(0, end - (request.limit ?? 200))
+          return { messages: all.slice(offset, end), total: all.length, offset }
+        }
+        return history.getSessionMessages(request.sessionId, {
+          dir, limit: request.limit, offset: request.offset, includeSystemMessages: true,
+        })
+      }
+      case 'sessions.close': return closeSession(request.sessionId)
+      case 'sessions.status': {
+        const entry = requireSession(request.sessionId)
+        return { ...entry.runtime.state.getState(), model: entry.model, permissionMode: entry.permissionMode }
+      }
+      case 'sessions.send': return send(request.sessionId, request.message)
+      case 'sessions.interrupt': {
+        const entry = requireSession(request.sessionId)
+        entry.runtime.permissions.cancelPending('Interrupted by desktop user')
+        entry.runtime.hostControls.cancelPending('Interrupted by desktop user')
+        await entry.runtime.interrupt()
+        return { sessionId: request.sessionId, requested: true }
+      }
+      case 'sessions.setModel': {
+        const entry = requireSession(request.sessionId)
+        // The official SDK clears the session override when set_model omits
+        // its optional model. Persist null to retain that default selection.
+        await entry.runtime.control({ subtype: 'set_model',
+          ...(request.model === null ? {} : { model: request.model }),
+        })
+        entry.model = request.model
+        await sessionSettings.write(request.sessionId, { model: entry.model, permissionMode: entry.permissionMode })
+        return { model: entry.model }
+      }
+      case 'sessions.setPermissionMode': {
+        if (request.mode === 'bypassPermissions' && !options.sessionOptions?.allowDangerouslySkipPermissions) {
+          throw new Error('Bypass permissions requires explicit host configuration')
+        }
+        const entry = requireSession(request.sessionId)
+        await entry.runtime.control({ subtype: 'set_permission_mode', mode: request.mode })
+        entry.permissionMode = request.mode
+        await sessionSettings.write(request.sessionId, { model: entry.model, permissionMode: entry.permissionMode })
+        return { mode: entry.permissionMode }
+      }
+      case 'host.list': return requireSession(request.sessionId).runtime.hostControls.getPending()
+      case 'host.respond': {
+        const host = requireSession(request.sessionId).runtime.hostControls
+        if (!host.settle(request.requestId, request.response)) throw new Error('Host request expired or belongs to another session')
+        return { requestId: request.requestId, accepted: true }
+      }
+      case 'host.reject': {
+        const host = requireSession(request.sessionId).runtime.hostControls
+        if (!host.reject(request.requestId, request.reason)) throw new Error('Host request expired or belongs to another session')
+        return { requestId: request.requestId, accepted: true }
+      }
+      case 'permissions.list': return requireSession(request.sessionId).runtime.permissions.getPending()
+      case 'permissions.decide': {
+        const broker = requireSession(request.sessionId).runtime.permissions
+        if (!broker.settle(request.permissionId, request.decision)) throw new Error('Permission request expired or belongs to another session')
+        return { permissionId: request.permissionId, accepted: true }
+      }
+      case 'agents.activity': {
+        // A read-only, cross-mode projection of existing SDK tasks and
+        // durable Mission assignments. It never launches workers or models.
+        type Activity = {
+          id: string; source: 'session-task'|'mission-job'|'mission-assignment';
+          title: string; status: string; updatedAt: string;
+          sessionId?: string; missionId?: string; jobId?: string;
+          kind?: string; model?: string;
+        }
+        const sessionEntries: Activity[] = [...sessions.entries()].flatMap(([sessionId, entry]) =>
+          [...entry.tasks.values()].map(task => ({
+            id: `session:${sessionId}:${task.taskId}`,
+            source: 'session-task' as const,
+            title: task.description || task.taskId,
+            status: task.status,
+            updatedAt: new Date(task.updatedAt).toISOString(),
+            sessionId,
+            ...(entry.model ? { model: entry.model } : {}),
+          })),
+        )
+        const missions = await projectMissions()
+        const entries = await Promise.all(missions.map(async mission => {
+          const jobs = await listMissionJobs(mission.id, cwd, options.missionRoot)
+          const assignments: Activity[] = mission.assignments
+            .filter(assignment => !assignment.id.startsWith('mission-job:'))
+            .map(assignment => ({
+              id: `assignment:${mission.id}:${assignment.id}`,
+              source: 'mission-assignment' as const,
+              title: assignment.title, status: assignment.status,
+              kind: assignment.kind, updatedAt: assignment.updatedAt,
+              missionId: mission.id,
+            }))
+          const tickets: Activity[] = jobs.map(job => ({
+            id: `job:${mission.id}:${job.id}`,
+            source: 'mission-job' as const,
+            title: job.title, status: job.status,
+            updatedAt: job.updatedAt, missionId: mission.id, jobId: job.id,
+            ...(job.sessionId ? { sessionId: job.sessionId } : {}),
+            ...(job.model ? { model: job.model } : {}),
+          }))
+          return [...assignments, ...tickets]
+        }))
+        const activities = [...sessionEntries, ...entries.flat()]
+          .sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))
+          .slice(0,100)
+        return { activities, totalVisible: sessionEntries.length + entries.reduce((n,x) => n+x.length,0) }
+      }
+      case 'agents.overview': {
+        const [missions, teams] = await Promise.all([projectMissions(), listProjectTeams(cwd)])
+        return {
+          mode: getActiveAgentMode(),
+          selectedMissionId: getSelectedMissionId(cwd) ?? null,
+          missions,
+          teams,
+          activeSessions: sessions.size,
+          activeTasks: [...sessions.values()]
+            .flatMap(session => [...session.tasks.values()])
+            .filter(task => task.status === 'running').length,
+        }
+      }
+      case 'agents.members': {
+        const teams = await listProjectTeams(cwd)
+        if (!teams.some(team => team.name === request.teamName))
+          throw new Error('团队不属于当前项目或已解散')
+        return getTeammateStatuses(request.teamName)
+      }
+      case 'agents.team.message':
+        return sendProjectTeamMessage(cwd, request)
+      case 'agents.team.inbox':
+        return readProjectTeamInbox(cwd, request.teamName, request.memberName)
+      case 'artifacts.list': {
+        const { listProjectArtifacts } = await import('../agentCenter/artifactRegistry.js')
+        return { artifacts:await listProjectArtifacts(cwd,options.dataDir) }
+      }
+      case 'artifacts.register': {
+        const { registerProjectArtifact } = await import('../agentCenter/artifactRegistry.js')
+        return registerProjectArtifact(cwd,{
+          title:request.title,kind:request.kind,path:request.path,
+          ...(request.missionId?{missionId:request.missionId}:{}),
+          ...(request.jobId?{jobId:request.jobId}:{}),
+        },options.dataDir)
+      }
+      case 'artifacts.verify': {
+        const { verifyProjectArtifact } = await import('../agentCenter/artifactRegistry.js')
+        return verifyProjectArtifact(cwd,request.artifactId,options.dataDir)
+      }
+      case 'artifacts.approve': {
+        const { approveProjectArtifact } = await import('../agentCenter/artifactRegistry.js')
+        return approveProjectArtifact(cwd,request.artifactId,'桌面用户',request.reviewNote,options.dataDir)
+      }
+      case 'supervisor.snapshot': {
+        const { getProjectSupervisorSnapshot } = await import('../agentCenter/projectSupervisor.js')
+        return getProjectSupervisorSnapshot(cwd,{dataDir:options.dataDir,missionRoot:options.missionRoot})
+      }
+      case 'agents.profiles.list': {
+        const { listAgentProfiles } = await import('../agentCenter/agentRegistry.js')
+        return { agents: await listAgentProfiles(cwd, options.dataDir) }
+      }
+      case 'agents.profiles.create': {
+        const { createAgentProfile } = await import('../agentCenter/agentRegistry.js')
+        return createAgentProfile(cwd, {
+          id:request.agentId,name:request.name,description:request.description,
+          domains:request.domains,capabilityIds:request.capabilityIds??[],
+        }, options.dataDir)
+      }
+      case 'agents.profiles.assign': {
+        const { assignAgentRole } = await import('../agentCenter/agentRegistry.js')
+        return assignAgentRole(cwd,request.agentId,{
+          role:request.role,purpose:request.purpose,
+          ...(request.teamName?{teamName:request.teamName}:{}),
+          ...(request.missionId?{missionId:request.missionId}:{}),
+        },options.dataDir)
+      }
+      case 'agents.profiles.bindSession': {
+        requireSession(request.sessionId)
+        const { bindAgentProfileSession } = await import('../agentCenter/agentRegistry.js')
+        return bindAgentProfileSession(cwd, request.agentId, request.roleId,
+          request.sessionId, options.dataDir)
+      }
+      case 'agents.profiles.release': {
+        const { releaseAgentRole } = await import('../agentCenter/agentRegistry.js')
+        return releaseAgentRole(cwd,request.agentId,request.roleId,options.dataDir)
+      }
+      case 'agents.profiles.status': {
+        const { updateAgentProfileStatus } = await import('../agentCenter/agentRegistry.js')
+        return updateAgentProfileStatus(cwd,request.agentId,request.status,options.dataDir)
+      }
+      case 'handoffs.list': {
+        const { listTeamHandoffs } = await import('../agentCenter/teamHandoffs.js')
+        return { handoffs: await listTeamHandoffs(cwd, options.dataDir) }
+      }
+      case 'handoffs.create': {
+        const { recordTeamHandoff, deliverTeamHandoff } =
+          await import('../agentCenter/teamHandoffs.js')
+        const handoff = await recordTeamHandoff(cwd, {
+          id: request.requestId, from: 'team-lead', teamName: request.teamName,
+          to: request.to, summary: request.summary, instruction: request.instruction,
+          inputRefs: request.inputRefs, ...(request.taskId ? { taskId: request.taskId } : {}),
+        }, options.dataDir)
+        return deliverTeamHandoff(cwd, handoff.id, current =>
+          sendProjectTeamMessage(cwd, {
+            teamName: current.teamName, to: current.to,
+            message: `${current.summary}\n\n${current.instruction}\n交接编号：${current.id}${current.inputRefs.length ? `\n输入成果：${current.inputRefs.join('、')}` : ''}`,
+            messageId: current.id,
+          }), options.dataDir)
+      }
+      case 'handoffs.approve': {
+        const { changeTeamHandoff } = await import('../agentCenter/teamHandoffs.js')
+        return changeTeamHandoff(cwd, request.handoffId, 'completed', 'team-lead',
+          { reviewSummary: request.reviewSummary }, options.dataDir)
+      }
+      case 'handoffs.retry': {
+        const { deliverTeamHandoff } = await import('../agentCenter/teamHandoffs.js')
+        return deliverTeamHandoff(cwd, request.handoffId, current =>
+          sendProjectTeamMessage(cwd, {
+            teamName: current.teamName, to: current.to,
+            message: `${current.summary}\n\n${current.instruction}\n交接编号：${current.id}${current.inputRefs.length ? `\n输入成果：${current.inputRefs.join('、')}` : ''}`,
+            messageId: current.id,
+          }), options.dataDir)
+      }
+      case 'agents.setMode':
+        setAgentMode(request.mode)
+        return { mode: getActiveAgentMode() }
+      case 'missions.list':
+        return { selectedMissionId: getSelectedMissionId(cwd) ?? null, missions: await projectMissions() }
+      case 'missions.get': return getScopedMission(request.missionId)
+      case 'missions.create': {
+        const mission = await createMission(request.objective, cwd, options.missionRoot)
+        selectMission(mission.id, cwd)
+        // Creating a mission only records the user's objective. The mode of
+        // existing sessions changes exclusively through agents.setMode.
+        return mission
+      }
+      case 'missions.select': {
+        if (request.missionId !== null) await getScopedMission(request.missionId)
+        selectMission(request.missionId ?? undefined, cwd)
+        return { selectedMissionId: request.missionId }
+      }
+      case 'missions.updateStatus': {
+        await getScopedMission(request.missionId)
+        const updated = await updateMissionStatus(request.missionId, request.status, options.missionRoot)
+        if (request.status !== 'active')
+          haltMissionQueue(request.missionId, `长期任务已${request.status}`)
+        return updated
+      }
+      case 'missions.checkpoint': {
+        await getScopedMission(request.missionId)
+        return saveMissionCheckpoint(request.missionId, request.checkpoint, options.missionRoot)
+      }
+      case 'missions.jobs.list': {
+        await getScopedMission(request.missionId)
+        return listMissionJobs(request.missionId, cwd, options.missionRoot)
+      }
+      case 'missions.jobs.enqueue': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        if (Boolean(request.agentProfileId)!==Boolean(request.roleId))
+          throw new Error('长期工作项需要同时指定身份和角色')
+        if (request.agentProfileId && request.roleId) {
+          const { resolveAssignedAgentRole } = await import('../agentCenter/agentRegistry.js')
+          await resolveAssignedAgentRole(cwd,request.agentProfileId,request.roleId,mission.id,options.dataDir)
+        }
+        const job = await enqueueMissionJob(
+          mission.id, cwd, request.title, request.instruction, options.missionRoot,
+          { ...(request.model?{model:request.model}:{}),
+            ...(request.permissionMode?{permissionMode:request.permissionMode}:{}),
+            ...(request.agentProfileId?{agentProfileId:request.agentProfileId,roleId:request.roleId}:{}) },
+        )
+        try {
+          await linkMissionAssignment(
+            mission.id, missionJobAssignmentId(job.id), 'agent', job.title, options.missionRoot,
+          )
+        } catch (error) {
+          // The queued job has not started. Cancel it if linking the mission's
+          // completion gate fails so no unauthorized orphan can be dispatched.
+          const cancelled = await cancelMissionJob(mission.id, cwd, job.id, options.missionRoot)
+          notifyJob(mission.id, cancelled)
+          throw error
+        }
+        notifyJob(mission.id, job)
+        triggerMissionQueue(mission.id)
+        return job
+      }
+      case 'missions.jobs.start': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        const claimed = await claimMissionJob(
+          mission.id, cwd, request.jobId, ownerKey, process.pid, options.missionRoot,
+        )
+        notifyJob(mission.id, claimed)
+        const runId = claimed.runId
+        if (!runId) throw new Error('已领取工作项缺少执行标识')
+        let openedSession: string | undefined
+        try {
+          // Each user-requested dispatch gets its own native SDK session.
+          // Worker/tool permissions are still checked by the SDK broker.
+          // Scope Coordinator Mode to this SDK child process only. Other
+          // desktop sessions keep the user's chosen master/super mode.
+          const workspace = await prepareMissionWorkspace(claimed)
+          const stored = await bindMissionJobWorkspace(
+            mission.id, cwd, claimed.id, runId, {
+              worktreePath: workspace.worktreePath, worktreeBranch: workspace.worktreeBranch,
+              worktreeHead: workspace.worktreeHead,
+            }, options.missionRoot,
+          )
+          notifyJob(mission.id, stored)
+          const opened = await openSession(claimed.model, undefined, {
+            CLAUDE_CODE_COORDINATOR_MODE: '1',
+            YAOYAOCHE_MISSION_PROJECT_DIR: cwd,
+          }, workspace.cwd,
+          claimed.permissionMode?{permissionMode:claimed.permissionMode}:{})
+          openedSession = opened.sessionId
+          let assignedRole: { name:string; role:string; purpose:string; domains:string[] } | undefined
+          if (claimed.agentProfileId && claimed.roleId) {
+            const { bindAgentProfileSession, resolveAssignedAgentRole } =
+              await import('../agentCenter/agentRegistry.js')
+            const {profile,role} = await resolveAssignedAgentRole(cwd,
+              claimed.agentProfileId,claimed.roleId,mission.id,options.dataDir)
+            await bindAgentProfileSession(cwd,profile.id,role.id,openedSession,options.dataDir)
+            assignedRole={name:profile.name,role:role.role,purpose:role.purpose,domains:profile.domains}
+          }
+          await bindMissionJobTurn(
+            mission.id, cwd, claimed.id, runId, openedSession,
+            undefined, options.missionRoot,
+          )
+          executingMissionJobs.set(openedSession, {
+            missionId: mission.id, jobId: claimed.id, runId: runId,
+          })
+          const { findRelevantExperiences } = await import('../agentCenter/experienceMemory.js')
+          const knownRules=(await findRelevantExperiences(
+            cwd,[claimed.title,claimed.instruction].join(' '),options.dataDir)).slice(0,3)
+          const normativeContext=knownRules.map(rule=>[
+            rule.title,rule.principle,rule.procedure.join('；'),rule.invalidWhen
+          ].join('；')).join('\n')
+          const identityContext=assignedRole?[
+            assignedRole.name,assignedRole.domains.join('、'),
+            assignedRole.role,assignedRole.purpose
+          ].join('；') : undefined
+          const instruction = [
+            '执行已授权的超级智能体工作项；保持项目目录与工具审批边界。',
+            ...(identityContext?[identityContext]:[]),
+            ...(normativeContext?[normativeContext]:[]),
+            `长期任务：${mission.id}。目标：${mission.objective}`,
+            `前次已核实的任务检查点：${mission.checkpoint || '暂无'}`,
+            `本工作项的既往执行结果：${(claimed.history.slice(-3)
+              .map(record => `第${record.attempt}次：${record.status}；${record.summary}`)
+              .join('；') || '暂无')}`,
+            `工作项：${claimed.title}。执行尝试：${claimed.attempt}`,
+            claimed.instruction,
+            `本次 SDK 独立工作目录：${workspace.cwd}。所有文件修改限定在此工作树中。`,
+            '执行前核对已有文件和提交，禁止重复已产生的外部副作用。',
+            '交付时报告实际文件/提交、测试证据及仍需人工审核的事项。',
+          ].join('\n')
+          const started = await send(openedSession, instruction)
+          const updated = await bindMissionJobTurn(
+            mission.id, cwd, claimed.id, runId, openedSession,
+            started.turnId, options.missionRoot,
+          )
+          notifyJob(mission.id, updated)
+          return { sessionId: openedSession, turnId: started.turnId, job: updated }
+        } catch (error) {
+          executingMissionJobs.delete(openedSession ?? '')
+          const job = await settleMissionJob(
+            mission.id, cwd, claimed.id, runId, 'failed',
+            `启动执行失败：${String(error)}`, options.missionRoot,
+          )
+          notifyJob(mission.id, job)
+          if (openedSession && sessions.has(openedSession)) await closeSessionInternal(openedSession)
+          throw error
+        }
+      }
+      case 'missions.jobs.previewIntegrate': {
+        const mission=await getScopedMission(request.missionId)
+        const jobs=await listMissionJobs(mission.id,cwd,options.missionRoot)
+        const job=jobs.find(item=>item.id===request.jobId)
+        if(job?.status!=='completed')throw new Error('仅已审核完成的工作项可以合入')
+        if(!job.worktreePath || !job.worktreeHead)throw new Error('该任务没有可信隔离工作树或基线')
+        const check=await previewWorktreeIntegration(cwd,job.worktreePath,job.worktreeHead)
+        return {...check,recordedCommit:job.integrationCommit}
+      }
+      case 'missions.jobs.integrate': {
+        const mission=await getScopedMission(request.missionId)
+        const jobs=await listMissionJobs(mission.id,cwd,options.missionRoot)
+        const job=jobs.find(item=>item.id===request.jobId)
+        if(job?.status!=='completed')throw new Error('仅已审核完成的工作项可以合入')
+        if(!job.worktreePath || !job.worktreeHead)throw new Error('缺少可核对的工作树和初始提交')
+        if(job.integrationCommit){
+          const preview=await previewWorktreeIntegration(cwd,job.worktreePath,job.worktreeHead)
+          if(!preview.alreadyIntegrated)throw new Error('项目历史已变化，需核对之前的合入提交')
+          return {mergeCommit:job.integrationCommit,alreadyIntegrated:true,job}
+        }
+        const result=await integrateWorktree(cwd,job.worktreePath,job.worktreeHead,
+          request.targetHead,request.sourceHead,options.missionRoot??getClaudeConfigHomeDir())
+        const saved=await markMissionJobIntegrated(mission.id,cwd,job.id,result.mergeCommit,options.missionRoot)
+        notifyJob(mission.id,saved)
+        return {...result,job:saved}
+      }
+      case 'missions.jobs.evidence': {
+        const mission = await getScopedMission(request.missionId)
+        const jobs = await listMissionJobs(mission.id, cwd, options.missionRoot)
+        const job = jobs.find(item => item.id === request.jobId)
+        if (!job) throw new Error('工作项不属于当前长期任务')
+        if (!job.worktreePath) return { isolated: false, message: '此工作项没有独立工作树记录' }
+        const { verifyResumedAgentWorktree } = await import('../../tools/AgentTool/resumeWorktree.js')
+        const path = await verifyResumedAgentWorktree(job.worktreePath)
+        if (!path) throw new Error('隔离工作树路径缺失')
+        const status = await execFileNoThrowWithCwd('git', ['status', '--short'], { cwd: path })
+        const diff = await execFileNoThrowWithCwd('git', ['diff', '--stat', 'HEAD'], { cwd: path })
+        if (status.code !== 0 || diff.code !== 0)
+          throw new Error('隔离工作树 Git 状态读取失败，请核对执行目录与版本库')
+        let commits = ''
+        if (job.worktreeHead) {
+          const recent = await execFileNoThrowWithCwd('git', ['log', '--oneline', `${job.worktreeHead}..HEAD`], { cwd: path })
+          if (recent.code !== 0) throw new Error('隔离工作树提交历史读取失败')
+          commits = recent.stdout
+        }
+        return {
+          isolated: true, worktreePath: path, branch: job.worktreeBranch,
+          status: status.stdout, diffStat: diff.stdout, commits,
+          sessionId: job.sessionId, jobStatus: job.status,
+        }
+      }
+      case 'missions.jobs.runBatch': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('当前长期任务已暂停或完成')
+        const jobs = (await listMissionJobs(mission.id, cwd, options.missionRoot))
+          .filter(job => job.status === 'queued')
+          .slice(0, request.limit ?? 3)
+        if (!jobs.length) return { launched: [], remaining: 0 }
+        const outcomes = await Promise.allSettled(jobs.map(job =>
+          handle({ id: randomUUID(), method: 'missions.jobs.start', missionId: mission.id, jobId: job.id }),
+        ))
+        return {
+          launched: jobs.map((job, index) => {
+            const outcome = outcomes[index]
+            if (!outcome) throw new Error('任务批量派发结果与原工作项数量不一致')
+            return outcome.status === 'fulfilled'
+              ? { jobId: job.id, ok: true, result: outcome.value }
+              : { jobId: job.id, ok: false, error: String(outcome.reason) }
+          }),
+          remaining: (await listMissionJobs(mission.id, cwd, options.missionRoot))
+            .filter(job => job.status === 'queued').length,
+        }
+      }
+      case 'missions.jobs.runQueue': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('长期任务已暂停或完成')
+        const firstStart = !activeMissionQueues.has(mission.id)
+        activeMissionQueues.add(mission.id)
+        if (firstStart) notifyQueue(mission.id, true, '已启动本地事件驱动队列派发')
+        triggerMissionQueue(mission.id)
+        return { active: true, missionId: mission.id }
+      }
+      case 'missions.jobs.haltQueue': {
+        await getScopedMission(request.missionId)
+        haltMissionQueue(request.missionId, '已停止派发新工作项；运行中任务仍按原权限执行')
+        return { active: false, missionId: request.missionId }
+      }
+      case 'missions.jobs.queueStatus': {
+        await getScopedMission(request.missionId)
+        return { active: activeMissionQueues.has(request.missionId) }
+      }
+      case 'missions.jobs.approve': {
+        const mission = await getScopedMission(request.missionId)
+        const job = await approveMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        await finishMissionAssignment(
+          mission.id, missionJobAssignmentId(job.id), 'completed', options.missionRoot,
+        )
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'missions.jobs.retry': {
+        const mission = await getScopedMission(request.missionId)
+        if (mission.status !== 'active') throw new Error('请先恢复长期任务后再重试')
+        const job = await retryMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        notifyJob(mission.id, job)
+        triggerMissionQueue(mission.id)
+        return job
+      }
+      case 'missions.jobs.recover': {
+        const mission = await getScopedMission(request.missionId)
+        const job = await recoverMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'missions.jobs.cancel': {
+        const mission = await getScopedMission(request.missionId)
+        const job = await cancelMissionJob(mission.id, cwd, request.jobId, options.missionRoot)
+        await finishMissionAssignment(
+          mission.id, missionJobAssignmentId(job.id), 'killed', options.missionRoot,
+        )
+        notifyJob(mission.id, job)
+        return job
+      }
+      case 'tasks.list': {
+        const active = sessions.get(request.sessionId)
+        return active ? [...active.tasks.values()] : journal.read(request.sessionId)
+      }
+      case 'tasks.stop': {
+        await requireSession(request.sessionId).runtime.control({ subtype: 'stop_task', task_id: request.taskId })
+        return { taskId: request.taskId, requested: true }
+      }
+      case 'tasks.resume': return restoreTask(request.sessionId, request.taskId, request.prompt)
+    }
+  }
+
+  async function close(): Promise<void> {
+    if (closed) return
+    closed = true
+    for (const missionId of activeMissionQueues) haltMissionQueue(missionId, '桌面宿主关闭，本轮派发已停止')
+    const ids = [...sessions.keys()]
+    const results = await Promise.allSettled(ids.map(id => closeSessionInternal(id)))
+    listeners.clear()
+    const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Desktop gateway shutdown failed')
+  }
+  async function closeSessionInternal(id: string) {
+    const entry = sessions.get(id)
+    if (!entry) return
+    if (entry.closing) throw new Error(`Desktop session is already closing: ${id}`)
+    entry.closing = true
+    entry.cancelSend?.(new Error('Desktop session closed during send'))
+    try {
+      // Closing a stream-json child can require its in-flight send/stream to
+      // settle. Join these lifecycles concurrently; awaiting child shutdown
+      // first can deadlock the desktop IPC close request.
+      const closing = entry.runtime.closeAndWait()
+      const pending = [closing]
+      if (entry.sending) pending.push(entry.sending)
+      if (entry.consuming) pending.push(entry.consuming)
+      await Promise.all(pending)
+      if (smartActive.has(id)) await finishSmartExecution(id, 'interrupted')
+      const budget=sessionBudgets.get(id)
+      if(budget){
+        await projectBudget.finish(budget.leaseId,budget.awaitingResult)
+        sessionBudgets.delete(id)
+      }
+      if (executingMissionJobs.has(id)) {
+        await settleExecutingJob(id, 'interrupted', '桌面执行宿主关闭；请核查结果后显式重试')
+      }
+      if (entry.persisting) await entry.persisting
+      const stale = [...entry.tasks.values()].map(task => task.status === 'running'
+        ? { ...task, status: 'interrupted' as const } : task)
+      if (stale.length) await journal.write(id, stale)
+    } finally {
+      for (const stop of entry.unsubscribe) stop()
+      sessions.delete(id)
+    }
+  }
+  return { handle, subscribe, close }
+}

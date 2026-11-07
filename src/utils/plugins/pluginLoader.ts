@@ -48,7 +48,7 @@ import {
 } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { basename, dirname, join, relative, resolve, sep } from 'path'
-import { getInlinePlugins } from '../../bootstrap/state.js'
+import { getInlinePlugins, getInlinePluginsWithoutMcp } from '../../bootstrap/state.js'
 import {
   BUILTIN_MARKETPLACE_NAME,
   getBuiltinPlugins,
@@ -2890,6 +2890,7 @@ async function loadSessionOnlyPlugins(
 
   const plugins: LoadedPlugin[] = []
   const errors: PluginError[] = []
+  const withoutMcp = new Set(getInlinePluginsWithoutMcp().map(path => resolve(path)))
 
   for (const [index, pluginPath] of sessionPluginPaths.entries()) {
     try {
@@ -2916,6 +2917,9 @@ async function loadSessionOnlyPlugins(
         true, // always enabled
         dirName,
       )
+
+      // SDK no-MCP plugins retain their commands, skills, agents and hooks.
+      if (withoutMcp.has(resolvedPath)) plugin.skipMcpDiscovery = true
 
       // Update source to use the actual plugin name from manifest
       plugin.source = `${plugin.name}@inline`

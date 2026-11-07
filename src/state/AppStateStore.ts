@@ -429,7 +429,6 @@ export type AppState = DeepImmutable<{
   // Fast mode
   fastMode?: boolean
   // Advisor model for server-side advisor tool (undefined = disabled).
-  advisorModel?: string
   // Effort value
   effortValue?: EffortValue
   // Set synchronously in launchUltraplan before the detached flow starts.

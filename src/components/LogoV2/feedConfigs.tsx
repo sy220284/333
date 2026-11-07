@@ -1,9 +1,6 @@
 import figures from 'figures';
 import { homedir } from 'os';
-import * as React from 'react';
-import { Box, Text } from '../../ink.js';
 import type { Step } from '../../projectOnboardingState.js';
-import { formatCreditAmount, getCachedReferrerReward } from '../../services/api/referral.js';
 import type { LogOption } from '../../types/logs.js';
 import { getCwd } from '../../utils/cwd.js';
 import { formatRelativeTimeAgo } from '../../utils/format.js';
@@ -39,9 +36,9 @@ export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
       text: note
     };
   });
-  const emptyMessage = process.env.USER_TYPE === 'ant' ? 'Unable to fetch latest claude-cli-internal commits' : 'Check the Claude Code changelog for updates';
+  const emptyMessage = '查看 摇摇车 的更新记录';
   return {
-    title: process.env.USER_TYPE === 'ant' ? "What's new [ANT-ONLY: Latest CC commits]" : "What's new",
+    title: "What's new",
     lines,
     footer: lines.length > 0 ? '/release-notes for more' : undefined,
     emptyMessage
@@ -60,7 +57,7 @@ export function createProjectOnboardingFeed(steps: Step[]): FeedConfig {
       text: `${checkmark}${text}`
     };
   });
-  const warningText = getCwd() === homedir() ? 'Note: You have launched claude in your home directory. For the best experience, launch it in a project directory instead.' : undefined;
+  const warningText = getCwd() === homedir() ? '当前位于用户主目录。建议在具体项目目录中启动 摇摇车，以便准确识别代码和工作区。' : undefined;
   if (warningText) {
     lines.push({
       text: warningText
@@ -69,23 +66,5 @@ export function createProjectOnboardingFeed(steps: Step[]): FeedConfig {
   return {
     title: '入门提示',
     lines
-  };
-}
-export function createGuestPassesFeed(): FeedConfig {
-  const reward = getCachedReferrerReward();
-  const subtitle = reward ? `分享 Claude Code 可获得 ${formatCreditAmount(reward)} 的额外用量` : '向朋友分享 Claude Code';
-  return {
-    title: '3 guest passes',
-    lines: [],
-    customContent: {
-      content: <>
-          <Box marginY={1}>
-            <Text color="claude">[✻] [✻] [✻]</Text>
-          </Box>
-          <Text dimColor>{subtitle}</Text>
-        </>,
-      width: 48
-    },
-    footer: '/passes'
   };
 }

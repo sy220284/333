@@ -70,6 +70,31 @@ test('离线包与安装和回装流程使用同一权威清单 SHA', () => {
   }
 })
 
+test('PR 全量测试按每个实际作业核对权威工具版本，新增作业自动纳入', () => {
+  const content = readFileSync(join(root, '.github/workflows/ci-test-matrix.yml'), 'utf8')
+  const jobsBody = content.split(/^jobs:\s*$/m)[1]
+  assert.ok(jobsBody, '全量测试工作流必须声明 jobs')
+  const jobs = jobsBody.split(/^ {2}(?=[a-z][\w-]*:)/m).filter(section => section.trim())
+  const nodeJobs = jobs.filter(section => section.includes('actions/setup-node@'))
+  const bunJobs = jobs.filter(section => section.includes('oven-sh/setup-bun@'))
+  assert.ok(nodeJobs.length > 0, '至少需要一项 Node 测试作业')
+  assert.ok(bunJobs.length > 0, '至少需要一项 Bun 测试作业')
+  for (const job of nodeJobs) {
+    const label = job.split(':', 1)[0]
+    assert.equal((job.match(/node tools\/dev\/toolchain\.mjs gha-env/g) ?? []).length, 1,
+      `${label}: 应由唯一权威清单导出工具链版本`)
+    assert.equal((job.match(/node-version: \$\{\{ env\.TOOLCHAIN_NODE_VERSION \}\}/g) ?? []).length, 1,
+      `${label}: Node 版本必须引用权威配置`)
+  }
+  for (const job of bunJobs) {
+    const label = job.split(':', 1)[0]
+    assert.equal((job.match(/bun-version: \$\{\{ env\.TOOLCHAIN_BUN_VERSION \}\}/g) ?? []).length, 1,
+      `${label}: Bun 版本必须引用权威配置`)
+  }
+  assert.match(content, /typescript@\$\{TOOLCHAIN_AST_TYPESCRIPT_VERSION\}/)
+  assert.doesNotMatch(content, /typescript@5\.9\.3|node-version: ['"]26['"]/)
+})
+
 test('bootstrap 脱离完整仓库仍能校验权威清单和锁文件', () => {
   const temp = mkdtempSync(join(tmpdir(), '333-toolchain-bootstrap-'))
   const directory = join(temp, 'tools/dev')

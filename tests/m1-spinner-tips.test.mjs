@@ -117,10 +117,9 @@ test('content success preserves exact rendered string and does not mark failure'
   assert.equal(result,'Displayed tip')
   assert.equal(state.failures,0)
 })
-test('actual REPL records a tip only when content rendered, errors clear spinner',()=>{
-  const source=code('src/screens/REPL.tsx')
-  assert.match(source,/await getSafeTipContent\(tip, theme\)/)
-  assert.match(source,/if \(content !== ''\)/)
-  assert.match(source,/recordShownTip\(tip\)/)
-  assert.match(source,/spinner tip failed/)
+test('新桌面显示实际会话运行状态',()=>{
+  const chat=code('desktop/src/components/chat/SessionChatSurface.tsx')
+  assert.match(chat,/sessionPhase/)
+  assert.match(chat,/runState/)
+  assert.match(chat,/执行中/)
 })

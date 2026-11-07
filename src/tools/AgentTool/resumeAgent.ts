@@ -1,4 +1,5 @@
-import { promises as fsp } from 'fs'
+import { findMissionByAssignmentId } from '../../utils/agentMissions.js'
+import { verifyResumedAgentWorktree } from './resumeWorktree.js'
 import { getSdkAgentProgressSummariesEnabled } from '../../bootstrap/state.js'
 import { getSystemPrompt } from '../../constants/prompts.js'
 import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js'
@@ -9,7 +10,6 @@ import { assembleToolPool } from '../../tools.js'
 import { asAgentId } from '../../types/ids.js'
 import { runWithAgentContext } from '../../utils/agentContext.js'
 import { runWithCwdOverride } from '../../utils/cwd.js'
-import { logForDebugging } from '../../utils/debug.js'
 import {
   createUserMessage,
   filterOrphanedThinkingOnlyMessages,
@@ -77,24 +77,9 @@ export async function resumeAgentBackground({
     resumedMessages,
     transcript.contentReplacements,
   )
-  // Best-effort: if the original worktree was removed externally, fall back
-  // to parent cwd rather than crashing on chdir later.
-  const resumedWorktreePath = meta?.worktreePath
-    ? await fsp.stat(meta.worktreePath).then(
-        s => (s.isDirectory() ? meta.worktreePath : undefined),
-        () => {
-          logForDebugging(
-            `Resumed worktree ${meta.worktreePath} no longer exists; falling back to parent cwd`,
-          )
-          return undefined
-        },
-      )
-    : undefined
-  if (resumedWorktreePath) {
-    // Bump mtime so stale-worktree cleanup doesn't delete a just-resumed worktree (#22355)
-    const now = new Date()
-    await fsp.utimes(resumedWorktreePath, now, now)
-  }
+  // Preserve the original isolation boundary, including after a process
+  // crash. If its worktree has gone, stop before any file/tool execution.
+  const resumedWorktreePath = await verifyResumedAgentWorktree(meta?.worktreePath)
 
   // Skip filterDeniedAgents re-gating — original spawn already passed permission checks
   let selectedAgent: AgentDefinition
@@ -194,6 +179,9 @@ export async function resumeAgentBackground({
     contentReplacementState: resumedReplacementState,
   }
 
+  // Resolve the mission before registering a task, so lookup failure cannot leave an orphaned running task.
+  const resumedMissionId = await findMissionByAssignmentId(String(agentId))
+
   // Skip name-registry write — original entry persists from the initial spawn
   const agentBackgroundTask = registerAsyncAgent({
     agentId,
@@ -230,6 +218,7 @@ export async function resumeAgentBackground({
   void runWithAgentContext(asyncAgentContext, () =>
     wrapWithCwd(() =>
       runAsyncAgentLifecycle({
+      missionId: resumedMissionId,
         taskId: agentBackgroundTask.agentId,
         abortController: agentBackgroundTask.abortController!,
         makeStream: onCacheSafeParams =>

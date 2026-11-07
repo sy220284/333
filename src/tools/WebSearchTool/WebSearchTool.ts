@@ -1,3 +1,4 @@
+import { resolveIndependentModel } from '../../services/api/multimodel/registry.js'
 import type {
   BetaContentBlock,
   BetaWebSearchTool20250305,
@@ -169,6 +170,7 @@ export const WebSearchTool = buildTool({
   isEnabled() {
     const provider = getAPIProvider()
     const model = getMainLoopModel()
+    if (resolveIndependentModel(model)) return false
 
     // Enable for firstParty
     if (provider === 'firstParty') {

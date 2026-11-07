@@ -1,7 +1,11 @@
+import { getIndependentProfile } from './multimodel/profiles.js'
 import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
+import { resolveIndependentModel, getIndependentApiKey, isRemovedIndependentModel } from './multimodel/registry.js'
+import { INDEPENDENT_BRIDGE_ORIGIN, makeIndependentFetch } from './multimodel/transport.js'
+import { assertChatGPTAccountIdentity, getChatGPTAuthorization } from '../auth/chatgptOAuth.js'
 import { native317MessagesRequest, native317RequestHeaders } from './native317Wire.ts'
+import { stripSdkDiagnosticHeaders } from './privacyHeaders.ts'
 import { createFoundryAzureTokenProvider } from './providerCredentials.ts'
-import { randomUUID } from 'crypto'
 import type { GoogleAuth } from 'google-auth-library'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
@@ -12,16 +16,14 @@ import {
   refreshAndGetAwsCredentials,
   refreshGcpCredentialsIfNeeded,
 } from 'src/utils/auth.js'
-import { getUserAgent } from 'src/utils/http.js'
+import { getClaudeCodeUserAgent } from 'src/utils/userAgent.js'
 import { getSmallFastModel } from 'src/utils/model/model.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
 import {
   getIsNonInteractiveSession,
-  getSessionId,
 } from '../../bootstrap/state.js'
 import { getOauthConfig } from '../../constants/oauth.js'
 import { isDebugToStdErr, logForDebugging } from '../../utils/debug.js'
@@ -100,21 +102,55 @@ export async function getAnthropicClient({
   fetchOverride?: ClientOptions['fetch']
   source?: string
 }): Promise<Anthropic> {
+  // Independent remote models share the existing Agent, tools and prompts.
+  // Resolve before Claude OAuth and Anthropic SDK credential checks.
+  if (model && isRemovedIndependentModel(model)) {
+    throw new Error(`模型 ${model} 已从 333 移除，请选择其他服务商模型`)
+  }
+  const independent = resolveIndependentModel(model)
+  if (independent) {
+    const authorization = independent.provider === 'chatgpt' ? await getChatGPTAuthorization() : undefined
+    // Bind the client to the exact account/workspace that created it.
+    // OAuth refresh may rotate tokens, but never change that identity.
+    const originalChatGPTAccount = authorization?.account
+    const upstream = fetchOverride ?? globalThis.fetch
+    const profile = getIndependentProfile(`${independent.provider}/${independent.model}`)
+    const makeFetch = (token: string, account?: string) => makeIndependentFetch(independent, token, upstream, profile, account)
+    const fetchIndependent = authorization ? undefined : makeFetch(getIndependentApiKey(independent))
+    return new Anthropic({
+      apiKey: '333-internal-provider-bridge',
+      baseURL: INDEPENDENT_BRIDGE_ORIGIN,
+      maxRetries,
+      timeout: parseInt(process.env.API_TIMEOUT_MS || String(600 * 1000), 10),
+      fetch: fetchIndependent ?? (async (input, init) => {
+        const request = new Request(input, init)
+        // A long-lived SDK client must check disk-backed OAuth identity on
+        // EVERY request, including while an old token remains valid.
+        const sent = await getChatGPTAuthorization()
+        assertChatGPTAccountIdentity(originalChatGPTAccount, sent)
+        const response = await makeFetch(sent.token, sent.account)(request.clone())
+        if (response.status !== 401) return response
+        await response.body?.cancel()
+        request.signal.throwIfAborted()
+        const refreshed = await getChatGPTAuthorization(sent)
+        assertChatGPTAccountIdentity(originalChatGPTAccount, refreshed)
+        return makeFetch(refreshed.token, refreshed.account)(request)
+      }),
+    })
+  }
+
   const containerId = process.env.CLAUDE_CODE_CONTAINER_ID
   const remoteSessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
-  const clientApp = process.env.CLAUDE_AGENT_SDK_CLIENT_APP
   const customHeaders = getCustomHeaders()
   const defaultHeaders: { [key: string]: string } = {
     'x-app': 'cli',
-    'User-Agent': getUserAgent(),
-    'X-Claude-Code-Session-Id': getSessionId(),
+    'User-Agent': getClaudeCodeUserAgent(),
     ...customHeaders,
     ...(containerId ? { 'x-claude-remote-container-id': containerId } : {}),
     ...(remoteSessionId
       ? { 'x-claude-remote-session-id': remoteSessionId }
       : {}),
     // SDK consumers can identify their app/library for backend analytics
-    ...(clientApp ? { 'x-client-app': clientApp } : {}),
   }
 
   // Log API client configuration for HFI debugging
@@ -373,8 +409,6 @@ function getCustomHeaders(): Record<string, string> {
   return customHeaders
 }
 
-export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'
-
 function buildFetch(
   fetchOverride: ClientOptions['fetch'],
   source: string | undefined,
@@ -382,28 +416,19 @@ function buildFetch(
 ): ClientOptions['fetch'] {
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
   const inner = fetchOverride ?? globalThis.fetch
-  // Only send to the first-party API — Bedrock/Vertex/Foundry don't log it
-  // and unknown headers risk rejection by strict proxies (inc-4029 class).
-  const injectClientRequestId =
-    getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const headers = native317RequestHeaders(input, init)
-    // Generate a client-side request ID so timeouts (which return no server
-    // request ID) can still be correlated with server logs by the API team.
-    // Callers that want to track the ID themselves can pre-set the header.
-    if (injectClientRequestId && !headers.has(CLIENT_REQUEST_ID_HEADER)) {
-      headers.set(CLIENT_REQUEST_ID_HEADER, randomUUID())
-    }
+    // Preserve authentication and model negotiation, omit SDK telemetry headers.
+    stripSdkDiagnosticHeaders(headers)
     const request = getAPIProvider() === 'firstParty'
       ? native317MessagesRequest(input, { ...init, headers }, native317Auth)
       : { input, init: { ...init, headers } }
     try {
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
       const url = request.input instanceof Request ? request.input.url : String(request.input)
-      const id = headers.get(CLIENT_REQUEST_ID_HEADER)
       logForDebugging(
-        `[API REQUEST] ${new URL(url).pathname}${id ? ` ${CLIENT_REQUEST_ID_HEADER}=${id}` : ''} source=${source ?? 'unknown'}`,
+        `[API REQUEST] ${new URL(url).pathname} source=${source ?? 'unknown'}`,
       )
     } catch {
       // never let logging crash the fetch

@@ -151,21 +151,8 @@ export const McpServerConfigForProcessTransportSchema = lazySchema(() =>
   ]),
 )
 
-export const McpClaudeAIProxyServerConfigSchema = lazySchema(() =>
-  z.object({
-    type: z.literal('claudeai-proxy'),
-    url: z.string(),
-    id: z.string(),
-  }),
-)
-
-// Broader config type for status responses (includes claudeai-proxy which is output-only)
-export const McpServerStatusConfigSchema = lazySchema(() =>
-  z.union([
-    McpServerConfigForProcessTransportSchema(),
-    McpClaudeAIProxyServerConfigSchema(),
-  ]),
-)
+// Status configurations follow the same validated transport contract as requests.
+export const McpServerStatusConfigSchema = McpServerConfigForProcessTransportSchema
 
 export const McpServerStatusSchema = lazySchema(() =>
   z
@@ -192,7 +179,7 @@ export const McpServerStatusSchema = lazySchema(() =>
         .string()
         .optional()
         .describe(
-          'Configuration scope (e.g., project, user, local, claudeai, managed)',
+          'Configuration scope (project, user, local)',
         ),
       tools: z
         .array(
@@ -339,14 +326,15 @@ export const PermissionResultSchema = lazySchema(() =>
 
 export const PermissionModeSchema = lazySchema(() =>
   z
-    .enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'])
+    .enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk', 'auto'])
     .describe(
       'Permission mode for controlling how tool executions are handled. ' +
         "'default' - Standard behavior, prompts for dangerous operations. " +
         "'acceptEdits' - Auto-accept file edit operations. " +
         "'bypassPermissions' - Bypass all permission checks (requires allowDangerouslySkipPermissions). " +
         "'plan' - Planning mode, no actual tool execution. " +
-        "'dontAsk' - Don't prompt for permissions, deny if not pre-approved.",
+        "'dontAsk' - Don't prompt for permissions, deny if not pre-approved. " +
+        "'auto' - Use the policy classifier when the active model and build support it.",
     ),
 )
 
@@ -1209,6 +1197,7 @@ export const SdkPluginConfigSchema = lazySchema(() =>
       path: z
         .string()
         .describe('Absolute or relative path to the plugin directory'),
+      skipMcpDiscovery: z.boolean().optional(),
     })
     .describe('Configuration for loading a plugin.'),
 )
@@ -1493,7 +1482,10 @@ export const SDKResultSuccessSchema = lazySchema(() =>
     subtype: z.literal('success'),
     duration_ms: z.number(),
     duration_api_ms: z.number(),
-    is_error: z.boolean(),
+    // A non-error success result is always is_error=false. The separate
+    // error schema handles official subtype='success', is_error=true and
+    // preserves its errors[] instead of dropping them during parsing.
+    is_error: z.literal(false),
     terminal_reason: z.enum(['completed', 'api_error', 'prompt_too_long', 'max_turns', 'max_budget_usd', 'aborted_tools', 'aborted_streaming', 'hook_stopped', 'tool_deferred_unavailable', 'turn_setup_failed']).optional(),
     api_error_status: z.number().int().optional(),
     num_turns: z.number(),
@@ -1516,6 +1508,9 @@ export const SDKResultErrorSchema = lazySchema(() =>
   z.object({
     type: z.literal('result'),
     subtype: z.enum([
+      // Official 2.1.317 uses the success subtype on some API error
+      // envelopes. is_error remains the authoritative outcome bit.
+      'success',
       'error_during_execution',
       'error_max_turns',
       'error_max_budget_usd',
@@ -1523,7 +1518,7 @@ export const SDKResultErrorSchema = lazySchema(() =>
     ]),
     duration_ms: z.number(),
     duration_api_ms: z.number(),
-    is_error: z.boolean(),
+    is_error: z.literal(true),
     terminal_reason: z.enum(['completed', 'api_error', 'prompt_too_long', 'max_turns', 'max_budget_usd', 'aborted_tools', 'aborted_streaming', 'hook_stopped', 'tool_deferred_unavailable', 'turn_setup_failed']).optional(),
     api_error_status: z.number().int().optional(),
     num_turns: z.number(),
@@ -1533,6 +1528,8 @@ export const SDKResultErrorSchema = lazySchema(() =>
     modelUsage: z.record(z.string(), ModelUsageSchema()),
     permission_denials: z.array(SDKPermissionDenialSchema()),
     errors: z.array(z.string()),
+    // Official 2.1.317 API failures include the user-facing result text.
+    result: z.string().optional(),
     startup_failure_reason: z.string().optional(),
     result_index: z.number().optional(),
     fast_mode_state: FastModeStateSchema().optional(),
@@ -1865,6 +1862,42 @@ export const SDKTaskProgressMessageSchema = lazySchema(() =>
   }),
 )
 
+/** 2.1.317 incremental task status; the patch carries only changed fields. */
+export const SDKTaskUpdatedMessageSchema = lazySchema(() =>
+  z.object({
+    type: z.literal('system'),
+    subtype: z.literal('task_updated'),
+    task_id: z.string(),
+    run_id: z.string().optional(),
+    patch: z.object({
+      status: z.string().optional(),
+      description: z.string().optional(),
+      end_time: z.number().optional(),
+      total_paused_ms: z.number().optional(),
+      error: z.unknown().optional(),
+      is_backgrounded: z.boolean().optional(),
+    }).passthrough(),
+    uuid: UUIDPlaceholder(),
+    session_id: z.string(),
+  }),
+)
+
+/** Background task resynchronization sent after reconnect or task lifecycle changes. */
+export const SDKBackgroundTasksChangedMessageSchema = lazySchema(() =>
+  z.object({
+    type: z.literal('system'),
+    subtype: z.literal('background_tasks_changed'),
+    tasks: z.array(z.object({
+      task_id: z.string(),
+      task_type: z.string().optional(),
+      status: z.string().optional(),
+      owned_by_subagent: z.boolean().optional(),
+    }).passthrough()),
+    uuid: UUIDPlaceholder(),
+    session_id: z.string(),
+  }),
+)
+
 export const SDKToolUseSummaryMessageSchema = lazySchema(() =>
   z.object({
     type: z.literal('tool_use_summary'),
@@ -1970,6 +2003,8 @@ export const SDKMessageSchema = lazySchema(() =>
     SDKTaskNotificationMessageSchema(),
     SDKTaskStartedMessageSchema(),
     SDKTaskProgressMessageSchema(),
+    SDKTaskUpdatedMessageSchema(),
+    SDKBackgroundTasksChangedMessageSchema(),
     SDKSessionStateChangedMessageSchema(),
     SDKFilesPersistedEventSchema(),
     SDKToolUseSummaryMessageSchema(),

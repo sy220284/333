@@ -287,12 +287,6 @@ export type GlobalConfig = {
     ReferralEligibilityResponse & { timestamp: number }
   >
 
-  // Grove config cache per account - key is account UUID
-  groveConfigCache?: Record<
-    string,
-    { grove_enabled: boolean; timestamp: number }
-  >
-
   // Guest passes upsell tracking
   passesUpsellSeenCount?: number // Number of times the guest passes upsell has been shown
   hasVisitedPasses?: boolean // Whether the user has visited /passes command
@@ -502,7 +496,6 @@ export type GlobalConfig = {
 
   // Cached org-level fast mode status from the API.
   // Used to detect cross-session changes and notify users.
-  penguinModeOrgEnabled?: boolean
 
   // Epoch ms when background refreshes last ran (fast mode, quota, passes, client data).
   // Used with tengu_cicada_nap_ms to throttle API calls
@@ -1076,6 +1069,7 @@ function saveConfigWithLock<A extends object>(
     const lockFilePath = `${file}.lock`
     const startTime = Date.now()
     release = lockfile.lockSync(file, {
+      realpath: false, // The explicit lock path is stable before the config file exists.
       lockfilePath: lockFilePath,
       onCompromised: err => {
         // Default onCompromised throws from a setTimeout callback, which

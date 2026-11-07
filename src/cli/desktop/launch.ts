@@ -1,4 +1,8 @@
 import { readdir, stat } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
+import { dirname, isAbsolute, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 
 const ALLOWED = new Set([
@@ -60,27 +64,17 @@ export function parseDesktopCliOptions(argv: string[]) {
 /** Return a user-visible validation error, or null when Desktop launch is eligible. */
 export function validateDesktopInvocation({
   argv = [], prompt, stdinIsTTY = false, stdoutIsTTY = false, env = {},
-}: {argv?: string[]; prompt?: string; stdinIsTTY?: boolean; stdoutIsTTY?: boolean; env?: NodeJS.ProcessEnv} = {}) : string {
-  if (!stdoutIsTTY || argv.some(arg => ['--print', '-p', '--init-only'].includes(arg) ||
-      arg === '--sdk-url' || arg.startsWith('--sdk-url='))) {
-    return "--desktop opens the Claude Desktop app and can't run non-interactively (`--print`, `--sdk-url`, `--init-only`, or redirected output)."
+}: {argv?: string[]; prompt?: string; stdinIsTTY?: boolean; stdoutIsTTY?: boolean; env?: NodeJS.ProcessEnv} = {}) : string | null {
+  if (!stdinIsTTY || !stdoutIsTTY ||
+      argv.some(arg => ['--print', '-p', '--init-only', '--sdk-url'].includes(arg) || arg.startsWith('--sdk-url='))) {
+    return '桌面工作台需要交互式启动；无界面脚本请使用 --print 或 SDK 协议。'
   }
-  const incompatible = argv.filter(arg => arg.startsWith('-') &&
-    !ALLOWED.has(arg.split('=')[0])).map(arg => `\`${arg.split('=')[0]}\``)
-  if (incompatible.length) {
-    return `--desktop only opens the Claude Desktop app; it can't be combined with ${incompatible.join(', ')}.`
-  }
+  const incompatible = argv.filter(arg => arg.startsWith('-') && arg !== '--' && !ALLOWED.has(arg.split('=')[0]))
+  if (incompatible.length) return `桌面模式不支持以下参数：${incompatible.join(', ')}`
   for (const [flag, detail] of RESTRICTED) {
-    if (truthy(env[flag])) {
-      return `--desktop can't open the Claude Desktop app from ${detail} wouldn't apply to the session the app starts.`
-    }
+    if (truthy(env[flag])) return `无法从受限的 ${detail} 启动桌面工作台。`
   }
-  if (prompt !== undefined && prompt !== '') {
-    return "--desktop doesn't take a prompt yet. Run `claude --desktop`, then type it in the app."
-  }
-  if (!stdinIsTTY) {
-    return "--desktop doesn't take piped or redirected input yet. Run `claude --desktop` on its own, then type in the app."
-  }
+  if (prompt && prompt.length > 16384) return '初始任务文本过长，请在桌面工作台输入。'
   return null
 }
 
@@ -106,72 +100,93 @@ async function existsInProjects(sessionId) {
   return false
 }
 
-async function isRunningBackgroundSession(sessionId) {
-  const { listSessions } = await import('../background/sessionStore.ts')
-  const sessions = await listSessions({ all: true })
-  return sessions.some(session => session.sessionId === sessionId && session.running)
-}
-
 function reportError(message) {
   process.stderr.write(`${message}\n`)
   return 1
 }
 
-/** 2.1.310 Desktop CLI entry: new / continue / explicit session resume. */
+
+type DesktopExecutable = {command:string;args:string[];cwd?:string}
+function isFile(path:string):boolean {try{return statSync(path).isFile()}catch{return false}}
+function findDesktopExecutable(env:NodeJS.ProcessEnv,platform:NodeJS.Platform):DesktopExecutable {
+  const override=env.YAOYAO_DESKTOP_APP
+  if(override){
+    if(!isAbsolute(override))throw new Error('YAOYAO_DESKTOP_APP 必须为绝对路径')
+    const target=override.endsWith('.app')?join(override,'Contents','MacOS','yaoyaoche'):override
+    if(!isFile(target))throw new Error(`未找到指定的桌面程序：${target}`)
+    return {command:target,args:[]}
+  }
+  const home=env.HOME||env.USERPROFILE||''
+  const candidates=platform==='win32'
+    ? [join(env.LOCALAPPDATA||'','Programs','yaoyaoche','yaoyaoche.exe'),
+       join(env.LOCALAPPDATA||'','Programs','摇摇车','yaoyaoche.exe'),
+       join(env.ProgramFiles||'','摇摇车','yaoyaoche.exe')]
+    : platform==='darwin'
+      ? ['/Applications/摇摇车.app/Contents/MacOS/yaoyaoche',
+         join(home,'Applications','摇摇车.app','Contents','MacOS','yaoyaoche')]
+      : ['/opt/yaoyaoche/yaoyaoche','/usr/lib/yaoyaoche/yaoyaoche',
+         join(home,'.local','share','yaoyaoche','yaoyaoche')]
+  const self=new Set([process.argv[1],process.execPath].filter((path): path is string => Boolean(path)).map(path=>{
+    try{return realpathSync(path)}catch{return path}
+  }))
+  for(const path of candidates)if(isFile(path)&&!self.has(realpathSync(path)))
+    return {command:path,args:[]}
+  // 开发模式仅从当前源码/构建程序的位置寻找经包名验证的桌面项目。
+  const here=dirname(fileURLToPath(import.meta.url))
+  for(const root of [resolve(here,'../../..'),resolve(here,'..'),
+     resolve(dirname(process.argv[1]||here),'..')]){
+    const desktop=join(root,'desktop'),manifest=join(desktop,'package.json')
+    if(!isFile(manifest))continue
+    let name:string
+    try{name=JSON.parse(readFileSync(manifest,'utf8')).name}catch{continue}
+    if(name!=='yaoyaoche-desktop')continue
+    if(!existsSync(join(desktop,'node_modules')))
+      throw new Error('桌面依赖未安装，请在 desktop 目录执行 npm install')
+    return platform==='win32'
+      ? {command:'cmd.exe',args:['/d','/s','/c','npm run dev'],cwd:desktop}
+      : {command:'npm',args:['run','dev'],cwd:desktop}
+  }
+  throw new Error('未找到摇摇车桌面应用，请安装桌面版或设置 YAOYAO_DESKTOP_APP。')
+}
+
 export async function launchDesktopFromCli({
-  prompt = '', options = {}, argv = process.argv.slice(2),
-  stdinIsTTY = process.stdin.isTTY === true,
-  stdoutIsTTY = process.stdout.isTTY === true,
-  env = process.env, platform = process.platform, arch = process.arch,
-}: {prompt?: string; options?: {continue?: boolean; resume?: boolean | string}; argv?: string[];
-    stdinIsTTY?: boolean; stdoutIsTTY?: boolean; env?: NodeJS.ProcessEnv;
-    platform?: NodeJS.Platform; arch?: string} = {}) : Promise<number> {
-  const invalid = validateDesktopInvocation({ argv, prompt, stdinIsTTY, stdoutIsTTY, env })
-  if (invalid) return reportError(invalid)
-  if (platform !== 'darwin' && !(platform === 'win32' && arch === 'x64')) {
-    return reportError("--desktop isn't available on this platform. It works on macOS and Windows (x64).")
+  prompt='', options={}, argv=process.argv.slice(2),
+  stdinIsTTY=process.stdin.isTTY===true,stdoutIsTTY=process.stdout.isTTY===true,
+  env=process.env,platform=process.platform,
+}: {prompt?:string;options?:{continue?:boolean;resume?:boolean|string};
+    argv?:string[];stdinIsTTY?:boolean;stdoutIsTTY?:boolean;
+    env?:NodeJS.ProcessEnv;platform?:NodeJS.Platform}={}):Promise<number>{
+  const invalid=validateDesktopInvocation({argv,prompt,stdinIsTTY,stdoutIsTTY,env})
+  if(invalid)return reportError(invalid)
+  let sessionId=''
+  let startupView=''
+  if(options.resume===true){
+    startupView='history'
+  }else if(typeof options.resume==='string'){
+    if(!UUID.test(options.resume))return reportError('会话编号格式无效。')
+    sessionId=options.resume
+    if(!await existsInProjects(sessionId))return reportError(`找不到本机会话：${sessionId}`)
+  }else if(options.continue){
+    const {fetchLogs,getSessionIdFromLog}=await import('../../utils/sessionStorage.js')
+    const [latest]=await fetchLogs(1)
+    sessionId=latest?String(getSessionIdFromLog(latest)||''):''
+    if(!sessionId)return reportError('当前工作区没有可以继续的会话。')
   }
-  // The full interactive CLI enables configuration reads in preAction.
-  // This one-shot Desktop entry bypasses preAction, so initialize settings
-  // explicitly before determining the current OAuth subscription.
-  const { enableConfigs } = await import('../../utils/config.js')
-  enableConfigs()
-  const { isClaudeAISubscriber } = await import('../../utils/auth.js')
-  if (!isClaudeAISubscriber()) {
-    return reportError("--desktop requires signing in with a Claude account. Run `claude auth login` to sign in.")
-  }
-  let target
-  if (options.continue) {
-    const { fetchLogs, getSessionIdFromLog } = await import('../../utils/sessionStorage.js')
-    const [latest] = await fetchLogs(1)
-    const sessionId = latest && getSessionIdFromLog(latest)
-    if (!sessionId) {
-      return reportError('No session in this directory to continue. Run `claude --desktop` to start a new one in Claude Desktop.')
-    }
-    target = { kind: 'resume', sessionId }
-  } else if (options.resume !== undefined && options.resume !== false) {
-    if (options.resume === true) {
-      return reportError('`--desktop --resume` needs a session ID. Pass one, or use `--desktop --continue` for the most recent session in this directory.')
-    }
-    const sessionId = options.resume
-    if (typeof sessionId !== 'string' || !UUID.test(sessionId)) {
-      return reportError('`--desktop --resume` takes a session ID, not a name or path. Run `claude --resume` to pick a session, then /desktop inside it.')
-    }
-    if (!(await existsInProjects(sessionId))) {
-      return reportError(`No session found with ID ${sessionId}. Run \`claude --resume\` to pick a session, then /desktop inside it.`)
-    }
-    target = { kind: 'resume', sessionId }
-  } else {
-    target = { kind: 'new-session', folder: process.cwd() }
-  }
-  if (target.kind === 'resume' && await isRunningBackgroundSession(target.sessionId)) {
-    return reportError(`Session ${target.sessionId} is open in another terminal. Run /desktop there instead.`)
-  }
-  const { openDesktopTarget } = await import('../../utils/desktopDeepLink.js')
-  const result = await openDesktopTarget(target)
-  if (!result.success) return reportError(result.error || 'Failed to open Claude Desktop')
-  process.stdout.write(target.kind === 'resume'
-    ? `Opening session ${target.sessionId} in Claude Desktop\n`
-    : `Opening ${target.folder} in Claude Desktop\n`)
-  return 0
+  try{
+    const exe=findDesktopExecutable(env,platform)
+    const child=spawn(exe.command,exe.args,{
+      cwd:exe.cwd||process.cwd(),detached:true,stdio:'ignore',windowsHide:true,
+      env:{...env,YAOYAO_INITIAL_WORKSPACE:process.cwd(),
+        YAOYAO_INITIAL_SESSION_ID:sessionId,YAOYAO_INITIAL_PROMPT:prompt,
+        YAOYAO_INITIAL_VIEW:startupView},
+    })
+    await new Promise<void>((resolve,reject)=>{
+      child.once('error',reject)
+      child.once('spawn',()=>resolve())
+    })
+    child.unref()
+    process.stdout.write('已启动摇摇车桌面工作台。\n')
+    return 0
+  }catch(error){return reportError('启动桌面工作台失败：'+
+    (error instanceof Error?error.message:String(error)))}
 }

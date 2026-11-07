@@ -100,7 +100,8 @@ test('Node 工具、官方扩展、压缩资源与原生二进制保留各自格
   assert.equal(tsconfig.compilerOptions.allowImportingTsExtensions, true)
   const pkg = JSON.parse(readFileSync(file('package.json'), 'utf8'))
   assert.match(pkg.scripts.rebuild, /node build\/[^ ]+\.mjs/)
-  assert.match(pkg.scripts['test:all'], /node --test tests\/[^ ]+\.test\.mjs/)
+  assert.match(pkg.scripts['test:node'], /^node --test tests\/[^ ]+\.test\.mjs/)
+  assert.equal(pkg.scripts['test:all'], 'npm run test:core && node build/run-unregistered-tests.mjs --ci-supplemental')
 })
 
 test('Node 测试入口只直接运行 MJS，TypeScript 测试交给 Bun', () => {
@@ -114,37 +115,60 @@ test('Node 测试入口只直接运行 MJS，TypeScript 测试交给 Bun', () =>
   }
 })
 
-test('主测试套件的 MJS 与 TypeScript 测试分别使用对应运行器', () => {
-  const pkg = JSON.parse(readFileSync(file('package.json'), 'utf8'))
-  for (const name of ['test:all', 'test:m2']) {
-    const parts = pkg.scripts[name].split(/\s*&&\s*/)
-    assert.equal(parts.length, name === 'test:all' ? 3 : 2,
-      name + ': expected unified Node/Bun suites followed by inventory for the full run')
-    if (name === 'test:all') {
-      assert.equal(parts[2], 'node build/run-unregistered-tests.mjs',
-        'test:all must actually run all unregistered tests')
+test('主测试套件按 Node/Bun 分类执行并包含未注册用例扫描', () => {
+  const scripts = JSON.parse(readFileSync(file('package.json'), 'utf8')).scripts
+  assert.equal(scripts['test:core'], 'npm run test:node && npm run test:bun')
+  assert.equal(scripts['test:all'], 'npm run test:core && node build/run-unregistered-tests.mjs --ci-supplemental')
+  for (const [name, runtime, suffix] of [
+    ['test:node', 'node --test ', '.test.mjs'],
+    ['test:bun', 'bun test ', '.test.ts'],
+  ]) {
+    const command = scripts[name]
+    const parts = command.split(/\s*&&\s*/)
+    // OAuth suites remain isolated, and other Bun suites may intentionally
+    // run in their own process when global state requires an independent host.
+    const isolated = parts.filter(part => part === 'npm run test:multimodel')
+    assert.equal(isolated.length, name === 'test:bun' ? 1 : 0,
+      `${name}: ChatGPT account tests must run exactly once in the isolated suite`)
+    const directCommands = parts.filter(part => part !== 'npm run test:multimodel')
+    if (name === 'test:node') assert.equal(directCommands.length, 1, 'Node tests require a single runner')
+    else assert.ok(directCommands.length >= 1, 'Bun tests require at least one direct runner')
+    const seen = new Set()
+    for (const direct of directCommands) {
+      assert.ok(direct.startsWith(runtime), `${name}: wrong runtime`)
+      const files = direct.slice(runtime.length).trim().split(/\s+/)
+      assert.ok(files.length > 0 && files.every(path => path.endsWith(suffix)), `${name}: wrong test format`)
+      for (const filePath of files) {
+        assert.equal(seen.has(filePath), false, `${name}: duplicate ${filePath}`)
+        seen.add(filePath)
+        assert.ok(existsSync(file(filePath)), `${name}: missing ${filePath}`)
+      }
     }
-    assert.match(parts[0], /^node --test /, name)
-    assert.match(parts[1], /^bun test /, name)
-    const nodeFiles = parts[0].replace(/^node --test /, '').trim().split(/\s+/)
-    const bunFiles = parts[1].replace(/^bun test /, '').trim().split(/\s+/)
-    assert.ok(nodeFiles.every(path => path.endsWith('.test.mjs')),
-      name + ': Node should execute only MJS tests')
-    assert.ok(bunFiles.every(path => path.endsWith('.test.ts')),
-      name + ': Bun should execute TypeScript tests in these suites')
-    const combined = [...nodeFiles, ...bunFiles]
-    assert.equal(new Set(combined).size, combined.length, name + ': duplicate test files')
-    for (const path of combined) assert.ok(existsSync(file(path)), name + ': missing ' + path)
   }
+  const supplementary = readFileSync(file('build/run-unregistered-tests.mjs'), 'utf8')
+  assert.match(supplementary, /discoverUnregisteredTests/)
+  assert.match(supplementary, /CI_SUPPLEMENTAL/)
+  assert.match(supplementary, /runTest\(/)
 })
 
-test('全量入口覆盖每个专项声明的测试文件', () => {
+test('全量测试中所有专项用例均被主清单或补充扫描收录', () => {
   const scripts = JSON.parse(readFileSync(file('package.json'), 'utf8')).scripts
-  const fullFiles = new Set(scripts['test:all'].match(/tests\/[^\s]+\.test\.(?:mjs|ts)/g))
+  const main = new Set([
+    ...(scripts['test:node'].match(/tests\/[^\s]+\.test\.mjs/g) ?? []),
+    ...(scripts['test:bun'].match(/tests\/[^\s]+\.test\.ts/g) ?? []),
+    ...(scripts['test:multimodel'].match(/tests\/[^\s]+\.test\.ts/g) ?? []),
+  ])
+  assert.ok(main.size > 0)
+  assert.match(scripts['test:all'], /node build\/run-unregistered-tests\.mjs --ci-supplemental/)
+  const supplementary = readFileSync(file('build/run-unregistered-tests.mjs'), 'utf8')
+  assert.match(supplementary, /const pending = tests\.filter/)
+  assert.match(supplementary, /supplemental \|\|/)
+  assert.match(supplementary, /runTest\(/)
   for (const [name, command] of Object.entries(scripts)) {
-    if (name === 'test:all') continue
+    if (['test:node', 'test:bun', 'test:core', 'test:all'].includes(name)) continue
     for (const path of command.match(/tests\/[^\s]+\.test\.(?:mjs|ts)/g) ?? []) {
-      assert.ok(fullFiles.has(path), name + ': full run omits ' + path)
+      assert.ok(existsSync(file(path)), `${name}: missing ${path}`)
+      assert.ok(main.has(path) || supplementary.includes('const pending = tests.filter'), `${name}: not inventoried ${path}`)
     }
   }
 })

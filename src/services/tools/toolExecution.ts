@@ -1,4 +1,6 @@
+import { getCwd } from '../../utils/cwd.js'
 import { feature } from 'bun:bundle'
+import { getStrictCommandScopeError } from '../../utils/permissions/strictCommandScope.js'
 import type {
   ContentBlockParam,
   ToolResultBlockParam,
@@ -84,6 +86,7 @@ import {
   stopSessionActivity,
 } from '../../utils/sessionActivity.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
+import { countRecentPermissionDenials, permissionDenialKey, permissionDenialLoopGuidance } from './permissionDenialLoop.js'
 import { Stream } from '../../utils/stream.js'
 import { logOTelEvent } from '../../utils/telemetry/events.js'
 import {
@@ -275,7 +278,6 @@ export type McpServerType =
   | 'sdk'
   | 'sse-ide'
   | 'ws-ide'
-  | 'claudeai-proxy'
   | undefined
 
 function findMcpServerConnection(
@@ -666,6 +668,20 @@ async function checkPermissionsAndCallTool(
     ]
   }
 
+  // Hard task scope precedes hooks and all auto-approval classifiers.
+  const scopeError = getStrictCommandScopeError(tool.name, parsedInput.data)
+  if (scopeError) {
+    return [{
+      message: createUserMessage({
+        content: [{
+          type: 'tool_result', tool_use_id: toolUseID,
+          content: `<tool_use_error>${scopeError}</tool_use_error>`, is_error: true,
+        }],
+        toolUseResult: scopeError,
+        sourceToolAssistantUUID: assistantMessage.uuid,
+      }),
+    }]
+  }
   // Validate input values. Each tool has its own validation logic
   const isValidCall = await tool.validateInput?.(
     parsedInput.data,
@@ -784,6 +800,8 @@ async function checkPermissionsAndCallTool(
   let hookPermissionResult: PermissionResult | undefined
   const preToolHookInfos: StopHookInfo[] = []
   const preToolHookStart = Date.now()
+  // Preserve user-installed security hooks. The hard scope guard above
+  // rejects model-invoked commands before permission hooks/classifiers.
   for await (const result of runPreToolUseHooks(
     toolUseContext,
     tool,
@@ -1015,6 +1033,11 @@ async function checkPermissionsAndCallTool(
     if (shouldPreventContinuation && !errorMessage) {
       errorMessage = `Execution stopped by PreToolUse hook${stopReason ? `: ${stopReason}` : ''}`
     }
+    const denialKey = permissionDenialKey(tool.name, getCwd(), callInput)
+    const repeatWarning = permissionDenialLoopGuidance(
+      countRecentPermissionDenials(toolUseContext.messages, denialKey),
+    )
+    if (repeatWarning) errorMessage = [errorMessage, repeatWarning].filter(Boolean).join('\n')
 
     // Build top-level content: tool_result (text-only for is_error compatibility) + images alongside
     const messageContent: ContentBlockParam[] = [
@@ -1052,12 +1075,12 @@ async function checkPermissionsAndCallTool(
     }
 
     resultingMessages.push({
-      message: createUserMessage({
+      message: { ...createUserMessage({
         content: messageContent,
         imagePasteIds: rejectImageIds,
         toolUseResult: `Error: ${errorMessage}`,
         sourceToolAssistantUUID: assistantMessage.uuid,
-      }),
+      }), permissionDenialKey: denialKey },
     })
 
     // Run PermissionDenied hooks for auto mode classifier denials.

@@ -1,12 +1,14 @@
 import type { JSONRPCMessage } from '@modelcontextprotocol/server'
 import { SdkControlServerTransport } from '../../services/mcp/SdkControlTransport.js'
 import { parseSdkTransportMessage } from '../../services/mcp/validateSdkTransportMessage.js'
+import { acknowledgeSdkMcpNonRequest } from './mcpControlSemantics317.js'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
 import { extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { SDKControlRequest, SDKControlRequestInner, SDKControlInitializeRequest, SDKControlCancelRequest, SDKControlResponse } from './controlTypes.js'
+import type { SDKControlRequest, SDKControlRequestInner, SDKControlInitializeRequest, SDKControlCancelRequest, SDKControlResponse, SDKHostControlRequest } from './controlTypes.js'
+import { SDK_HOST_CONTROL_SUBTYPES, SDKControlElicitationResponseSchema } from './controlSchemas.js'
 import type { SDKMessage, SDKUserMessage } from './coreTypes.js'
 import type { HookCallback, InternalOptions, SDKSessionOptions } from './runtimeTypes.js'
 import { prepareExternalSession317, SDK_SESSION_UUID } from './externalSessionStore317.js'
@@ -14,6 +16,12 @@ import type { StdoutMessage } from './controlTypes.js'
 import { Stream } from '../../utils/stream.js'
 
 type ExternalSession = Awaited<ReturnType<typeof prepareExternalSession317>>
+const hostControlSubtypes = new Set<string>(['elicitation', ...SDK_HOST_CONTROL_SUBTYPES])
+// 2.1.317 routes these requests to the machine serving remote tools;
+// the SDK side intentionally leaves them unanswered.
+const remoteWorkerSubtypes = new Set([
+  'remote_tool_call', 'remote_plumbing_call', 'remote_tools_probe', 'remote_tools_reannounce',
+])
 
 export function createSessionRuntime317(
   options: SDKSessionOptions | InternalOptions,
@@ -70,6 +78,19 @@ function startSession(
   resume?: string,
   external?: ExternalSession,
 ) {
+  const queryOptions: InternalOptions = options
+  // Match the official SDK contract before spawning the child: conflicting
+  // permission sources and identical primary/fallback models are errors.
+  if (options.canUseTool && queryOptions.permissionPromptToolName) {
+    throw new Error('canUseTool callback cannot be used with permissionPromptToolName. Please use one or the other.')
+  }
+  if (queryOptions.fallbackModel && queryOptions.model && queryOptions.fallbackModel === queryOptions.model) {
+    throw new Error('Fallback model cannot be the same as the main model. Please specify a different model for fallbackModel option.')
+  }
+  const abortSignal = options.abortController?.signal
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason instanceof Error ? abortSignal.reason : new Error('SDK session aborted before start')
+  }
   const path = options.pathToClaudeCodeExecutable ??
     fileURLToPath(new URL('../../../dist/launcher.cjs', import.meta.url))
   const interpreter = options.executable ??
@@ -80,7 +101,6 @@ function startSession(
     '--print', '--verbose', '--input-format', 'stream-json',
     '--output-format', 'stream-json',
   ]
-  const queryOptions: InternalOptions = options
   if (external) args.push('--session-mirror')
   if (options.model) args.push('--model', options.model)
   if (resume) args.push('--resume', resume)
@@ -110,11 +130,15 @@ function startSession(
     '--debug': queryOptions.debug,
     '--enable-auth-status': queryOptions.enableAuthStatus,
     '--forward-subagent-text': queryOptions.forwardSubagentText,
+    '--include-hook-events': queryOptions.includeHookEvents,
   }
   for (const [flag, enabled] of Object.entries(switches)) if (enabled) args.push(flag)
   if (Array.isArray(queryOptions.tools)) args.push('--tools', queryOptions.tools.join(','))
+  else if (queryOptions.tools) args.push('--tools=default')
   for (const dir of queryOptions.additionalDirectories ?? []) args.push('--add-dir', dir)
-  for (const plugin of queryOptions.plugins ?? []) args.push('--plugin-dir', plugin.path)
+  for (const plugin of queryOptions.plugins ?? []) {
+    args.push(plugin.skipMcpDiscovery ? '--plugin-dir-no-mcp' : '--plugin-dir', plugin.path)
+  }
   const sdkServers = new Map<string, {
     transport: SdkControlServerTransport
     pending: Map<string | number, (message: JSONRPCMessage) => void>
@@ -211,24 +235,56 @@ function startSession(
   }
 
   async function respondToControl({ request_id, request }: SDKControlRequest): Promise<void> {
+    if (closed || permissions.has(request_id)) return
     const controller = new AbortController()
     permissions.set(request_id, controller)
     try {
       let response: SDKControlResponse['response']
       try {
         let decision: Record<string, unknown>
-        if (request.subtype === 'can_use_tool' && options.canUseTool) {
-          decision = await options.canUseTool(request.tool_name, request.input, {
+        if (remoteWorkerSubtypes.has(request.subtype)) return
+        if (request.subtype === 'can_use_tool') {
+          if (!options.canUseTool) throw new Error('canUseTool callback is not provided.')
+          const toolDecision = await options.canUseTool(request.tool_name, request.input, {
             signal: controller.signal,
             suggestions: request.permission_suggestions,
             toolUseID: request.tool_use_id,
+            requestId: request_id,
+            blockedPath: request.blocked_path,
+            mcpServer: request.mcp_server,
+            decisionReason: request.decision_reason,
+            decisionReasonType: request.decision_reason_type,
+            decisionReasonCode: request.decision_reason_code,
+            serverPolicyAskOnly: request.server_policy_ask_only,
+            title: request.title,
+            displayName: request.display_name,
+            description: request.description,
+            defaultToNo: request.default_to_no,
+            suppressAlwaysAllowRule: request.suppress_always_allow_rule,
+            agentID: request.agent_id,
+            plugin: request.plugin,
+            requiresUserInteraction: request.requires_user_interaction,
+            serverPrompt: request.server_prompt,
+            computerFolder: request.computer_folder,
+            matchedAskRule: request.matched_ask_rule && {
+              source: request.matched_ask_rule.source,
+              toolName: request.matched_ask_rule.tool_name,
+              ...(request.matched_ask_rule.rule_content !== undefined && {
+                ruleContent: request.matched_ask_rule.rule_content,
+              }),
+            },
           })
+          // The official SDK leaves the request unanswered when the callback
+          // returns null; this is distinct from allow/deny and from an error.
+          if (toolDecision === null) return
+          decision = { ...toolDecision, toolUseID: request.tool_use_id }
         } else if (request.subtype === 'mcp_message') {
           const server = sdkServers.get(request.server_name)
-          if (!server?.transport.onmessage) throw new Error('SDK MCP server is disconnected: ' + request.server_name)
+          if (!server) throw new Error(`SDK MCP server not found: ${request.server_name}`)
           const message = parseSdkTransportMessage(request.message)
           if ('method' in message && 'id' in message) {
             const id = message.id
+            if (!server.transport.onmessage) throw new Error('No message handler registered')
             if (server.pending.has(id)) throw new Error('Duplicate SDK MCP request ID')
             try {
               const mcp_response = await new Promise<JSONRPCMessage>((resolve, reject) => {
@@ -241,13 +297,78 @@ function startSession(
               server.pending.delete(id)
             }
           } else {
-            server.transport.onmessage(message)
-            decision = { mcp_response: null }
+            decision = { mcp_response: acknowledgeSdkMcpNonRequest(server.transport, message) }
           }
         } else if (request.subtype === 'hook_callback') {
           const callback = callbacks.get(request.callback_id)
           if (!callback) throw new Error('Unknown SDK hook callback')
           decision = await callback(request.input, request.tool_use_id, { signal: controller.signal })
+        } else if (request.subtype === 'elicitation' && options.onElicitation) {
+          // The original SDK exposes a dedicated callback in camelCase.
+          // A null answer parks the request for another capable host.
+          const answer = await options.onElicitation({
+            serverName: request.mcp_server_name,
+            message: request.message,
+            mode: request.mode,
+            url: request.url,
+            elicitationId: request.elicitation_id,
+            requestedSchema: request.requested_schema,
+            title: request.title,
+            displayName: request.display_name,
+            description: request.description,
+          }, { signal: controller.signal, requestId: request_id })
+          if (answer === null) return
+          decision = SDKControlElicitationResponseSchema().parse(answer)
+        } else if (request.subtype === 'request_user_dialog' && options.onUserDialog) {
+          const answer = await options.onUserDialog({
+            dialogKind: request.dialog_kind,
+            payload: request.payload,
+            toolUseID: typeof request.tool_use_id === 'string' ? request.tool_use_id : undefined,
+          }, { signal: controller.signal, requestId: request_id })
+          if (answer === null) return
+          decision = answer
+        } else if (request.subtype === 'oauth_token_refresh' && options.getOAuthToken) {
+          // Official 2.1.317: an empty token is null, and the only permitted
+          // decline reasons come from the original SDK's D_s enumeration.
+          let declineReason: string | undefined
+          const token = await options.getOAuthToken({
+            signal: controller.signal,
+            onDecline: reason => {
+              if (['signed_out','identity_changed','transient','refresh_failed'].includes(reason))
+                declineReason = reason
+            },
+            ...(request.kind !== undefined && { kind: request.kind }),
+          }) ?? null
+          decision = token === null && declineReason !== undefined
+            ? { accessToken: null, reason: declineReason }
+            : { accessToken: token }
+        } else if (request.subtype === 'host_auth_token_refresh' && options.getHostAuthToken) {
+          const token = await options.getHostAuthToken({ signal: controller.signal }) ?? null
+          decision = typeof token === 'string' || token === null
+            ? { authToken: token }
+            : token
+        } else if (hostControlSubtypes.has(request.subtype) && options.onControlRequest) {
+          if (request.subtype === 'remote_control_work_secret' && request.session_id !== sessionId) {
+            throw new Error('Work secret request names a different SDK session')
+          }
+          const hostDecision = await options.onControlRequest(request as SDKHostControlRequest, {
+            signal: controller.signal, requestId: request_id,
+          })
+          if (hostDecision === null) {
+            if (request.subtype === 'elicitation' || request.subtype === 'request_user_dialog') return
+            throw new Error(`Host control callback returned null for ${request.subtype}`)
+          }
+          decision = hostDecision
+        } else if (request.subtype === 'oauth_token_refresh') {
+          throw new Error('getOAuthToken callback is not provided.')
+        } else if (request.subtype === 'host_auth_token_refresh') {
+          throw new Error('getHostAuthToken callback is not provided.')
+        } else if (request.subtype === 'elicitation') {
+          // Official SDK: missing elicitation handler defaults to decline.
+          decision = { action: 'decline' }
+        } else if (request.subtype === 'request_user_dialog') {
+          // Official SDK: a capable host (or worker park deadline) settles it.
+          return
         } else {
           throw new Error(`Unsupported SDK control request: ${request.subtype}`)
         }
@@ -260,13 +381,14 @@ function startSession(
       }
       if (!controller.signal.aborted) await write({ type: 'control_response', response })
     } finally {
-      permissions.delete(request_id)
+      if (permissions.get(request_id) === controller) permissions.delete(request_id)
     }
   }
 
   function close(): void {
     if (closed) return
     closed = true
+    abortSignal?.removeEventListener('abort', abortSession)
     for (const controller of permissions.values()) controller.abort()
     permissions.clear()
     const closeOps = [...sdkServers.values()].map(server => server.transport.close())
@@ -284,9 +406,21 @@ function startSession(
     requests.clear()
     if (failure) messages.error(failure)
     else messages.done()
-    reader.close()
-    child.stdin.destroy()
-    if (child.exitCode === null && child.signalCode === null) child.kill()
+    // Match the official SDK graceful shutdown: EOF lets the CLI flush
+    // transcripts and pending session metadata before a bounded termination.
+    child.stdin.end()
+    if (child.exitCode === null && child.signalCode === null) {
+      const grace = setTimeout(() => {
+        if (child.exitCode !== null || child.signalCode !== null) return
+        child.kill('SIGTERM')
+        const force = setTimeout(() => {
+          if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+        }, 5000)
+        force.unref()
+      }, 2000)
+      grace.unref()
+      void exited.then(() => clearTimeout(grace))
+    }
   }
 
   async function closeAndWait(): Promise<void> {
@@ -294,20 +428,22 @@ function startSession(
     // Child 'close' fires after process exit AND stdio streams have closed,
     // which is necessary before a Windows workspace can be safely removed.
     await exited
+    await pumpEnded
     await transportClosure
   }
 
   async function pump(): Promise<void> {
     for await (const line of reader) {
-      if (closed) return
       if (!line.trim()) continue
       const message: SDKMessage | SDKControlRequest | SDKControlCancelRequest | SDKControlResponse | Extract<StdoutMessage, { type: 'transcript_mirror' }> =
         JSON.parse(line)
       if (message.type === 'transcript_mirror') {
         if (!external) throw new Error('Unexpected SDK transcript mirror')
+        // A mirror can arrive after close() while the child flushes its final files.
         await external.mirror(message.filePath, message.entries)
-      } else if (message.type === 'control_request') {
-        void respondToControl(message).catch(fail)
+      } else if (!closed) {
+        if (message.type === 'control_request') {
+          void respondToControl(message).catch(fail)
       } else if (message.type === 'control_cancel_request') {
         permissions.get(message.request_id)?.abort()
       } else if (message.type === 'control_response') {
@@ -315,9 +451,22 @@ function startSession(
         const request = requests.get(reply.request_id)
         requests.delete(reply.request_id)
         if (reply.subtype === 'error') request?.reject(new Error(reply.error))
-        else request?.resolve(reply.response ?? {})
-      } else {
-        messages.enqueue(message)
+        else {
+          // Reinitializing an existing 2.1.317 CLI can return unresolved
+          // prompts for the new host to serve. Retain their original request
+          // IDs and use the same cancellation/permission semantics as live
+          // control_request frames.
+          const pending = [
+            ...(reply.pending_permission_requests ?? []),
+            ...(reply.pending_user_dialog_requests ?? []),
+            ...(reply.pending_elicitation_requests ?? []),
+          ]
+          for (const parked of pending) void respondToControl(parked).catch(fail)
+          request?.resolve(reply.response ?? {})
+        }
+        } else {
+          messages.enqueue(message)
+        }
       }
     }
     await exited
@@ -329,7 +478,13 @@ function startSession(
     close()
   }
 
-  void pump().catch(fail)
+  function abortSession(): void {
+    fail(abortSignal?.reason instanceof Error ? abortSignal.reason : new Error('SDK session aborted'))
+  }
+  abortSignal?.addEventListener('abort', abortSession, { once: true })
+  if (abortSignal?.aborted) abortSession()
+
+  const pumpEnded = pump().catch(fail)
   const initialization = Promise.all([...sdkServers.values()].map(server => server.connect())).then(() => control({
     subtype: 'initialize',
     sdkMcpServers: [...sdkServers.keys()],
@@ -339,7 +494,24 @@ function startSession(
     systemPrompt: typeof queryOptions.systemPrompt === 'string' ? queryOptions.systemPrompt : undefined,
     appendSystemPrompt: queryOptions.appendSystemPrompt ??
       (typeof queryOptions.systemPrompt === 'object' ? queryOptions.systemPrompt.append : undefined),
+    // 2.1.317 exposes both switches through initialize rather than CLI flags.
+    // Without forwarding them, the CLI owns the implementation but callers
+    // cannot opt into suggestions or native background agent summaries.
+    promptSuggestions: queryOptions.promptSuggestions,
+    agentProgressSummaries: queryOptions.agentProgressSummaries,
   })).then(async result => {
+    // Native 2.1.317 fails closed when an onFailure:'block' Hook is configured
+    // but the attached CLI cannot prove that failure blocks execution.
+    const hasBlockingHooks = Object.values(queryOptions.hooks ?? {}).some(matchers =>
+      matchers?.some(matcher => matcher.onFailure === 'block'))
+    if (hasBlockingHooks) {
+      if (result.hook_on_failure_supported !== true) {
+        throw new Error('SDK CLI does not support onFailure: "block" for hooks; blocking execution cannot be guaranteed')
+      }
+      if (result.hooks_applied === false) {
+        throw new Error('SDK CLI did not register blocking hooks; start a new session or remove onFailure: "block"')
+      }
+    }
     const tokens = queryOptions.thinking
       ? queryOptions.thinking.type === 'enabled' ? queryOptions.thinking.budgetTokens : undefined
       : queryOptions.maxThinkingTokens
@@ -352,7 +524,9 @@ function startSession(
 
   return {
     sessionId,
-    exited,
+    // Consumers (notably the external SessionStore) must not clean up until
+    // all transcript_mirror frames have finished writing.
+    exited: Promise.all([exited, pumpEnded]).then(() => undefined),
     fail,
     control,
     initialization,

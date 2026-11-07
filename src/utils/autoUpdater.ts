@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getIndependentReleaseBaseUrl } from './releaseSource.js'
 import { constants as fsConstants } from 'fs'
 import { access, writeFile } from 'fs/promises'
 import { homedir } from 'os'
@@ -20,15 +21,14 @@ import { logError } from './log.js'
 import { gte, lt } from './semver.js'
 import { getInitialSettings } from './settings/settings.js'
 import {
-  filterClaudeAliases,
+  filterYaoyaocheAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
 
-const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
+
 
 class AutoUpdaterError extends ClaudeError {}
 
@@ -61,7 +61,7 @@ export type MaxVersionConfig = {
  *
  * Versioning approach:
  * 1. For version requirements/compatibility (assertMinVersion), we use semver comparison that ignores build metadata
- * 2. For updates ('claude update'), we use exact string comparison to detect any change, including SHA
+ * 2. For updates ('yaoyaoche update'), we use exact string comparison to detect any change, including SHA
  *    - This ensures users always get the latest build, even when only the SHA changes
  *    - The UI clearly shows both versions including build metadata
  *
@@ -83,11 +83,11 @@ export async function assertMinVersion(): Promise<void> {
     ) {
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.error(`
-It looks like your version of Claude Code (${MACRO.VERSION}) needs an update.
+It looks like your version of 摇摇车 (${MACRO.VERSION}) needs an update.
 A newer version (${versionConfig.minVersion} or higher) is required to continue.
 
 To update, please run:
-    claude update
+    yaoyaoche update
 
 This will ensure you have access to the latest features and improvements.
 `)
@@ -385,7 +385,7 @@ export async function getLatestVersionFromGcs(
   channel: ReleaseChannel,
 ): Promise<string | null> {
   try {
-    const response = await axios.get(`${GCS_BUCKET_URL}/${channel}`, {
+    const response = await axios.get(`${getIndependentReleaseBaseUrl()}/${channel}`, {
       timeout: 5000,
       responseType: 'text',
     })
@@ -470,7 +470,7 @@ export async function installGlobalPackage(
   }
 
   try {
-    await removeClaudeAliasesFromShellConfigs()
+    await removeYaoyaocheAliasesFromShellConfigs()
     // Check if we're using npm from Windows path in WSL
     if (!env.isRunningWithBun() && env.isNpmFromWindowsPath()) {
       logError(new Error('Windows NPM detected in WSL environment'))
@@ -482,13 +482,13 @@ export async function installGlobalPackage(
       console.error(`
 Error: Windows NPM detected in WSL
 
-You're running Claude Code in WSL but using the Windows NPM installation from /mnt/c/.
+You're running 摇摇车 in WSL but using the Windows NPM installation from /mnt/c/.
 This configuration is not supported for updates.
 
 To fix this issue:
   1. Install Node.js within your Linux distribution: e.g. sudo apt install nodejs npm
   2. Make sure Linux NPM is in your PATH before the Windows version
-  3. Try updating again with 'claude update'
+  3. Try updating again with 'yaoyaoche update'
 `)
       return 'install_failed'
     }
@@ -513,7 +513,7 @@ To fix this issue:
     )
     if (installResult.code !== 0) {
       const error = new AutoUpdaterError(
-        `Failed to install new version of claude: ${installResult.stdout} ${installResult.stderr}`,
+        `Failed to install new version of 摇摇车: ${installResult.stdout} ${installResult.stderr}`,
       )
       logError(error)
       return 'install_failed'
@@ -536,7 +536,7 @@ To fix this issue:
  * Remove claude aliases from shell configuration files
  * This helps clean up old installation methods when switching to native or npm global
  */
-async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
+async function removeYaoyaocheAliasesFromShellConfigs(): Promise<void> {
   const configMap = getShellConfigPaths()
 
   // Process each shell config file
@@ -545,11 +545,11 @@ async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filterClaudeAliases(lines)
+      const { filtered, hadAlias } = filterYaoyaocheAliases(lines)
 
       if (hadAlias) {
         await writeFileLines(configFile, filtered)
-        logForDebugging(`Removed claude alias from ${configFile}`)
+        logForDebugging(`Removed 摇摇车 alias from ${configFile}`)
       }
     } catch (error) {
       // Don't fail the whole operation if one file can't be processed

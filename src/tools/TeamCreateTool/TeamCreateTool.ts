@@ -1,4 +1,6 @@
 import { z } from 'zod/v4'
+import { requireActiveSelectedMission, linkMissionAssignment, getMissionExecutionProjectDir } from '../../utils/agentMissions.js'
+import { isSuperAgentMode } from '../../utils/agentMode.js'
 import { getSessionId } from '../../bootstrap/state.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
@@ -18,18 +20,21 @@ import { TEAM_LEAD_NAME } from '../../utils/swarm/constants.js'
 import type { TeamFile } from '../../utils/swarm/teamHelpers.js'
 import {
   getTeamFilePath,
-  readTeamFile,
+  cleanupTeamDirectories,
+  unregisterTeamForSessionCleanup,
   registerTeamForSessionCleanup,
   sanitizeName,
   writeTeamFileAsync,
 } from '../../utils/swarm/teamHelpers.js'
+import { rm } from 'node:fs/promises'
+import { reserveTeamDirectory } from '../../utils/swarm/teamReservation.js'
 import { assignTeammateColor } from '../../utils/swarm/teammateLayoutManager.js'
 import {
   ensureTasksDir,
   resetTaskList,
   setLeaderTeamName,
+  clearLeaderTeamName,
 } from '../../utils/tasks.js'
-import { generateWordSlug } from '../../utils/words.js'
 import { TEAM_CREATE_TOOL_NAME } from './constants.js'
 import { getPrompt } from './prompt.js'
 import { renderToolUseMessage } from './UI.js'
@@ -56,20 +61,6 @@ export type Output = {
 }
 
 export type Input = z.infer<InputSchema>
-
-/**
- * Generates a unique team name by checking if the provided name already exists.
- * If the name already exists, generates a new word slug.
- */
-function generateUniqueTeamName(providedName: string): string {
-  // If the team doesn't exist, use the provided name
-  if (!readTeamFile(providedName)) {
-    return providedName
-  }
-
-  // Team exists, generate a new unique name
-  return generateWordSlug()
-}
 
 export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
   name: TEAM_CREATE_TOOL_NAME,
@@ -139,18 +130,21 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       )
     }
 
-    // If team already exists, generate a unique name instead of failing
-    const finalTeamName = generateUniqueTeamName(team_name)
+    const missionId = isSuperAgentMode() ? await requireActiveSelectedMission() : undefined
 
-    // Generate a deterministic agent ID for the team lead
-    const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
+    // Validate the model before reserving a directory, so invalid model
+    // configurations do not leave empty team directories behind.
     const leadAgentType = agent_type || TEAM_LEAD_NAME
-    // Get the team lead's current model from AppState (handles session model, settings, CLI override)
     const leadModel = parseUserSpecifiedModel(
       appState.mainLoopModelForSession ??
         appState.mainLoopModel ??
         getDefaultMainLoopModel(),
     )
+
+    // Atomic across independent desktop-host processes: the same team name
+    // can never overwrite an existing roster.
+    const { teamName: finalTeamName, teamDir } = await reserveTeamDirectory(team_name)
+    const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
 
     const teamFilePath = getTeamFilePath(finalTeamName)
 
@@ -160,6 +154,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       createdAt: Date.now(),
       leadAgentId,
       leadSessionId: getSessionId(), // Store actual session ID for team discovery
+      projectDir: getMissionExecutionProjectDir(),
       members: [
         {
           agentId: leadAgentId,
@@ -174,7 +169,15 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       ],
     }
 
-    await writeTeamFileAsync(finalTeamName, teamFile)
+    // reserveTeamDirectory already claimed this unique directory. Complete
+    // the exclusive config write under the lifecycle guard; on failure only
+    // this creator owns the reservation, so its empty directory is safe to clean.
+    try {
+      await writeTeamFileAsync(finalTeamName, teamFile, true)
+    } catch (error) {
+      await rm(teamDir, { recursive: true, force: true })
+      throw error
+    }
     // Track for session-end cleanup — teams were left on disk forever
     // unless explicitly TeamDelete'd (gh-32730).
     registerTeamForSessionCleanup(finalTeamName)
@@ -210,6 +213,22 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
         },
       },
     }))
+
+    // A team is a first-class assignment of a durable super-agent mission.
+    // Roll back the newly created empty team when the mission write fails,
+    // otherwise the UI would claim a team exists with no recoverable record.
+    if (missionId) {
+      try {
+        await linkMissionAssignment(missionId, `team:${finalTeamName}`, 'team', _description || finalTeamName)
+      } catch (error) {
+        await cleanupTeamDirectories(finalTeamName)
+        unregisterTeamForSessionCleanup(finalTeamName)
+        clearLeaderTeamName()
+        setAppState(prev => prev.teamContext?.teamName === finalTeamName
+          ? { ...prev, teamContext: undefined } : prev)
+        throw error
+      }
+    }
 
     logEvent('tengu_team_created', {
       team_name:

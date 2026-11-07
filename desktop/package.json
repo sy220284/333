@@ -1,0 +1,127 @@
+{
+  "name": "yaoyaoche-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build && node scripts/build-electron.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build && electron-builder",
+    "package:win": "npm run build && electron-builder --win",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:linux": "npm run build && electron-builder --linux",
+    "test:ui": "vitest run"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0",
+    "vitest": "^3.2.0",
+    "jsdom": "^26.1.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "build": {
+    "appId": "app.yaoyaoche.desktop",
+    "productName": "摇摇车",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "extraResources": [
+        {
+          "from": "../dist/desktopHost.exe",
+          "to": "bin/desktopHost.exe"
+        },
+        {
+          "from": "../dist/yaoyaoche.exe",
+          "to": "bin/yaoyaoche.exe"
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools",
+      "extraResources": [
+        {
+          "from": "../dist/desktopHost",
+          "to": "bin/desktopHost"
+        },
+        {
+          "from": "../dist/yaoyaoche",
+          "to": "bin/yaoyaoche"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "extraResources": [
+        {
+          "from": "../dist/desktopHost",
+          "to": "bin/desktopHost"
+        },
+        {
+          "from": "../dist/yaoyaoche",
+          "to": "bin/yaoyaoche"
+        }
+      ],
+      "maintainer": "摇摇车 contributors <208273231+sy220284@users.noreply.github.com>",
+      "syncDesktopName": true
+    },
+    "executableName": "yaoyaoche",
+    "artifactName": "yaoyaoche-${version}-${arch}.${ext}",
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "fonts-noto-cjk"
+      ]
+    }
+  },
+  "description": "摇摇车本地智能体开发工作台，支持主子智能体与 Super Agents 团队协作。",
+  "homepage": "https://github.com/sy220284/333",
+  "author": {
+    "name": "摇摇车 contributors",
+    "email": "208273231+sy220284@users.noreply.github.com"
+  },
+  "desktopName": "yaoyaoche"
+}

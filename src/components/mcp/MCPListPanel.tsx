@@ -34,7 +34,7 @@ type SelectableItem = {
 
 // Define scope order for display (constant, outside component)
 // 'dynamic' (built-in) is rendered separately at the end
-const SCOPE_ORDER: ConfigScope[] = ['project', 'local', 'user', 'enterprise'];
+const SCOPE_ORDER: ConfigScope[] = ['project', 'local', 'user'];
 
 // Get scope heading parts (label is bold, path is grey)
 function getScopeHeading(scope: ConfigScope): {
@@ -56,10 +56,6 @@ function getScopeHeading(scope: ConfigScope): {
       return {
         label: '本地 MCP',
         path: describeMcpConfigFilePath(scope)
-      };
-    case 'enterprise':
-      return {
-        label: '企业 MCP'
       };
     case 'dynamic':
       return {
@@ -111,7 +107,7 @@ export function MCPListPanel(t0) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   let t3;
   if ($[2] !== servers) {
-    const regularServers = servers.filter(_temp);
+    const regularServers = servers;
     t3 = groupServersByScope(regularServers);
     $[2] = servers;
     $[3] = t3;
@@ -119,15 +115,6 @@ export function MCPListPanel(t0) {
     t3 = $[3];
   }
   const serversByScope = t3;
-  let t4;
-  if ($[4] !== servers) {
-    t4 = servers.filter(_temp2).sort(_temp3);
-    $[4] = servers;
-    $[5] = t4;
-  } else {
-    t4 = $[5];
-  }
-  const claudeAiServers = t4;
   let t5;
   if ($[6] !== serversByScope) {
     t5 = (serversByScope.get("dynamic") ?? []).sort(_temp4);
@@ -146,7 +133,7 @@ export function MCPListPanel(t0) {
   }
   const dynamicHeading = t6;
   let items;
-  if ($[9] !== agentServers || $[10] !== claudeAiServers || $[11] !== dynamicServers || $[12] !== serversByScope) {
+  if ($[9] !== agentServers || $[11] !== dynamicServers || $[12] !== serversByScope) {
     items = [];
     for (const scope of SCOPE_ORDER) {
       const scopeServers = serversByScope.get(scope) ?? [];
@@ -156,12 +143,6 @@ export function MCPListPanel(t0) {
           server
         });
       }
-    }
-    for (const server_0 of claudeAiServers) {
-      items.push({
-        type: "server",
-        server: server_0
-      });
     }
     for (const agentServer of agentServers) {
       items.push({
@@ -176,7 +157,6 @@ export function MCPListPanel(t0) {
       });
     }
     $[9] = agentServers;
-    $[10] = claudeAiServers;
     $[11] = dynamicServers;
     $[12] = serversByScope;
     $[13] = items;
@@ -394,15 +374,6 @@ export function MCPListPanel(t0) {
   } else {
     t22 = $[50];
   }
-  let t23;
-  if ($[51] !== claudeAiServers || $[52] !== renderServerItem) {
-    t23 = claudeAiServers.length > 0 && <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true}>claude.ai</Text></Box>{claudeAiServers.map(server_5 => renderServerItem(server_5))}</Box>;
-    $[51] = claudeAiServers;
-    $[52] = renderServerItem;
-    $[53] = t23;
-  } else {
-    t23 = $[53];
-  }
   let t24;
   if ($[54] !== agentServers || $[55] !== renderAgentServerItem) {
     t24 = agentServers.length > 0 && <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true}>代理 MCP</Text></Box>{[...new Set(agentServers.flatMap(_temp6))].map(agentName => <Box key={agentName} flexDirection="column" marginTop={1}><Box paddingLeft={2}><Text dimColor={true}>@{agentName}</Text></Box>{agentServers.filter(s_3 => s_3.sourceAgents.includes(agentName)).map(agentServer_2 => renderAgentServerItem(agentServer_2))}</Box>)}</Box>;
@@ -445,10 +416,9 @@ export function MCPListPanel(t0) {
     t28 = $[64];
   }
   let t29;
-  if ($[65] !== t22 || $[66] !== t23 || $[67] !== t24 || $[68] !== t25 || $[69] !== t28) {
-    t29 = <Box flexDirection="column">{t22}{t23}{t24}{t25}{t28}</Box>;
+  if ($[65] !== t22 || $[67] !== t24 || $[68] !== t25 || $[69] !== t28) {
+    t29 = <Box flexDirection="column">{t22}{t24}{t25}{t28}</Box>;
     $[65] = t22;
-    $[66] = t23;
     $[67] = t24;
     $[68] = t25;
     $[69] = t28;
@@ -494,10 +464,4 @@ function _temp4(a_0, b_0) {
 }
 function _temp3(a, b) {
   return a.name.localeCompare(b.name);
-}
-function _temp2(s_0) {
-  return s_0.client.config.type === "claudeai-proxy";
-}
-function _temp(s) {
-  return s.client.config.type !== "claudeai-proxy";
 }

@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
     // MACRO.VERSION is inlined at build time.
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${MACRO.VERSION} (Claude Code)`);
+    console.log(`${MACRO.VERSION} (摇摇车)`);
     if (verboseVersion) {
       // Independently verified against the official 2.1.317 Linux x64 binary.
       console.log('Commit: 3d3e7cb16b5577dccaee9520c8dc1189d02d61b7');
@@ -89,6 +89,21 @@ async function main(): Promise<void> {
     process.stderr.write(cwdError + '\n');
     await writeStartupFailureResult({ sessionId: randomUUID(), message: cwdError, reason: 'cwd_unavailable' });
     process.exitCode = 1;
+    return;
+  }
+
+  // One-shot inventory commands must exit without importing the full REPL CLI.
+  // The full preAction runs init() (Git repository detection, warm connections,
+  // background setup), which can keep file watchers alive after models list.
+  // The catalog reads only built-in IDs and locally discovered models.
+  if (args[0] === 'models' && args[1] === 'list' &&
+      (args.length === 2 || (args.length === 3 && args[2] === '--json'))) {
+    const { enableConfigs } = await import('../utils/config.js');
+    enableConfigs();
+    const { getRegisteredModelInventory } = await import('../services/api/multimodel/catalog.js');
+    const models = getRegisteredModelInventory();
+    if (args[2] === '--json') process.stdout.write(`${JSON.stringify(models, null, 2)}\n`);
+    else for (const model of models) process.stdout.write(`${model.id}\n`);
     return;
   }
 
@@ -113,67 +128,6 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_plugin_test_path');
     const { runPluginTestFastPath317 } = await import('./pluginTestFastPath317.ts');
     if (await runPluginTestFastPath317(args.slice(2))) return;
-  }
-
-  // Official 317 cli.js:429-459 dispatches self-hosted runner before REPL.
-  // Keep host registration, worker credentials and process lifecycle isolated.
-  if (args[0] === 'self-hosted-runner') {
-    profileCheckpoint('cli_self_hosted_runner_path');
-    try {
-      const operation = args[1];
-      switch (operation) {
-        case 'orchestrator': {
-          const { selfHostedRunnerOrchestratorMain317 } =
-            await import('../cli/selfHostedRunner/orchestrator317.ts');
-          await selfHostedRunnerOrchestratorMain317(args.slice(2));
-          break;
-        }
-        case 'setup': {
-          const { selfHostedRunnerSetupMain317 } =
-            await import('../cli/selfHostedRunner/setup317.ts');
-          await selfHostedRunnerSetupMain317(args.slice(2));
-          break;
-        }
-        case 'doctor': {
-          const { selfHostedRunnerDoctorMain317 } =
-            await import('../cli/selfHostedRunner/doctor317.ts');
-          await selfHostedRunnerDoctorMain317(args.slice(2));
-          break;
-        }
-        case 'code-sign': {
-          const { selfHostedRunnerCodeSignMain317 } =
-            await import('../cli/selfHostedRunner/codeSign317.ts');
-          await selfHostedRunnerCodeSignMain317(args.slice(2));
-          break;
-        }
-        case 'decode-token': {
-          const { selfHostedRunnerDecodeTokenMain317 } =
-            await import('../cli/selfHostedRunner/decodeToken317.ts');
-          await selfHostedRunnerDecodeTokenMain317(args.slice(2));
-          break;
-        }
-        default: {
-          const { selfHostedRunnerMain317 } = await import('../cli/selfHostedRunner/runnerHost317.ts');
-          await selfHostedRunnerMain317(args.slice(1));
-        }
-      }
-    } catch (error) {
-      const usage = error instanceof Error && error.name === 'RunnerUsageError317';
-      const jwtError = args[1] === 'decode-token' && error instanceof Error;
-      if (jwtError) {
-        process.stderr.write(error.message + '\n');
-        process.exitCode = 1;
-      } else if (usage) {
-        process.stderr.write('error: ' + error.message +
-          "\nRun 'claude self-hosted-runner --help' for usage.\n");
-        process.exitCode = 2;
-      } else {
-        process.stderr.write('self-hosted-runner: ' +
-          (error instanceof Error ? error.message : String(error)) + '\n');
-        process.exitCode = 1;
-      }
-    }
-    return;
   }
 
   // Official 2.1.317 runs the eval MCP stand-in independently of the REPL,
@@ -277,12 +231,15 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Desktop is a one-shot native handoff, not an interactive REPL. Handle it
-  // before main.tsx initializes terminal listeners and startup background tasks:
-  // those tasks otherwise keep error paths alive after their message is printed.
-  if (desktopRequest && !helpRequest) {
-    const { parseDesktopCliOptions, launchDesktopFromCli } =
-      await import('../cli/desktop/launch.ts');
+  // 交互式会话统一使用新桌面工作台，先于旧 Ink/REPL 的 main.tsx 导入。
+  const { isDesktopWorkbenchLaunch } = await import('./startupRouting317.ts');
+  if (!helpRequest && (desktopRequest || isDesktopWorkbenchLaunch(args))) {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      process.stderr.write('交互式会话现由桌面工作台提供。无界面调用请使用 --print 或 SDK stream-json。\n');
+      process.exitCode = 1;
+      return;
+    }
+    const { parseDesktopCliOptions, launchDesktopFromCli } = await import('../cli/desktop/launch.ts');
     const { prompt, options } = parseDesktopCliOptions(args);
     process.exitCode = await launchDesktopFromCli({ prompt, options, argv: args });
     return;
@@ -338,86 +295,12 @@ async function main(): Promise<void> {
     console.log(prompt.join('\n'));
     return;
   }
-  if (process.argv[2] === '--claude-in-chrome-mcp') {
-    profileCheckpoint('cli_claude_in_chrome_mcp_path');
-    const {
-      runClaudeInChromeMcpServer
-    } = await import('../utils/claudeInChrome/mcpServer.js');
-    await runClaudeInChromeMcpServer();
-    return;
-  } else if (process.argv[2] === '--chrome-native-host') {
-    profileCheckpoint('cli_chrome_native_host_path');
-    const {
-      runChromeNativeHost
-    } = await import('../utils/claudeInChrome/chromeNativeHost.js');
-    await runChromeNativeHost();
-    return;
-  } else if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {
+  if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {
     profileCheckpoint('cli_computer_use_mcp_path');
     const {
       runComputerUseMcpServer
     } = await import('../utils/computerUse/mcpServer.js');
     await runComputerUseMcpServer();
-    return;
-  }
-
-  // Fast-path for `claude remote-control` (also accepts legacy `claude remote` / `claude sync` / `claude bridge`):
-  // serve local machine as bridge environment.
-  // feature() must stay inline for build-time dead code elimination;
-  // isBridgeEnabled() checks the runtime GrowthBook gate.
-  if (feature('BRIDGE_MODE') && (args[0] === 'remote-control' || args[0] === 'rc' || args[0] === 'remote' || args[0] === 'sync' || args[0] === 'bridge')) {
-    profileCheckpoint('cli_bridge_path');
-    const {
-      enableConfigs
-    } = await import('../utils/config.js');
-    enableConfigs();
-    const {
-      getBridgeDisabledReason,
-      checkBridgeMinVersion,
-      isRemoteControlDisabledBySettings
-    } = await import('../bridge/bridgeEnabled.js');
-    const {
-      BRIDGE_LOGIN_ERROR
-    } = await import('../bridge/types.js');
-    const {
-      bridgeMain
-    } = await import('../bridge/bridgeMain.js');
-    const {
-      exitWithError
-    } = await import('../utils/process.js');
-
-    // Auth check must come before the GrowthBook gate check — without auth,
-    // GrowthBook has no user context and would return a stale/default false.
-    // getBridgeDisabledReason awaits GB init, so the returned value is fresh
-    // (not the stale disk cache), but init still needs auth headers to work.
-    const {
-      getClaudeAIOAuthTokens
-    } = await import('../utils/auth.js');
-    if (isRemoteControlDisabledBySettings()) {
-      exitWithError('Error: Remote Control is disabled by the disableRemoteControl setting.');
-    }
-    if (!getClaudeAIOAuthTokens()?.accessToken) {
-      exitWithError(BRIDGE_LOGIN_ERROR);
-    }
-    const disabledReason = await getBridgeDisabledReason();
-    if (disabledReason) {
-      exitWithError(`Error: ${disabledReason}`);
-    }
-    const versionError = checkBridgeMinVersion();
-    if (versionError) {
-      exitWithError(versionError);
-    }
-
-    // Bridge is a remote control feature - check policy limits
-    const {
-      waitForPolicyLimitsToLoad,
-      isPolicyAllowed
-    } = await import('../services/policyLimits/index.js');
-    await waitForPolicyLimitsToLoad();
-    if (!isPolicyAllowed('allow_remote_control')) {
-      exitWithError("Error: Remote Control is disabled by your organization's policy.");
-    }
-    await bridgeMain(args.slice(1));
     return;
   }
 

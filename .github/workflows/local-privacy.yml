@@ -1,0 +1,31 @@
+name: 本地遥测与隐私边界专项验收
+on:
+  workflow_call:
+  workflow_dispatch:
+concurrency:
+  group: reusable-local-privacy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  local-privacy:
+    name: 真实写盘、零遥测联网及模型字段最小化
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: 恢复项目冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 运行静态隐私与云端路径清理门禁
+        run: node --test tests/m1-otel-timeout-317.test.mjs
+      - name: 运行真实本地磁盘写入、隐私开关与性能计数测试
+        run: bun test tests/local-telemetry-privacy.test.ts tests/local-product-entrypoints-317.test.ts tests/review-cross-model-local.test.ts tests/cloud-command-local-only.test.ts tests/local-voice-stt-317.test.ts
+      - name: 验证 SDK 请求头最小化行为
+        run: bun test tests/privacy-headers.test.ts

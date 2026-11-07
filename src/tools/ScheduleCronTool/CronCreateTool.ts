@@ -114,6 +114,18 @@ export const CronCreateTool = buildTool({
     }
     return { result: true }
   },
+  async checkPermissions(input) {
+    return {
+      behavior: 'ask' as const,
+      message: `确认创建定时任务：${cronToHuman(input.cron)}。任务内容：${input.prompt}`,
+      // safetyCheck stays confirmation-required even in bypassPermissions mode.
+      decisionReason: {
+        type: 'safetyCheck' as const,
+        reason: '创建定时任务需要用户明确授权',
+        classifierApprovable: false,
+      },
+    }
+  },
   async call({ cron, prompt, recurring = true, durable = false }) {
     // Kill switch forces session-only; schema stays stable so the model sees
     // no validation errors when the gate flips mid-session.

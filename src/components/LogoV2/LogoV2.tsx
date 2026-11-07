@@ -7,9 +7,9 @@ import { stringWidth } from '../../ink/stringWidth.js';
 import { getLayoutMode, calculateLayoutDimensions, calculateOptimalLeftWidth, formatWelcomeMessage, truncatePath, getRecentActivitySync, getRecentReleaseNotesSync, getLogoDisplayData } from '../../utils/logoV2Utils.js';
 import { truncate } from '../../utils/format.js';
 import { getDisplayPath } from '../../utils/file.js';
-import { Clawd } from './Clawd.js';
+import { BrandMark } from './BrandMark.js';
 import { FeedColumn } from './FeedColumn.js';
-import { createRecentActivityFeed, createWhatsNewFeed, createProjectOnboardingFeed, createGuestPassesFeed } from './feedConfigs.js';
+import { createRecentActivityFeed, createWhatsNewFeed, createProjectOnboardingFeed } from './feedConfigs.js';
 import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config.js';
 import { resolveThemeSetting } from 'src/utils/systemTheme.js';
 import { getInitialSettings } from 'src/utils/settings/settings.js';
@@ -35,8 +35,6 @@ import { feature } from 'bun:bundle';
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ChannelsNoticeModule = feature('KAIROS') || feature('KAIROS_CHANNELS') ? require('./ChannelsNotice.js') as typeof import('./ChannelsNotice.js') : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { useShowGuestPassesUpsell, incrementGuestPassesSeenCount } from './GuestPassesUpsell.js';
-import { useShowOverageCreditUpsell, incrementOverageCreditUpsellSeenCount, createOverageCreditFeed } from './OverageCreditUpsell.js';
 import { plural } from '../../utils/stringUtils.js';
 import { useAppState } from '../../state/AppState.js';
 import { getEffortSuffix } from '../../utils/effort.js';
@@ -59,8 +57,6 @@ export function LogoV2() {
     t0 = $[0];
   }
   const showOnboarding = t0;
-  const showGuestPassesUpsell = useShowGuestPassesUpsell();
-  const showOverageCreditUpsell = useShowOverageCreditUpsell();
   const agent = useAppState(_temp);
   const effortValue = useAppState(_temp2);
   const activePermissionMode = useAppState(state => state.toolPermissionContext.mode);
@@ -106,49 +102,6 @@ export function LogoV2() {
     t3 = $[4];
   }
   useEffect(t2, t3);
-  let t4;
-  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = !hasReleaseNotes && !showOnboarding && !isEnvTruthy(process.env.CLAUDE_CODE_FORCE_FULL_LOGO);
-    $[5] = t4;
-  } else {
-    t4 = $[5];
-  }
-  const isCondensedMode = t4;
-  let t5;
-  let t6;
-  if ($[6] !== showGuestPassesUpsell) {
-    t5 = () => {
-      if (showGuestPassesUpsell && !showOnboarding && !isCondensedMode) {
-        incrementGuestPassesSeenCount();
-      }
-    };
-    t6 = [showGuestPassesUpsell, showOnboarding, isCondensedMode];
-    $[6] = showGuestPassesUpsell;
-    $[7] = t5;
-    $[8] = t6;
-  } else {
-    t5 = $[7];
-    t6 = $[8];
-  }
-  useEffect(t5, t6);
-  let t7;
-  let t8;
-  if ($[9] !== showGuestPassesUpsell || $[10] !== showOverageCreditUpsell) {
-    t7 = () => {
-      if (showOverageCreditUpsell && !showOnboarding && !showGuestPassesUpsell && !isCondensedMode) {
-        incrementOverageCreditUpsellSeenCount();
-      }
-    };
-    t8 = [showOverageCreditUpsell, showOnboarding, showGuestPassesUpsell, isCondensedMode];
-    $[9] = showGuestPassesUpsell;
-    $[10] = showOverageCreditUpsell;
-    $[11] = t7;
-    $[12] = t8;
-  } else {
-    t7 = $[11];
-    t8 = $[12];
-  }
-  useEffect(t7, t8);
   const model = useMainLoopModel();
   const fullModelDisplayName = renderModelSetting(model);
   const {
@@ -171,15 +124,15 @@ export function LogoV2() {
   const modelDisplayName = t10;
   if (isScreenReaderEnabled()) {
     // Accessibility uses the same live model, billing and workspace metadata
-    // as the normal logo, without Clawd art, decorative borders or animation.
+    // as the normal logo, without graphical brand art, decorative borders or animation.
     return <Box flexDirection="column">
-      <Text>Claude Code v{version}</Text>
+      <Text>摇摇车 v{version}</Text>
       <Text>{fullModelDisplayName}{effortSuffix} · {billingType}</Text>
       <Text>{agentName ? `@${agentName} · ${cwd}` : cwd}</Text>
       {activePermissionMode === 'auto' && <>
-        <Text>Auto mode is now Claude Code's default permission mode.</Text>
-        <Text>Auto mode lets Claude handle permission prompts automatically. Claude checks each tool call for risky actions and prompt injection before executing, runs the ones it assesses as lower-risk, and blocks the rest.</Text>
-        <Text>https://code.claude.com/docs/en/permission-modes</Text>
+        <Text>自动模式已启用。</Text>
+        <Text>自动模式会评估每次工具调用中的高风险操作和提示注入风险，执行评估为低风险的操作并拦截其他操作。</Text>
+        
         <Text>auto mode on (shift+tab to cycle)</Text>
       </>}
       {announcement && <Text>{announcement}</Text>}
@@ -257,8 +210,8 @@ export function LogoV2() {
   }
   const layoutMode = getLayoutMode(columns);
   const userTheme = resolveThemeSetting(getGlobalConfig().theme);
-  const borderTitle = ` ${color("claude", userTheme)("Claude Code")} ${color("inactive", userTheme)(`v${version}`)} `;
-  const compactBorderTitle = color("claude", userTheme)(" Claude Code ");
+  const borderTitle = ` ${color("professionalBlue", userTheme)("摇摇车")} ${color("inactive", userTheme)(`v${version}`)} `;
+  const compactBorderTitle = color("professionalBlue", userTheme)(" 摇摇车 ");
   if (layoutMode === "compact") {
     let welcomeMessage = formatWelcomeMessage(username);
     if (stringWidth(welcomeMessage) > columns - 4) {
@@ -288,7 +241,7 @@ export function LogoV2() {
     }
     let t12;
     if ($[34] === Symbol.for("react.memo_cache_sentinel")) {
-      t12 = <Box marginY={1}><Clawd /></Box>;
+      t12 = <Box marginY={1}><BrandMark /></Box>;
       $[34] = t12;
     } else {
       t12 = $[34];
@@ -327,7 +280,7 @@ export function LogoV2() {
       t18 = $[42];
       t19 = $[43];
     }
-    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t18}{t19}</>;
+    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="professionalBlue" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t18}{t19}</>;
   }
   const welcomeMessage_0 = formatWelcomeMessage(username);
   const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
@@ -343,7 +296,7 @@ export function LogoV2() {
   const T1 = Box;
   const t11 = "column";
   const t12 = "round";
-  const t13 = "claude";
+  const t13 = "professionalBlue";
   let t14;
   if ($[44] !== borderTitle) {
     t14 = {
@@ -371,7 +324,7 @@ export function LogoV2() {
   }
   let t19;
   if ($[48] === Symbol.for("react.memo_cache_sentinel")) {
-    t19 = <Clawd />;
+    t19 = <BrandMark />;
     $[48] = t19;
   } else {
     t19 = $[48];
@@ -413,13 +366,13 @@ export function LogoV2() {
   }
   let t24;
   if ($[60] !== layoutMode) {
-    t24 = layoutMode === "horizontal" && <Box height="100%" borderStyle="single" borderColor="claude" borderDimColor={true} borderTop={false} borderBottom={false} borderLeft={false} />;
+    t24 = layoutMode === "horizontal" && <Box height="100%" borderStyle="single" borderColor="professionalBlue" borderDimColor={true} borderTop={false} borderBottom={false} borderLeft={false} />;
     $[60] = layoutMode;
     $[61] = t24;
   } else {
     t24 = $[61];
   }
-  const t25 = layoutMode === "horizontal" && <FeedColumn feeds={showOnboarding ? [createProjectOnboardingFeed(getSteps()), createRecentActivityFeed(activities)] : showGuestPassesUpsell ? [createRecentActivityFeed(activities), createGuestPassesFeed()] : showOverageCreditUpsell ? [createRecentActivityFeed(activities), createOverageCreditFeed()] : [createRecentActivityFeed(activities), createWhatsNewFeed(changelog)]} maxWidth={rightWidth} />;
+  const t25 = layoutMode === "horizontal" && <FeedColumn feeds={showOnboarding ? [createProjectOnboardingFeed(getSteps()), createRecentActivityFeed(activities)] : [createRecentActivityFeed(activities), createWhatsNewFeed(changelog)]} maxWidth={rightWidth} />;
   let t26;
   if ($[62] !== T2 || $[63] !== t15 || $[64] !== t23 || $[65] !== t24 || $[66] !== t25) {
     t26 = <T2 flexDirection={t15} paddingX={t16} gap={t17}>{t23}{t24}{t25}</T2>;

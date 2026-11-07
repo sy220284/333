@@ -96,40 +96,10 @@ export type PermissionUpdateDestination =
 /**
  * Update operations for permission configuration
  */
-export type PermissionUpdate =
-  | {
-      type: 'addRules'
-      destination: PermissionUpdateDestination
-      rules: PermissionRuleValue[]
-      behavior: PermissionBehavior
-    }
-  | {
-      type: 'replaceRules'
-      destination: PermissionUpdateDestination
-      rules: PermissionRuleValue[]
-      behavior: PermissionBehavior
-    }
-  | {
-      type: 'removeRules'
-      destination: PermissionUpdateDestination
-      rules: PermissionRuleValue[]
-      behavior: PermissionBehavior
-    }
-  | {
-      type: 'setMode'
-      destination: PermissionUpdateDestination
-      mode: ExternalPermissionMode
-    }
-  | {
-      type: 'addDirectories'
-      destination: PermissionUpdateDestination
-      directories: string[]
-    }
-  | {
-      type: 'removeDirectories'
-      destination: PermissionUpdateDestination
-      directories: string[]
-    }
+// SDK 2.1.317 also accepts 'auto' in setMode permission updates.
+// Keep tool permissions, hook results and remote suggestions on the same
+// generated wire contract so they cannot diverge during future upgrades.
+export type PermissionUpdate = import('../entrypoints/sdk/coreTypes.js').PermissionUpdate
 
 /**
  * Source of an additional working directory permission.

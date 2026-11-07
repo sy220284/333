@@ -1,4 +1,5 @@
 import { isStoppableTask } from '../../tasks/agentLifecycle317.js'
+import { recordLocalTaskState } from '../../services/localRuntime/taskJournal.js'
 import {
   OUTPUT_FILE_TAG,
   STATUS_TAG,
@@ -99,6 +100,10 @@ export function registerTask(task: TaskState, setAppState: SetAppState): void {
     return { ...prev, tasks: { ...prev.tasks, [task.id]: merged } }
   })
 
+  void recordLocalTaskState(task).catch(error => {
+    process.stderr.write(`[333 local task] ${String(error)}\n`)
+  })
+
   // Replacement (resume) — not a new start. Skip to avoid double-emit.
   if (isReplacement) return
 
@@ -168,6 +173,14 @@ export async function generateTaskAttachments(state: AppState): Promise<{
   const updatedTaskOffsets: Record<string, number> = {}
   const evictedTaskIds: string[] = []
   const tasks = state.tasks ?? {}
+
+  // Persist state transitions to the local task ledger. The journal
+  // deduplicates unchanged statuses; existing task storage remains authoritative.
+  for (const taskState of Object.values(tasks)) {
+    void recordLocalTaskState(taskState).catch(error => {
+      process.stderr.write(`[333 local task] ${String(error)}\n`)
+    })
+  }
 
   for (const taskState of Object.values(tasks)) {
     if (taskState.notified) {

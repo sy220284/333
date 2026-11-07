@@ -122,9 +122,7 @@ export function ThemePicker({
           </Text>
         )}
         <Box flexDirection="column">
-          选择适合当前终端的文字样式<Text bold>
-            Choose the text style that looks best with your terminal
-          </Text>
+          <Text bold>选择适合当前终端的文字样式</Text>
           {helpText && !showHelpTextBelow && <Text dimColor>{helpText}</Text>}
         </Box>
         <Select

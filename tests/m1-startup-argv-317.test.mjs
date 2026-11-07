@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { getCliFlagValue, hasCliFlag, isStreamJsonLaunch, rejectDeepLinkArgumentInjection, backgroundSessionVerbIndex317 } from '../src/utils/cliArgv317.mjs'
-import { classifyStartupArgs } from '../src/entrypoints/startupRouting317.mjs'
+import { classifyStartupArgs, isDesktopWorkbenchLaunch } from '../src/entrypoints/startupRouting317.mjs'
 
 test('317 early configuration parsing chooses the final actual flag and stops at --', () => {
   assert.equal(getCliFlagValue('--settings', ['--settings', 'a', '--settings=b']), 'b')
@@ -109,4 +109,14 @@ test('317 launch routing recognizes only real flags, never values or prompt text
   assert.equal(classifyStartupArgs(['--system-prompt', '--desktop', '--bg']).backgroundFlagRequest, true)
   assert.equal(classifyStartupArgs(['--desktop', '--system-prompt', '--bg']).desktopRequest, true)
   assert.equal(classifyStartupArgs(['--desktop', '--system-prompt', '--bg']).backgroundFlagRequest, false)
+})
+
+
+test('内部后台服务与无界面任务不会被新桌面入口截获', () => {
+  for (const args of [
+    ['--internal-bg-supervisor'], ['--bg', '--bare', 'task'], ['agents', '--json'],
+    ['daemon', 'stop', '--any'], ['--print', 'task'], ['-p', '--output-format', 'json', 'task'],
+  ]) assert.equal(isDesktopWorkbenchLaunch(args), false, args.join(' '))
+  assert.equal(isDesktopWorkbenchLaunch([]), true)
+  assert.equal(isDesktopWorkbenchLaunch(['hello']), true)
 })

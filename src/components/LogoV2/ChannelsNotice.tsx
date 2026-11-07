@@ -135,7 +135,7 @@ export function ChannelsNotice() {
   }
   let t2;
   if ($[24] !== flag) {
-    t2 = <Text dimColor={true}>实验功能：收到的消息将进入当前会话，存在提示注入风险。若要关闭，请在不使用 {flag} 的情况下重启 Claude Code。</Text>;
+    t2 = <Text dimColor={true}>实验功能：收到的消息将进入当前会话，存在提示注入风险。若要关闭，请在不使用 {flag} 的情况下重启 摇摇车。</Text>;
     $[24] = flag;
     $[25] = t2;
   } else {
@@ -207,7 +207,7 @@ function findUnmatched(entries: readonly ChannelEntry[], allowlist: ReturnType<t
   // Server-kind: build one Set from all scopes up front. getMcpConfigsByScope
   // is not cached (project scope walks the dir tree); getMcpConfigByName would
   // redo that walk per entry.
-  const scopes = ['enterprise', 'user', 'project', 'local'] as const;
+  const scopes = ['user', 'project', 'local'] as const;
   const configured = new Set<string>();
   for (const scope of scopes) {
     for (const name of Object.keys(getMcpConfigsByScope(scope).servers)) {

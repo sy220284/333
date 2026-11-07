@@ -241,7 +241,6 @@ export function logAPIError({
   durationMsIncludingRetries,
   attempt,
   requestId,
-  clientRequestId,
   didFallBackToNonStreaming,
   promptCategory,
   headers,
@@ -259,8 +258,6 @@ export function logAPIError({
   durationMsIncludingRetries: number
   attempt: number
   requestId?: string | null
-  /** Client-generated ID sent as x-client-request-id header (survives timeouts) */
-  clientRequestId?: string
   didFallBackToNonStreaming?: boolean
   promptCategory?: string
   headers?: globalThis.Headers
@@ -293,13 +290,6 @@ export function logAPIError({
 
   const invocation = consumeInvokingRequestId()
 
-  if (clientRequestId) {
-    logForDebugging(
-      `API error x-client-request-id=${clientRequestId} (give this to the API team for server-log lookup)`,
-      { level: 'error' },
-    )
-  }
-
   logError(error as Error)
   logEvent('tengu_api_error', {
     model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -325,9 +315,6 @@ export function logAPIError({
             invocation.invocationKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }
       : {}),
-    clientRequestId:
-      (clientRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS) ||
-      undefined,
     didFallBackToNonStreaming,
     ...(promptCategory
       ? {

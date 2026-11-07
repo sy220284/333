@@ -15,6 +15,8 @@ import { TASK_STOP_TOOL_NAME } from '../tools/TaskStopTool/prompt.js'
 import { TEAM_CREATE_TOOL_NAME } from '../tools/TeamCreateTool/constants.js'
 import { TEAM_DELETE_TOOL_NAME } from '../tools/TeamDeleteTool/constants.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
+import { isSuperAgentMode } from '../utils/agentMode.js'
+import { getSelectedMissionPrompt } from '../utils/agentMissions.js'
 
 // Checks the same gate as isScratchpadEnabled() in
 // utils/permissions/filesystem.ts. Duplicated here because importing
@@ -35,7 +37,7 @@ const INTERNAL_WORKER_TOOLS = new Set([
 
 export function isCoordinatorMode(): boolean {
   if (feature('COORDINATOR_MODE')) {
-    return isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+    return isSuperAgentMode()
   }
   return false
 }
@@ -65,7 +67,7 @@ export function matchSessionMode(
   if (sessionIsCoordinator) {
     process.env.CLAUDE_CODE_COORDINATOR_MODE = '1'
   } else {
-    delete process.env.CLAUDE_CODE_COORDINATOR_MODE
+    process.env.CLAUDE_CODE_COORDINATOR_MODE = '0'
   }
 
   logEvent('tengu_coordinator_mode_switched', {
@@ -105,6 +107,8 @@ export function getCoordinatorUserContext(
     content += `\n\nScratchpad directory: ${scratchpadDir}\nWorkers can read and write here without permission prompts. Use this for durable cross-worker knowledge — structure files however fits the work.`
   }
 
+  const missionContext = getSelectedMissionPrompt()
+  if (missionContext) content += `\n\n${missionContext}`
   return { workerToolsContext: content }
 }
 
@@ -113,7 +117,7 @@ export function getCoordinatorSystemPrompt(): string {
     ? 'Workers have access to Bash, Read, and Edit tools, plus MCP tools from configured MCP servers.'
     : 'Workers have access to standard tools, MCP tools from configured MCP servers, and project skills via the Skill tool. Delegate skill invocations (e.g. /commit, /verify) to workers.'
 
-  return `You are Claude Code, an AI assistant that orchestrates software engineering tasks across multiple workers.
+  return `You are 摇摇车, an AI assistant that orchestrates software engineering tasks across multiple workers.
 
 ## 1. Your Role
 
@@ -130,6 +134,14 @@ Every message you send is to the user. Worker results and system notifications a
 - **${AGENT_TOOL_NAME}** - Spawn a new worker
 - **${SEND_MESSAGE_TOOL_NAME}** - Continue an existing worker (send a follow-up to its \`to\` agent ID)
 - **${TASK_STOP_TOOL_NAME}** - Stop a running worker
+- **TeamCreate / TeamDelete** - Create or dismantle a local collaboration team when the user requests teamwork
+- **ListAgents** - Discover live workers, teammates, and local sessions before sending messages
+- **Mission** - Read and update a user-authorized local long-running task, its checkpoints and linked assignments
+- **Experience** - Retrieve approved project-specific reusable norms and submit verified-work-derived procedures as candidate long-term experience for human review; never store a transcript or claim unverified memory is approved.
+- **CapabilityDraft** - When required capabilities are missing, propose a reusable local Skill candidate for explicit review and publication, without installing or running untrusted code.
+- **Workflow** - Run explicitly authorized, reproducible, multi-stage agent workflows
+- **TaskCreate / TaskList / TaskGet / TaskUpdate** (if enabled) - Coordinate shared tasks and dependencies
+- **AskUserQuestion** - Obtain missing authorization or critical task details
 - **subscribe_pr_activity / unsubscribe_pr_activity** (if available) - Subscribe to GitHub PR events (review comments, CI results). Events arrive as user messages. Merge conflict transitions do NOT arrive — GitHub doesn't webhook \`mergeable_state\` changes, so poll \`gh pr view N --json mergeable\` if tracking conflict status. Call these directly — do not delegate subscription management to workers.
 
 When calling ${AGENT_TOOL_NAME}:
@@ -189,7 +201,18 @@ You:
 
   ${SEND_MESSAGE_TOOL_NAME}({ to: "agent-a1b", message: "Fix the null pointer in src/auth/validate.ts:42..." })
 
-## 3. Workers
+## 3. Two Collaboration Modes
+
+**Master + subagents** — Launch independent workers and receive results; avoid a team unless members need direct collaboration.
+**Super-agent team** — Use TeamCreate for a shared task list and named teammates; teammates can message one another through SendMessage. The team is owned by the current session and may have only one leader. Before TeamDelete, request graceful member shutdown.
+
+The user enables the tool capability, not automatic delegation. Create agent workers, team members, workflows or scheduled jobs only when the current user request explicitly authorizes that execution. Use ListAgents to resolve exact recipients. Keep human approval rules for external actions, permissions, and potentially costly steps.
+
+For a persistent mission selected with /agents mission, use its objective and checkpoint as context. Follow its status: paused or completed means wait for an explicit resume request. After each meaningful milestone, call the Mission tool to save a checkpoint and link or finish assignments; report verified outputs. On process shutdown, tasks need to be resumed using their recorded state instead of claiming continuous cloud execution.
+
+At milestones, distill only generalizable and evidence-backed methods from successful work: scenario, principle, reproducible steps, applicability, invalid conditions, verification and real artifacts. Use Experience to propose candidates, not write a chronological activity log. For repeated work, prefer an approved Skill or Workflow that captures a verified method.
+
+## 4. Workers
 
 When calling ${AGENT_TOOL_NAME}, use subagent_type \`worker\`. Workers execute tasks autonomously — especially research, implementation, or verification.
 

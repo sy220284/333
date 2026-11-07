@@ -1,17 +1,12 @@
-import { execFileSync } from 'child_process'
 import { diffLines } from 'diff'
-import { constants as fsConstants, type Dirent } from 'node:fs'
+import type { Dirent } from 'node:fs'
 import {
-  copyFile,
   mkdir,
-  mkdtemp,
   readdir,
   readFile,
-  rm,
   unlink,
   writeFile,
 } from 'fs/promises'
-import { tmpdir } from 'os'
 import { extname, join } from 'path'
 import type { Command } from '../commands.js'
 import { queryWithModel } from '../services/api/claude.js'
@@ -21,10 +16,10 @@ import {
 import type { LogOption } from '../types/logs.js'
 import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
 import { toError } from '../utils/errors.js'
-import { execFileNoThrow } from '../utils/execFileNoThrow.js'
 import { logError } from '../utils/log.js'
 import { extractTextContent } from '../utils/messages.js'
-import { getDefaultOpusModel } from '../utils/model/model.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
+import { getMainLoopModel, getDefaultOpusModel } from '../utils/model/model.js'
 import {
   getProjectsDir,
   getSessionFilesWithMtime,
@@ -38,187 +33,15 @@ import { escapeXmlAttr as escapeHtml } from '../utils/xml.js'
 
 // Model for facet extraction and summarization (Opus - best quality)
 function getAnalysisModel(): string {
-  return getDefaultOpusModel()
+  const model = getMainLoopModel()
+  return resolveIndependentModel(model) ? model : getDefaultOpusModel()
 }
 
 // Model for narrative insights (Opus - best quality)
 function getInsightsModel(): string {
-  return getDefaultOpusModel()
+  const model = getMainLoopModel()
+  return resolveIndependentModel(model) ? model : getDefaultOpusModel()
 }
-
-// ============================================================================
-// Homespace Data Collection
-// ============================================================================
-
-type RemoteHostInfo = {
-  name: string
-  sessionCount: number
-}
-
-/* eslint-disable custom-rules/no-process-env-top-level */
-const getRunningRemoteHosts: () => Promise<string[]> =
-  process.env.USER_TYPE === 'ant'
-    ? async () => {
-        const { stdout, code } = await execFileNoThrow(
-          'coder',
-          ['list', '-o', 'json'],
-          { timeout: 30000 },
-        )
-        if (code !== 0) return []
-        try {
-          const workspaces = jsonParse(stdout) as Array<{
-            name: string
-            latest_build?: { status?: string }
-          }>
-          return workspaces
-            .filter(w => w.latest_build?.status === 'running')
-            .map(w => w.name)
-        } catch {
-          return []
-        }
-      }
-    : async () => []
-
-const getRemoteHostSessionCount: (hs: string) => Promise<number> =
-  process.env.USER_TYPE === 'ant'
-    ? async (homespace: string) => {
-        const { stdout, code } = await execFileNoThrow(
-          'ssh',
-          [
-            `${homespace}.coder`,
-            'find /root/.claude/projects -name "*.jsonl" 2>/dev/null | wc -l',
-          ],
-          { timeout: 30000 },
-        )
-        if (code !== 0) return 0
-        return parseInt(stdout.trim(), 10) || 0
-      }
-    : async () => 0
-
-const collectFromRemoteHost: (
-  hs: string,
-  destDir: string,
-) => Promise<{ copied: number; skipped: number }> =
-  process.env.USER_TYPE === 'ant'
-    ? async (homespace: string, destDir: string) => {
-        const result = { copied: 0, skipped: 0 }
-
-        // Create temp directory
-        const tempDir = await mkdtemp(join(tmpdir(), 'claude-hs-'))
-
-        try {
-          // SCP the projects folder
-          const scpResult = await execFileNoThrow(
-            'scp',
-            ['-rq', `${homespace}.coder:/root/.claude/projects/`, tempDir],
-            { timeout: 300000 },
-          )
-          if (scpResult.code !== 0) {
-            // SCP failed
-            return result
-          }
-
-          const projectsDir = join(tempDir, 'projects')
-          let projectDirents: Dirent<string>[]
-          try {
-            projectDirents = await readdir(projectsDir, { withFileTypes: true })
-          } catch {
-            return result
-          }
-
-          // Merge into destination (parallel per project directory)
-          await Promise.all(
-            projectDirents.map(async dirent => {
-              const projectName = dirent.name
-              const projectPath = join(projectsDir, projectName)
-
-              // Skip if not a directory
-              if (!dirent.isDirectory()) return
-
-              const destProjectName = `${projectName}__${homespace}`
-              const destProjectPath = join(destDir, destProjectName)
-
-              try {
-                await mkdir(destProjectPath, { recursive: true })
-              } catch {
-                // Directory may already exist
-              }
-
-              // Copy session files (skip existing)
-              let files: Dirent<string>[]
-              try {
-                files = await readdir(projectPath, { withFileTypes: true })
-              } catch {
-                return
-              }
-              await Promise.all(
-                files.map(async fileDirent => {
-                  const fileName = fileDirent.name
-                  if (!fileName.endsWith('.jsonl')) return
-
-                  const srcFile = join(projectPath, fileName)
-                  const destFile = join(destProjectPath, fileName)
-
-                  try {
-                    await copyFile(srcFile, destFile, fsConstants.COPYFILE_EXCL)
-                    result.copied++
-                  } catch {
-                    // EEXIST from COPYFILE_EXCL means dest already exists
-                    result.skipped++
-                  }
-                }),
-              )
-            }),
-          )
-        } finally {
-          try {
-            await rm(tempDir, { recursive: true, force: true })
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
-
-        return result
-      }
-    : async () => ({ copied: 0, skipped: 0 })
-
-const collectAllRemoteHostData: (destDir: string) => Promise<{
-  hosts: RemoteHostInfo[]
-  totalCopied: number
-  totalSkipped: number
-}> =
-  process.env.USER_TYPE === 'ant'
-    ? async (destDir: string) => {
-        const rHosts = await getRunningRemoteHosts()
-        const result: RemoteHostInfo[] = []
-        let totalCopied = 0
-        let totalSkipped = 0
-
-        // Collect from all hosts in parallel (SCP per host can take seconds)
-        const hostResults = await Promise.all(
-          rHosts.map(async hs => {
-            const sessionCount = await getRemoteHostSessionCount(hs)
-            if (sessionCount > 0) {
-              const { copied, skipped } = await collectFromRemoteHost(
-                hs,
-                destDir,
-              )
-              return { name: hs, sessionCount, copied, skipped }
-            }
-            return { name: hs, sessionCount, copied: 0, skipped: 0 }
-          }),
-        )
-
-        for (const hr of hostResults) {
-          result.push({ name: hr.name, sessionCount: hr.sessionCount })
-          totalCopied += hr.copied
-          totalSkipped += hr.skipped
-        }
-
-        return { hosts: result, totalCopied, totalSkipped }
-      }
-    : async () => ({ hosts: [], totalCopied: 0, totalSkipped: 0 })
-/* eslint-enable custom-rules/no-process-env-top-level */
 
 // ============================================================================
 // Types
@@ -1445,38 +1268,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT:
 Include 3 opportunities. Think BIG - autonomous workflows, parallel agents, iterating against tests.`,
     maxTokens: 8192,
   },
-  ...(process.env.USER_TYPE === 'ant'
-    ? [
-        {
-          name: 'cc_team_improvements',
-          prompt: `Analyze this Claude Code usage data and suggest product improvements for the CC team.
-
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{
-  "improvements": [
-    {"title": "Product/tooling improvement", "detail": "3-4 sentences describing the improvement", "evidence": "3-4 sentences with specific session examples"}
-  ]
-}
-
-Include 2-3 improvements based on friction patterns observed.`,
-          maxTokens: 8192,
-        },
-        {
-          name: 'model_behavior_improvements',
-          prompt: `Analyze this Claude Code usage data and suggest model behavior improvements.
-
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{
-  "improvements": [
-    {"title": "Model behavior change", "detail": "3-4 sentences describing what the model should do differently", "evidence": "3-4 sentences with specific examples"}
-  ]
-}
-
-Include 2-3 improvements based on friction patterns observed.`,
-          maxTokens: 8192,
-        },
-      ]
-    : []),
   {
     name: 'fun_ending',
     prompt: `Analyze this Claude Code usage data and find a memorable moment.
@@ -1545,20 +1336,6 @@ type InsightResults = {
       whats_possible: string
       how_to_try?: string
       copyable_prompt?: string
-    }>
-  }
-  cc_team_improvements?: {
-    improvements?: Array<{
-      title: string
-      detail: string
-      evidence?: string
-    }>
-  }
-  model_behavior_improvements?: {
-    improvements?: Array<{
-      title: string
-      detail: string
-      evidence?: string
     }>
   }
   fun_ending?: {
@@ -2141,7 +1918,7 @@ function generateHtmlReport(
             pat.copyable_prompt
               ? `
           <div class="copyable-prompt-section">
-            <div class="prompt-label">Paste into Claude Code:</div>
+            <div class="prompt-label">复制到摇摇车：</div>
             <div class="copyable-prompt-row">
               <code class="copyable-prompt">${escapeHtml(pat.copyable_prompt)}</code>
               <button class="copy-btn" onclick="copyText(this)">Copy</button>
@@ -2176,83 +1953,12 @@ function generateHtmlReport(
           <div class="horizon-title">${escapeHtml(opp.title || '')}</div>
           <div class="horizon-possible">${escapeHtml(opp.whats_possible || '')}</div>
           ${opp.how_to_try ? `<div class="horizon-tip"><strong>如何开始：</strong> ${escapeHtml(opp.how_to_try)}</div>` : ''}
-          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into Claude Code:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
+          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">复制到摇摇车：</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
         </div>
       `,
         )
         .join('')}
     </div>
-    `
-      : ''
-
-  // Build Team Feedback section (collapsible, ant-only)
-  const ccImprovements =
-    process.env.USER_TYPE === 'ant'
-      ? insights.cc_team_improvements?.improvements || []
-      : []
-  const modelImprovements =
-    process.env.USER_TYPE === 'ant'
-      ? insights.model_behavior_improvements?.improvements || []
-      : []
-  const teamFeedbackHtml =
-    ccImprovements.length > 0 || modelImprovements.length > 0
-      ? `
-    <h2 id="section-feedback" class="feedback-header">Closing the Loop: Feedback for Other Teams</h2>
-    <p class="feedback-intro">根据你的使用情况，为产品与模型团队整理的建议。点击展开查看。</p>
-    ${
-      ccImprovements.length > 0
-        ? `
-    <div class="collapsible-section">
-      <div class="collapsible-header" onclick="toggleCollapsible(this)">
-        <span class="collapsible-arrow">▶</span>
-        <h3>给 Claude Code 团队的产品改进建议</h3>
-      </div>
-      <div class="collapsible-content">
-        <div class="suggestions-section">
-          ${ccImprovements
-            .map(
-              imp => `
-            <div class="feedback-card team-card">
-              <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
-              <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
-              ${imp.evidence ? `<div class="feedback-evidence"><em>依据：</em> ${escapeHtml(imp.evidence)}</div>` : ''}
-            </div>
-          `,
-            )
-            .join('')}
-        </div>
-      </div>
-    </div>
-    `
-        : ''
-    }
-    ${
-      modelImprovements.length > 0
-        ? `
-    <div class="collapsible-section">
-      <div class="collapsible-header" onclick="toggleCollapsible(this)">
-        <span class="collapsible-arrow">▶</span>
-        <h3>模型行为改进建议</h3>
-      </div>
-      <div class="collapsible-content">
-        <div class="suggestions-section">
-          ${modelImprovements
-            .map(
-              imp => `
-            <div class="feedback-card model-card">
-              <div class="feedback-title">${escapeHtml(imp.title || '')}</div>
-              <div class="feedback-detail">${escapeHtml(imp.detail || '')}</div>
-              ${imp.evidence ? `<div class="feedback-evidence"><em>依据：</em> ${escapeHtml(imp.evidence)}</div>` : ''}
-            </div>
-          `,
-            )
-            .join('')}
-        </div>
-      </div>
-    </div>
-    `
-        : ''
-    }
     `
       : ''
 
@@ -2269,7 +1975,7 @@ function generateHtmlReport(
 
   const css = `
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
     .container { max-width: 800px; margin: 0 auto; }
     h1 { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
     h2 { font-size: 20px; font-weight: 600; color: #0f172a; margin-top: 48px; margin-bottom: 16px; }
@@ -2356,37 +2062,15 @@ function generateHtmlReport(
     .horizon-title { font-weight: 600; font-size: 15px; color: #5b21b6; margin-bottom: 8px; }
     .horizon-possible { font-size: 14px; color: #334155; margin-bottom: 10px; line-height: 1.5; }
     .horizon-tip { font-size: 13px; color: #6b21a8; background: rgba(255,255,255,0.6); padding: 8px 12px; border-radius: 4px; }
-    .feedback-header { margin-top: 48px; color: #64748b; font-size: 16px; }
-    .feedback-intro { font-size: 13px; color: #94a3b8; margin-bottom: 16px; }
-    .feedback-section { margin-top: 16px; }
-    .feedback-section h3 { font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 12px; }
-    .feedback-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-    .feedback-card.team-card { background: #eff6ff; border-color: #bfdbfe; }
-    .feedback-card.model-card { background: #faf5ff; border-color: #e9d5ff; }
-    .feedback-title { font-weight: 600; font-size: 14px; color: #0f172a; margin-bottom: 6px; }
-    .feedback-detail { font-size: 13px; color: #475569; line-height: 1.5; }
-    .feedback-evidence { font-size: 12px; color: #64748b; margin-top: 8px; }
     .fun-ending { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fbbf24; border-radius: 12px; padding: 24px; margin-top: 40px; text-align: center; }
     .fun-headline { font-size: 18px; font-weight: 600; color: #78350f; margin-bottom: 8px; }
     .fun-detail { font-size: 14px; color: #92400e; }
-    .collapsible-section { margin-top: 16px; }
-    .collapsible-header { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-    .collapsible-header h3 { margin: 0; font-size: 14px; font-weight: 600; color: #475569; }
-    .collapsible-arrow { font-size: 12px; color: #94a3b8; transition: transform 0.2s; }
-    .collapsible-content { display: none; padding-top: 16px; }
-    .collapsible-content.open { display: block; }
-    .collapsible-header.open .collapsible-arrow { transform: rotate(90deg); }
     @media (max-width: 640px) { .charts-row { grid-template-columns: 1fr; } .stats-row { justify-content: center; } }
   `
 
   const hourCountsJson = getHourCountsJson(data.message_hours)
 
   const js = `
-    function toggleCollapsible(header) {
-      header.classList.toggle('open');
-      const content = header.nextElementSibling;
-      content.classList.toggle('open');
-    }
     function copyText(btn) {
       const code = btn.previousElementSibling;
       navigator.clipboard.writeText(code.textContent).then(() => {
@@ -2483,13 +2167,12 @@ function generateHtmlReport(
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>Claude Code 使用分析</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>摇摇车使用分析</title>
   <style>${css}</style>
 </head>
 <body>
   <div class="container">
-    <h1>Claude Code 使用分析</h1>
+    <h1>摇摇车使用分析</h1>
     <p class="subtitle">${data.total_messages.toLocaleString()} 条消息，分布于 ${data.total_sessions} 个会话${data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions ? ` (${data.total_sessions_scanned.toLocaleString()} 总计)` : ''} | ${data.date_range.start} 至 ${data.date_range.end}</p>
 
     ${atAGlanceHtml}
@@ -2502,7 +2185,6 @@ function generateHtmlReport(
       <a href="#section-features">功能建议</a>
       <a href="#section-patterns">新用法</a>
       <a href="#section-horizon">未来方向</a>
-      <a href="#section-feedback">团队反馈</a>
     </nav>
 
     <div class="stats-row">
@@ -2636,7 +2318,6 @@ function generateHtmlReport(
 
     ${funEndingHtml}
 
-    ${teamFeedbackHtml}
   </div>
   <script>${js}</script>
 </body>
@@ -2652,12 +2333,10 @@ function generateHtmlReport(
  */
 export type InsightsExport = {
   metadata: {
-    username: string
     generated_at: string
     claude_code_version: string
     date_range: { start: string; end: string }
     session_count: number
-    remote_hosts_collected?: string[]
   }
   aggregated_data: AggregatedData
   insights: InsightResults
@@ -2672,19 +2351,14 @@ export type InsightsExport = {
 
 /**
  * Build export data from already-computed values.
- * Used by background upload to S3.
+ * Local-only export of already computed aggregates.
  */
 export function buildExportData(
   data: AggregatedData,
   insights: InsightResults,
   facets: Map<string, SessionFacets>,
-  remoteStats?: { hosts: RemoteHostInfo[]; totalCopied: number },
 ): InsightsExport {
   const version = typeof MACRO !== 'undefined' ? MACRO.VERSION : 'unknown'
-
-  const remote_hosts_collected = remoteStats?.hosts
-    .filter(h => h.sessionCount > 0)
-    .map(h => h.name)
 
   const facets_summary = {
     total: facets.size,
@@ -2718,15 +2392,10 @@ export function buildExportData(
 
   return {
     metadata: {
-      username: process.env.SAFEUSER || process.env.USER || 'unknown',
       generated_at: new Date().toISOString(),
       claude_code_version: version,
       date_range: data.date_range,
       session_count: data.total_sessions,
-      ...(remote_hosts_collected &&
-        remote_hosts_collected.length > 0 && {
-          remote_hosts_collected,
-        }),
     },
     aggregated_data: data,
     insights,
@@ -2791,24 +2460,12 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
 // Main Function
 // ============================================================================
 
-export async function generateUsageReport(options?: {
-  collectRemote?: boolean
-}): Promise<{
+export async function generateUsageReport(options: { modelAnalysis?: boolean } = {}): Promise<{
   insights: InsightResults
   htmlPath: string
   data: AggregatedData
-  remoteStats?: { hosts: RemoteHostInfo[]; totalCopied: number }
   facets: Map<string, SessionFacets>
 }> {
-  let remoteStats: { hosts: RemoteHostInfo[]; totalCopied: number } | undefined
-
-  // Optionally collect data from remote hosts first (ant-only)
-  if (process.env.USER_TYPE === 'ant' && options?.collectRemote) {
-    const destDir = join(getClaudeConfigHomeDir(), 'projects')
-    const { hosts, totalCopied } = await collectAllRemoteHostData(destDir)
-    remoteStats = { hosts, totalCopied }
-  }
-
   // Phase 1: Lite scan — filesystem metadata only (no JSONL parsing)
   const allScannedSessions = await scanAllSessions()
   const totalSessionsScanned = allScannedSessions.length
@@ -2947,25 +2604,29 @@ export async function generateUsageReport(options?: {
     }
   }
 
-  // Extract facets for sessions that need them (50 concurrent)
-  const CONCURRENCY = 50
-  for (let i = 0; i < toExtract.length; i += CONCURRENCY) {
-    const batch = toExtract.slice(i, i + CONCURRENCY)
-    const results = await Promise.all(
-      batch.map(async ({ log, sessionId }) => {
-        const newFacets = await extractFacetsFromAPI(log, sessionId)
-        return { sessionId, newFacets }
-      }),
-    )
-    // Collect facets synchronously, save in parallel (independent writes)
-    const facetsToSave: SessionFacets[] = []
-    for (const { sessionId, newFacets } of results) {
-      if (newFacets) {
-        facets.set(sessionId, newFacets)
-        facetsToSave.push(newFacets)
+  // 只有用户明确启用模型分析才把会话片段发送到所配置的模型提供商。
+  if (options.modelAnalysis) {
+    // Extract facets for sessions that need them (50 concurrent)
+    const CONCURRENCY = 50
+    for (let i = 0; i < toExtract.length; i += CONCURRENCY) {
+      const batch = toExtract.slice(i, i + CONCURRENCY)
+      const results = await Promise.all(
+        batch.map(async ({ log, sessionId }) => {
+          const newFacets = await extractFacetsFromAPI(log, sessionId)
+          return { sessionId, newFacets }
+        }),
+      )
+      // Collect facets synchronously, save in parallel (independent writes)
+      const facetsToSave: SessionFacets[] = []
+      for (const { sessionId, newFacets } of results) {
+        if (newFacets) {
+          facets.set(sessionId, newFacets)
+          facetsToSave.push(newFacets)
+        }
       }
+      await Promise.all(facetsToSave.map(f => saveFacets(f)))
     }
-    await Promise.all(facetsToSave.map(f => saveFacets(f)))
+
   }
 
   // Filter out warmup/minimal sessions (matching Python's is_minimal)
@@ -2993,7 +2654,9 @@ export async function generateUsageReport(options?: {
   aggregated.total_sessions_scanned = totalSessionsScanned
 
   // Generate parallel insights from Claude (6 sections)
-  const insights = await generateParallelInsights(aggregated, facets)
+  const insights: InsightResults = options.modelAnalysis
+    ? await generateParallelInsights(aggregated, facets)
+    : {}
 
   // Generate HTML report
   const htmlReport = generateHtmlReport(aggregated, insights)
@@ -3015,7 +2678,6 @@ export async function generateUsageReport(options?: {
     insights,
     htmlPath,
     data: aggregated,
-    remoteStats,
     facets: substantiveFacets,
   }
 }
@@ -3037,65 +2699,15 @@ function safeKeys(obj: Record<string, unknown> | undefined | null): string[] {
 const usageReport: Command = {
   type: 'prompt',
   name: 'insights',
-  description: '生成 Claude Code 会话使用分析报告',
+  description: '生成本地会话使用分析报告（--model-analysis 可选调用模型）',
   contentLength: 0, // Dynamic content
   progressMessage: '正在分析你的会话',
   source: 'builtin',
   async getPromptForCommand(args) {
-    let collectRemote = false
-    let remoteHosts: string[] = []
-    let hasRemoteHosts = false
-
-    if (process.env.USER_TYPE === 'ant') {
-      // Parse --homespaces flag
-      collectRemote = args?.includes('--homespaces') ?? false
-
-      // Check for available remote hosts
-      remoteHosts = await getRunningRemoteHosts()
-      hasRemoteHosts = remoteHosts.length > 0
-
-      // Show collection message if collecting
-      if (collectRemote && hasRemoteHosts) {
-        // biome-ignore lint/suspicious/noConsole: intentional
-        console.error(
-          `Collecting sessions from ${remoteHosts.length} homespace(s): ${remoteHosts.join(', ')}...`,
-        )
-      }
-    }
-
-    const { insights, htmlPath, data, remoteStats } = await generateUsageReport(
-      { collectRemote },
-    )
-
-    let reportUrl = `file://${htmlPath}`
-    let uploadHint = ''
-
-    if (process.env.USER_TYPE === 'ant') {
-      // Try to upload to S3
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .replace('T', '_')
-        .slice(0, 15)
-      const username = process.env.SAFEUSER || process.env.USER || 'unknown'
-      const filename = `${username}_insights_${timestamp}.html`
-      const s3Path = `s3://anthropic-serve/atamkin/cc-user-reports/${filename}`
-      const s3Url = `https://s3-frontend.infra.ant.dev/anthropic-serve/atamkin/cc-user-reports/${filename}`
-
-      reportUrl = s3Url
-      try {
-        execFileSync('ff', ['cp', htmlPath, s3Path], {
-          timeout: 60000,
-          stdio: 'pipe', // Suppress output
-        })
-      } catch {
-        // Upload failed - fall back to local file and show upload command
-        reportUrl = `file://${htmlPath}`
-        uploadHint = `\nAutomatic upload failed. Are you on the boron namespace? Try \`use-bo\` and ensure you've run \`sso\`.
-To share, run: ff cp ${htmlPath} ${s3Path}
-Then access at: ${s3Url}`
-      }
-    }
+    const { insights, htmlPath, data } = await generateUsageReport({
+      modelAnalysis: args?.split(/\s+/).includes('--model-analysis') ?? false,
+    })
+    const reportUrl = `file://${htmlPath}`
 
     // Build header with stats
     const sessionLabel =
@@ -3109,21 +2721,6 @@ Then access at: ${s3Url}`
       `${Math.round(data.total_duration_hours)}h`,
       `${data.git_commits} commits`,
     ].join(' · ')
-
-    // Build remote host info (ant-only)
-    let remoteInfo = ''
-    if (process.env.USER_TYPE === 'ant') {
-      if (remoteStats && remoteStats.totalCopied > 0) {
-        const hsNames = remoteStats.hosts
-          .filter(h => h.sessionCount > 0)
-          .map(h => h.name)
-          .join(', ')
-        remoteInfo = `\n_Collected ${remoteStats.totalCopied} new sessions from: ${hsNames}_\n`
-      } else if (!collectRemote && hasRemoteHosts) {
-        // Suggest using --homespaces if they have remote hosts but didn't use the flag
-        remoteInfo = `\n_Tip: Run \`/insights --homespaces\` to include sessions from your ${remoteHosts.length} running homespace(s)_\n`
-      }
-    }
 
     // Build markdown summary from insights
     const atAGlance = insights.at_a_glance
@@ -3139,22 +2736,21 @@ ${atAGlance.quick_wins ? `**Quick wins to try:** ${atAGlance.quick_wins} See _Fe
 ${atAGlance.ambitious_workflows ? `**Ambitious workflows:** ${atAGlance.ambitious_workflows} See _On the Horizon_.` : ''}`
       : '_No insights generated_'
 
-    const header = `# Claude Code Insights
+    const header = `# 会话分析报告
 
 ${stats}
 ${data.date_range.start} to ${data.date_range.end}
-${remoteInfo}
 `
 
     const userSummary = `${header}${summaryText}
 
-Your full shareable insights report is ready: ${reportUrl}${uploadHint}`
+本地分析报告已保存： ${reportUrl}`
 
     // Return prompt for Claude to respond to
     return [
       {
         type: 'text',
-        text: `The user just ran /insights to generate a usage report analyzing their Claude Code sessions.
+        text: `The user just ran /insights to generate a local usage report. Model-based analysis occurs only when the user explicitly selects --model-analysis.
 
 Here is the full insights data:
 ${jsonStringify(insights, null, 2)}
@@ -3169,8 +2765,8 @@ ${userSummary}
 Now output the following message exactly:
 
 <message>
-Your shareable insights report is ready:
-${reportUrl}${uploadHint}
+本地分析报告已保存：
+${reportUrl}
 
 Want to dig into any section or try one of the suggestions?
 </message>`,

@@ -5,11 +5,6 @@
 
 import React from 'react'
 import {
-  getChromeFlagOverride,
-  getFlagSettingsPath,
-  getInlinePlugins,
-  getMainLoopModelOverride,
-  getSessionBypassPermissionsMode,
   getSessionId,
 } from '../../bootstrap/state.js'
 import type { AppState } from '../../state/AppState.js'
@@ -25,7 +20,6 @@ import { errorMessage } from '../../utils/errors.js'
 import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
 import { getMainLoopModel, parseUserSpecifiedModel } from '../../utils/model/model.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
-import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
 import { isTmuxAvailable } from '../../utils/swarm/backends/detection.js'
 import {
   detectAndGetBackend,
@@ -49,7 +43,7 @@ import {
   type InProcessSpawnConfig,
   spawnInProcessTeammate,
 } from '../../utils/swarm/spawnInProcess.js'
-import { buildInheritedEnvVars } from '../../utils/swarm/spawnUtils.js'
+import { buildInheritedCliFlags, buildInheritedEnvVars } from '../../utils/swarm/spawnUtils.js'
 import {
   readTeamFileAsync,
   sanitizeAgentName,
@@ -205,60 +199,6 @@ function getTeammateCommand(): string {
  * @param options.planModeRequired - If true, don't inherit bypass permissions (plan mode takes precedence)
  * @param options.permissionMode - Permission mode to propagate
  */
-function buildInheritedCliFlags(options?: {
-  planModeRequired?: boolean
-  permissionMode?: PermissionMode
-}): string {
-  const flags: string[] = []
-  const { planModeRequired, permissionMode } = options || {}
-
-  // Propagate permission mode to teammates, but NOT if plan mode is required
-  // Plan mode takes precedence over bypass permissions for safety
-  if (planModeRequired) {
-    // Don't inherit bypass permissions when plan mode is required
-  } else if (
-    permissionMode === 'bypassPermissions' ||
-    getSessionBypassPermissionsMode()
-  ) {
-    flags.push('--dangerously-skip-permissions')
-  } else if (permissionMode === 'acceptEdits') {
-    flags.push('--permission-mode acceptEdits')
-  } else if (permissionMode === 'auto') {
-    // Teammates inherit auto mode so the classifier auto-approves their tool
-    // calls too. The teammate's own startup (permissionSetup.ts) handles
-    // GrowthBook gate checks and setAutoModeActive(true) independently.
-    flags.push('--permission-mode auto')
-  }
-
-  // Propagate --model if explicitly set via CLI
-  const modelOverride = getMainLoopModelOverride()
-  if (modelOverride) {
-    flags.push(`--model ${quote([modelOverride])}`)
-  }
-
-  // Propagate --settings if set via CLI
-  const settingsPath = getFlagSettingsPath()
-  if (settingsPath) {
-    flags.push(`--settings ${quote([settingsPath])}`)
-  }
-
-  // Propagate --plugin-dir for each inline plugin
-  const inlinePlugins = getInlinePlugins()
-  for (const pluginDir of inlinePlugins) {
-    flags.push(`--plugin-dir ${quote([pluginDir])}`)
-  }
-
-  // Propagate --chrome / --no-chrome if explicitly set on the CLI
-  const chromeFlagOverride = getChromeFlagOverride()
-  if (chromeFlagOverride === true) {
-    flags.push('--chrome')
-  } else if (chromeFlagOverride === false) {
-    flags.push('--no-chrome')
-  }
-
-  return flags.join(' ')
-}
-
 /**
  * Generates a unique teammate name by checking existing team members.
  * If the name already exists, appends a numeric suffix (e.g., tester-2, tester-3).

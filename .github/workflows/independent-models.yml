@@ -1,0 +1,57 @@
+name: 333 独立模型协议与本地能力验证
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: independent-models-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  protocol:
+    name: 模型协议、流式工具及账号目录模拟验证
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Windows 允许完整长路径检出
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/cache/restore@v4
+        id: npm-cache
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 恢复全量依赖与冻结的第三方包
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/cache/save@v4
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.npm
+            .rebuild/public
+          key: rebuild-deps-${{ runner.os }}-${{ hashFiles('build/install-public-deps.mjs', 'build/public-dependencies.lock.json') }}
+      - name: 模拟七个直连服务商、退役缓存迁移与完整工具调用
+        # Account tests intentionally change HOME and the global fetch mock.
+        # Bun can execute test files in the same process; give each suite an
+        # independent process to prevent credentials and OAuth mocks crossing.
+        run: |
+          npm run test:multimodel
+          bun test tests/pr19-model-limits-and-scope.test.ts

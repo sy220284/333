@@ -67,7 +67,10 @@ def probe(executable, mode):
     home = Path(tempfile.mkdtemp(prefix='333-spinner-parity-'))
     project = home / 'project'
     project.mkdir()
-    (home / '.claude').mkdir()
+    # The official CLI and the independent product have separate config
+    # directories by design. Prepare equivalent first-run state for each
+    # executable instead of letting an unrelated theme dialog block the PTY
+    # spinner behavior under test.
     tip = {'id': 'tip1', 'text': 'PROBE_ORGANIZATION_TIP'}
     override = {'excludeDefault': True, 'label': 'Team QA'}
     if mode == 'file':
@@ -76,16 +79,23 @@ def probe(executable, mode):
         override['tipsFile'] = str(tip_file)
     else:
         override['tips'] = [tip]
-    (home / '.claude' / 'settings.json').write_text(
-        json.dumps({'spinnerTipsOverride': override}), encoding='utf-8'
-    )
-    (home / '.claude.json').write_text(json.dumps({
+    settings = {'spinnerTipsOverride': override}
+    onboarding = {
         'hasCompletedOnboarding': True,
         'lastOnboardingVersion': TARGET_RELEASE,
         'theme': 'dark',
         'customApiKeyResponses': {'approved': ['local-only'], 'rejected': []},
         'projects': {str(project): {'hasTrustDialogAccepted': True}},
-    }), encoding='utf-8')
+    }
+    for config_dir, state_file in (
+        ('.claude', '.claude.json'),
+        ('.yaoyaoche', '.yaoyaoche.json'),
+    ):
+        (home / config_dir).mkdir()
+        (home / config_dir / 'settings.json').write_text(
+            json.dumps(settings), encoding='utf-8'
+        )
+        (home / state_file).write_text(json.dumps(onboarding), encoding='utf-8')
     calls = []
     first_response_finished = threading.Event()
     second_turn_requested = threading.Event()

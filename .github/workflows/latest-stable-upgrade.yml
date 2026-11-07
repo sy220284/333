@@ -1,13 +1,5 @@
 name: 全部最新稳定依赖升级及端到端测试
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'package.json'
-      - 'build/public-dependencies.lock.json'
-      - 'docs/upgrade/latest-stable-dependencies.json'
-      - 'tools/dev/**'
-      - '.github/workflows/latest-stable-upgrade.yml'
   workflow_dispatch:
     inputs:
       perform_upgrade:
@@ -19,25 +11,11 @@ permissions:
   contents: write
 concurrency:
   group: latest-stable-deps-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 150
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: gateway_test
-          POSTGRES_PASSWORD: gateway_test
-          POSTGRES_DB: gateway_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U gateway_test -d gateway_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
     steps:
       - uses: actions/checkout@v7
       - name: 读取权威工具链版本
@@ -80,7 +58,7 @@ jobs:
           git add -A src native tests tools/dev build/install-public-deps.mjs build/public-dependencies.lock.json build/rebuild.mjs package.json tsconfig.json docs/upgrade/latest-stable-dependencies.json
           git diff --cached --quiet && { echo '没有产生任何更新'; exit 1; }
           git commit -m '全面升级最新稳定依赖并同步迁移源码接口'
-          git push origin HEAD:upgrade/toolchain-${GITHUB_RUN_ID}
+          git push origin "HEAD:upgrade/toolchain-${GITHUB_RUN_ID}"
       - name: 工具链版本与锁文件权威校验
         run: node tools/dev/toolchain.mjs check
       - name: MCP v2 全生产引用检查
@@ -105,7 +83,6 @@ jobs:
         id: build
         continue-on-error: true
         env:
-          GATEWAY_TEST_POSTGRES_URL: postgres://gateway_test:gateway_test@127.0.0.1:5432/gateway_test
           TS_COMPILER_PATH: ${{ runner.temp }}/333-ui-typescript/node_modules/typescript/lib/typescript.js
         run: |
           set -euo pipefail
@@ -116,17 +93,7 @@ jobs:
           node build/compile-standalone.mjs
           node build/package-release.mjs
           npm run test:all
-          # PR7新增的认证、Observer、Artifact、内置SDK MCP均须随依赖升级复验。
-          # 专项工作流登记的测试不能依赖“未登记测试”扫描器执行。
-          bun test tests/m3-mcp-auth-317.test.ts
-          bun test tests/m5-sdk-mcp-factory-317.test.ts tests/m1-sdk-mcp-message-validation.test.ts
-          bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts
-          bun test tests/m5-mcp-dual-era-317.test.ts tests/m4-sdk-daemon-tasks-317.test.ts tests/m4-sdk-remote-control-317.test.ts
-          # 其余只登记在分支专属工作流里的测试也要在PR13依赖组合上运行。
-          # TypeScript 7 uses a native checker. The localization AST checker
-          # needs the pinned JS parser (same contract as chinese-only-ui.yml).
-          # This is a test-only parser, not a production compiler downgrade.
-          TS_COMPILER_PATH="${RUNNER_TEMP}/333-ui-typescript/node_modules/typescript/lib/typescript.js" node build/run-unregistered-tests.mjs --workflow-only
+          # test:all already runs every active test, including former workflow-only suites.
       - name: 汇总验收结果（失败阻断）
         if: always()
         run: |

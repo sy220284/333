@@ -85,6 +85,8 @@ import { applyToolResultBudget } from './utils/toolResultStorage.js'
 import { recordContentReplacement } from './utils/sessionStorage.js'
 import { handleStopHooks } from './query/stopHooks.js'
 import { buildQueryConfig } from './query/config.js'
+import { queuedTurnRequestsUltrathink, turnRequestsUltrathink } from './query/turnEffort317.js'
+import { isUltrathinkEnabled } from './utils/thinking.js'
 import { productionDeps, type QueryDeps } from './query/deps.js'
 import type { Terminal, Continue } from './query/transitions.js'
 import { feature } from 'bun:bundle'
@@ -246,6 +248,13 @@ async function* queryLoop(
   const deps = params.deps ?? productionDeps()
   // Preserve fallback progress across model/tool turns; a failed model is never retried through the chain.
   const fallbackChain = createFallbackModelChain(fallbackModel)
+  // 2.1.317 boosts the real per-turn model request, not just a reminder.
+  // Snapshot once at query entry so tool-result continuations retain the boost
+  // without leaking it into a later user turn or a subagent.
+  let ultrathinkForTurn =
+    params.toolUseContext.agentId === undefined &&
+    isUltrathinkEnabled() &&
+    turnRequestsUltrathink(params.messages)
 
   // Mutable cross-iteration state. The loop body destructures this at the top
   // of each iteration so reads stay bare-name (`messages`, `toolUseContext`).
@@ -551,6 +560,14 @@ async function* queryLoop(
         try {
           let streamingFallbackOccured = false
           queryCheckpoint('query_api_streaming_start')
+          // A human can submit "ultrathink" while the current turn is
+          // executing. Latch the boost before the next API request, then keep
+          // it for follow-up iterations of this turn only.
+          if (!ultrathinkForTurn && !toolUseContext.agentId && isUltrathinkEnabled()) {
+            ultrathinkForTurn = queuedTurnRequestsUltrathink(
+              getCommandsByMaxPriority('next'),
+            )
+          }
           for await (const message of deps.callModel({
             messages: prependUserContext(messagesForQuery, userContext),
             systemPrompt: fullSystemPrompt,
@@ -587,8 +604,7 @@ async function* queryLoop(
                 c => c.type === 'pending',
               ),
               queryTracking,
-              effortValue: appState.effortValue,
-              advisorModel: appState.advisorModel,
+              effortValue: ultrathinkForTurn ? 'xhigh' : appState.effortValue,
               skipCacheWrite,
               agentId: toolUseContext.agentId,
               addNotification: toolUseContext.addNotification,
@@ -1355,6 +1371,13 @@ async function* queryLoop(
       // user prompts, even if someone stamps an agentId on one.
       return cmd.mode === 'task-notification' && cmd.agentId === currentAgentId
     })
+
+    // Queued prompts can be consumed into attachments below. Latch any
+    // explicit boost before the queue is drained, so the next iteration
+    // still receives xhigh even after the queue entry disappears.
+    if (!ultrathinkForTurn && isMainThread && isUltrathinkEnabled()) {
+      ultrathinkForTurn = queuedTurnRequestsUltrathink(queuedCommandsSnapshot)
+    }
 
     for await (const attachment of getAttachmentMessages(
       null,

@@ -11,7 +11,7 @@ test('new unregistered tests are automatically selected for execution', () => {
     mkdirSync(join(root, 'tests', 'sub'), { recursive:true })
     mkdirSync(join(root, '.github', 'workflows'), { recursive:true })
     writeFileSync(join(root, 'package.json'), JSON.stringify({scripts: {test: 'node --test tests/already.test.mjs'}}))
-    writeFileSync(join(root, '.github/workflows/test.yml'), 'run: bun test tests/ci.test.ts\n')
+    writeFileSync(join(root, '.github/workflows/test.yml'), 'on:\n  pull_request:\njobs:\n  suite:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bun test tests/ci.test.ts\n')
     for (const name of ['tests/already.test.mjs', 'tests/sub/new.test.mjs', 'tests/ci.test.ts']) {
       writeFileSync(join(root, name), '')
     }

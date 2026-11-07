@@ -50,7 +50,7 @@ function sections(output) {
   return {flags:[...new Set(flags)].sort(),commands:[...new Set(commands)].sort()};
 }
 test('rebuilt CLI uses target version while original source is retained as old baseline', () => {
-  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (Claude Code)`);
+  assert.equal(compiledHelp(['--version']).trim(), `${targetVersion} (摇摇车)`);
   assert.equal(originalHelp(['--version']).trim(), '2.1.88 (Claude Code)');
 });
 // The 2.1.88 CLI is retained for historical compatibility checks only.
@@ -60,6 +60,43 @@ const official317 = JSON.parse(
   readFileSync(resolve(root, 'tests/fixtures/claude-2.1.317-official-cli-help.json'), 'utf8'),
 );
 assert.equal(official317.version, targetVersion);
+
+// 摇摇车's additive interfaces are explicitly documented here. The official
+// 2.1.317 command and flag contract is still compared exhaustively; only
+// these intentional additions may differ from the Claude reference.
+// These additions belong to the local product contract, and must be tested
+// explicitly rather than compared with the unmodified official flag set.
+const independentFlags = {
+  '--help': ['--proactive', '--strict-command', '--plugin-dir-no-mcp'],
+}
+const independentCommands = {
+  '--help': ['local-settings', 'local-tasks', 'models'],
+  'auth --help': ['api-key', 'chatgpt-login', 'chatgpt-logout', 'chatgpt-status', 'chatgpt-accounts', 'chatgpt-switch'],
+};
+function verifyBaseAndExtensions(actual, official, commandLine) {
+  const additions = independentCommands[commandLine] ?? [];
+  for (const entry of additions) {
+    assert.ok(actual.commands.includes(entry), `摇摇车 independent command absent: ${entry}`);
+    assert.equal(actual.commands.filter(name => name === entry).length, 1);
+  }
+  const removedFlags = commandLine === '--help'
+    ? ['--cloud', '--environment', '--remote-control', '--remote-control-session-name-prefix', '--teleport'] : [];
+  for (const flag of removedFlags) assert.equal(actual.flags.includes(flag), false, `Retired cloud flag remains public: ${flag}`);
+  const addedFlags = independentFlags[commandLine] ?? [];
+  for (const flag of addedFlags) {
+    assert.ok(actual.flags.includes(flag), `摇摇车扩展参数缺失：${flag}`);
+  }
+  assert.deepEqual(actual.flags.filter(flag => !addedFlags.includes(flag)),
+    official.flags.filter(flag => !removedFlags.includes(flag)),
+    `Original 2.1.317 flags must stay available: ${commandLine}`);
+  // 本地产品清退了云端 Ultrareview、企业网关及 Claude 订阅专用的 setup-token。
+  // 其他官方 2.1.317 命令仍严格对照，模型凭证由独立的本地模型管理配置。
+  const removed = commandLine === '--help' ? ['ultrareview', 'gateway', 'setup-token'] : [];
+  for (const command of removed) assert.equal(actual.commands.includes(command), false, `Retired command remains exposed: ${command}`);
+  assert.deepEqual(actual.commands.filter(name => !additions.includes(name)),
+    official.commands.filter(name => !removed.includes(name)),
+    `2.1.317 original commands changed beyond approved removals: ${commandLine}`);
+}
 
 function nativeHelp(executable, args) {
   const output = spawnSync(executable, args, {
@@ -85,9 +122,19 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
       assert.deepEqual(native, expected, `The official x64 reference changed: ${commandLine}`);
     }
     const actual = sections(compiledHelp(args));
-    assert.deepEqual(actual, expected, `2.1.317 CLI discrepancy: ${commandLine}`);
+    verifyBaseAndExtensions(actual, expected, commandLine);
   });
 }
+
+test('333 SDK-only plugin opt-out retains native flags and reaches the plugin loader', () => {
+  const help = compiledHelp(['--help']);
+  assert.equal(sections(help).flags.includes('--plugin-dir-no-mcp'), true,
+    'The SDK plugin opt-out must be visible and accepted by the CLI');
+  const runtime = readFileSync(resolve(root, 'src/entrypoints/sdk/sessionRuntime317.ts'), 'utf8');
+  const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
+  assert.match(runtime, /plugin\.skipMcpDiscovery\s*\?\s*'--plugin-dir-no-mcp'/);
+  assert.match(main, /--plugin-dir-no-mcp <path>/);
+});
 
 test('317 hidden permission callback reaches the existing permission consumer', () => {
   const help = compiledHelp(['--help']);
@@ -102,8 +149,8 @@ test('317 hidden permission callback reaches the existing permission consumer', 
 });
 
 test('legacy -d2e alias is accepted by reconstructed Commander configuration', () => {
-  assert.match(compiledHelp(['-d2e','--help']), /Usage: claude/);
-  assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: claude/);
+  assert.match(compiledHelp(['-d2e','--help']), /Usage: yaoyaoche/);
+  assert.match(compiledHelp(['--debug-to-stderr','--help']), /Usage: yaoyaoche/);
 });
 
 test('bootstrap route classification ignores literal prompt words after --', async () => {
@@ -120,7 +167,7 @@ test('bootstrap route classification ignores literal prompt words after --', asy
 
 test('2.1.317 hidden permission callback flag is accepted and reaches the SDK route', () => {
   const help = compiledHelp(['--permission-prompt-tool', 'mcp__permission', '--help'])
-  assert.match(help, /Usage: claude/)
+  assert.match(help, /Usage: yaoyaoche/)
   assert.equal(sections(help).flags.includes('--permission-prompt-tool'), false,
     'the upstream hides this SDK-only flag from public help')
   if (process.platform === 'linux' && process.env.CLAUDE_TARGET_X64) {

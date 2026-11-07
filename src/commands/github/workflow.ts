@@ -1,0 +1,138 @@
+export const GITHUB_WORKFLOW_PATH = '.github/workflows/yaoyaoche-review.yml'
+export const GITHUB_SCRIPT_PATH = '.github/scripts/yaoyaoche-review.mjs'
+export const GITHUB_TASK_SCRIPT_PATH = '.github/scripts/yaoyaoche-task.mjs'
+export type GithubWorkflowSelection = 'review' | 'respond' | 'both'
+
+/** Generated workflow runs only trusted/default-branch scripts. Fork PRs are
+ * inspected as data; only explicitly authorized comments can modify code. */
+export function githubWorkflow(selection: GithubWorkflowSelection = 'both'): string {
+  const d = '$'
+  const membership = "contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association)"
+  const reviews = selection === 'respond' ? [] : [
+    '  pull_request_target:',
+    '    types: [opened, synchronize, reopened, ready_for_review]',
+  ]
+  // The review-only mode must still receive /yaoyaoche review comments.
+  // Developer tasks additionally subscribe to PR review comments and issues.
+  const comments = [
+    '  issue_comment:',
+    '    types: [created]',
+    ...(selection === 'review' ? [] : [
+      '  pull_request_review_comment:',
+      '    types: [created]',
+      '  pull_request_review:',
+      '    types: [submitted]',
+      '  issues:',
+      '    types: [opened, assigned]',
+    ]),
+  ]
+  const reviewComment = `(github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/yaoyaoche review') && ${membership})`
+  const requested = (content: string): string => [
+    `startsWith(${content}, '/yaoyaoche task ')`,
+    `startsWith(${content}, '/yaoyaoche dev ')`,
+    `startsWith(${content}, '/yaoyaoche 开发 ')`,
+    `contains(${content}, '@yaoyaoche')`,
+  ].join(' || ')
+  const trusted = (field: string): string =>
+    `contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), ${field})`
+  const taskComment = [
+    `(github.event_name == 'issue_comment' && (${requested('github.event.comment.body')}) && ${membership})`,
+    `(github.event_name == 'pull_request_review_comment' && (${requested('github.event.comment.body')}) && ${trusted('github.event.comment.author_association')})`,
+    `(github.event_name == 'pull_request_review' && (${requested('github.event.review.body')}) && ${trusted('github.event.review.author_association')})`,
+    `(github.event_name == 'issues' && (${requested('github.event.issue.body')}) && ${trusted('github.event.issue.author_association')})`,
+  ].join(' || ')
+  // Trusted default-branch reviewer reads fork diffs as data and never checks out
+  // or executes a contributor's branch; preserve 317's external-PR coverage.
+  const anyPR = "github.event_name == 'pull_request_target'"
+  const reviewCases = ["github.event_name == 'workflow_dispatch'",
+    ...(selection === 'respond' ? [] : [anyPR, reviewComment])]
+  return [
+    'name: 摇摇车 GitHub 审查与开发',
+    'on:',
+    '  workflow_dispatch:',
+    '    inputs:',
+    '      pr_number:',
+    '        description: PR 编号',
+    '        required: true',
+    '        type: string',
+    '      mode:',
+    '        description: 审查等级',
+    '        required: true',
+    '        type: choice',
+    '        default: normal',
+    '        options: [normal, deep, security]',
+    ...reviews,
+    ...comments,
+    'permissions:',
+    '  contents: read',
+    '  pull-requests: write',
+    '  issues: write',
+    'jobs:',
+    '  review:',
+    '    if: >-',
+    `      ${reviewCases.join(' || ')}`,
+    '    runs-on: ubuntu-latest',
+    '    timeout-minutes: 45',
+    '    steps:',
+    '      - uses: actions/checkout@v4',
+    '        with:',
+    `          ref: ${d}{{ github.event.repository.default_branch }}`,
+    '          persist-credentials: false',
+    '      - uses: actions/setup-node@v4',
+    '        with:',
+    '          node-version: 26',
+    '      - name: 多模型审查与核验',
+    '        env:',
+    `          GH_TOKEN: ${d}{{ github.token }}`,
+    `          MODEL_API_KEY: ${d}{{ secrets.YAOYAOCHE_MODEL_API_KEY }}`,
+    `          MODEL_PROVIDER: ${d}{{ vars.YAOYAOCHE_MODEL_PROVIDER }}`,
+    `          MODEL_NAME: ${d}{{ vars.YAOYAOCHE_MODEL_NAME }}`,
+    `          MODEL_BASE_URL: ${d}{{ vars.YAOYAOCHE_MODEL_BASE_URL }}`,
+    `          MODEL_TOKEN_FIELD: ${d}{{ vars.YAOYAOCHE_MODEL_TOKEN_FIELD }}`,
+    `          INPUT_PR_NUMBER: ${d}{{ inputs.pr_number }}`,
+    `          REVIEW_MODE: ${d}{{ inputs.mode }}`,
+    '        run: node .github/scripts/yaoyaoche-review.mjs',
+    '      - name: 保存审查证据',
+    '        if: always()',
+    '        uses: actions/upload-artifact@v4',
+    '        with:',
+    '          name: yaoyaoche-review-report',
+    '          path: yaoyaoche-review-report.md',
+    '          if-no-files-found: ignore',
+    ...(selection === 'review' ? [] : [
+      '  task:',
+      '    if: >-',
+      `      ${taskComment}`,
+      '    runs-on: ubuntu-latest',
+      '    timeout-minutes: 45',
+      '    permissions:',
+      '      contents: write',
+      '      pull-requests: write',
+      '      issues: write',
+      '    steps:',
+      '      - uses: actions/checkout@v4',
+      '        with:',
+      `          ref: ${d}{{ github.event.repository.default_branch }}`,
+      '          persist-credentials: false',
+      '      - uses: actions/setup-node@v4',
+      '        with:',
+      '          node-version: 26',
+      '      - name: 授权评论开发任务',
+      '        env:',
+      `          GH_TOKEN: ${d}{{ github.token }}`,
+      `          MODEL_API_KEY: ${d}{{ secrets.YAOYAOCHE_MODEL_API_KEY }}`,
+      `          MODEL_PROVIDER: ${d}{{ vars.YAOYAOCHE_MODEL_PROVIDER }}`,
+      `          MODEL_NAME: ${d}{{ vars.YAOYAOCHE_MODEL_NAME }}`,
+      `          MODEL_BASE_URL: ${d}{{ vars.YAOYAOCHE_MODEL_BASE_URL }}`,
+      `          MODEL_TOKEN_FIELD: ${d}{{ vars.YAOYAOCHE_MODEL_TOKEN_FIELD }}`,
+      '        run: node .github/scripts/yaoyaoche-task.mjs',
+      '      - name: 保存开发任务证据',
+      '        if: always()',
+      '        uses: actions/upload-artifact@v4',
+      '        with:',
+      '          name: yaoyaoche-task-report',
+      '          path: yaoyaoche-task-report.md',
+      '          if-no-files-found: error',
+    ]),
+  ].join('\n').concat('\n')
+}

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { skipWhenUnixSocketUnavailable } from './helpers/unixSocketCapability.mjs'
 import { spawn, spawnSync } from 'node:child_process'
 import { connect } from 'node:net'
 import { mkdtempSync, existsSync, rmSync, writeFileSync } from 'node:fs'
@@ -52,7 +53,8 @@ test('317 spare missing socket argument returns upstream exit status 2', () => {
   }
 })
 test('317 official and rebuilt bg-spare accept a single authenticated claim',
-  { skip: process.platform === 'win32', timeout: 70000 }, async () => {
+  { skip: process.platform === 'win32', timeout: 70000 }, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
     for (const [name, binary, prefix] of bins) {
       const dir = mkdtempSync(join(tmpdir(), '333-bgspare-'))
       const sock = join(dir, 'claim.sock'), auth = 'm1-317-claim-secret'
@@ -68,7 +70,7 @@ test('317 official and rebuilt bg-spare accept a single authenticated claim',
         const result = await Promise.race([started.done,
           new Promise((_, reject) => setTimeout(() => reject(Error(name + ' spare claim timed out')), 12000))])
         assert.equal(result.code, 0, name + JSON.stringify(result))
-        assert.equal(result.stdout.trim(), '2.1.317 (Claude Code)', name)
+        assert.equal(result.stdout.trim(), `2.1.317 (${name === 'official' ? 'Claude Code' : '摇摇车'})`, name)
         assert.equal(existsSync(sock), false, name + ' stale claim socket')
       } finally {
         started.child.kill('SIGKILL')
@@ -77,7 +79,8 @@ test('317 official and rebuilt bg-spare accept a single authenticated claim',
     }
   })
 test('317 spare SIGTERM releases unclaimed socket and exits cleanly',
-  { skip: process.platform === 'win32', timeout: 18000 }, async () => {
+  { skip: process.platform === 'win32', timeout: 18000 }, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
     const dir = mkdtempSync(join(tmpdir(), '333-bgspare-term-'))
     const socket = join(dir, 'unused.sock')
     const started = launch('bun', [cli], socket, dir)
@@ -95,7 +98,8 @@ test('317 spare SIGTERM releases unclaimed socket and exits cleanly',
   })
 
 test('317 PTY host plus authenticated bg-spare forms one complete claim-to-output chain',
-  { skip: process.platform === 'win32', timeout: 75000 }, async () => {
+  { skip: process.platform === 'win32', timeout: 75000 }, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
     const { createPtyFrameDecoder317, encodePtyControl317 } =
       await import('../src/bootstrap/ptyWire317.mjs')
     for (const [name, binary, prefix] of bins) {
@@ -136,7 +140,7 @@ test('317 PTY host plus authenticated bg-spare forms one complete claim-to-outpu
         await Promise.race([exit,
           new Promise((_, reject) => setTimeout(() => reject(Error(name + ' integrated host hung')), 12000))])
         assert.equal(resultCode, 0, name + ' ' + stderr)
-        assert.ok(output.includes('2.1.317 (Claude Code)'), name + ' ' + output)
+        assert.ok(output.includes(`2.1.317 (${name === 'official' ? 'Claude Code' : '摇摇车'})`), `${name} ${output}`)
         for (const event of ['hello', 'live', 'ping', 'exit'])
           assert.ok(controls.includes(event), name + ' missing ' + event + ' ' + JSON.stringify(controls))
         await until(() => !existsSync(claimSocket) && !existsSync(ptySocket))
@@ -175,7 +179,8 @@ test('317 spare refuses missing or malformed explicit claim-token files before o
   })
 
 test('317 authenticated spare rejects malformed claims and preserves its one-shot handoff',
-  { skip: process.platform === 'win32', timeout: 30000 }, async () => {
+  { skip: process.platform === 'win32', timeout: 30000 }, async t => {
+  if (await skipWhenUnixSocketUnavailable(t)) return
     const dir = mkdtempSync(join(tmpdir(), '333-bgspare-claim-validation-'))
     const tokens = join(dir, 'tokens.json'), socket = join(dir, 'claim.sock')
     writeFileSync(tokens, JSON.stringify({ claimAuth: 'trusted-claim' }), { mode: 0o600 })
@@ -195,7 +200,7 @@ test('317 authenticated spare rejects malformed claims and preserves its one-sho
       const result = await Promise.race([started.done,
         new Promise((_, reject) => setTimeout(() => reject(Error('valid claim timed out')), 12000))])
       assert.equal(result.code, 0, JSON.stringify(result))
-      assert.equal(result.stdout.trim(), '2.1.317 (Claude Code)')
+      assert.equal(result.stdout.trim(), '2.1.317 (摇摇车)')
       assert.equal(existsSync(socket), false)
     } finally {
       started.child.kill('SIGKILL')

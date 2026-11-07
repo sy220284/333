@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 2.1.310 公开发行版行为：旧 `claude assistant` 专用向导已退场。
+ * 2.1.317 公开发行版行为：旧 `claude assistant` 专用向导已退场。
  * 同条件执行官方安装版和当前源码重建版的帮助入口，防止旧入口重新劫持参数。
  */
 import assert from 'node:assert/strict'
@@ -43,7 +43,7 @@ function help(binary, args, label) {
   })
   assert.equal(run.error, undefined, `${label}: ${run.error?.message}`)
   assert.equal(run.status, 0, `${label}: ${run.stderr.slice(-700)}`)
-  assert.ok(run.stdout.startsWith('Usage: claude '), `${label}: 缺少 CLI 帮助`)
+  assert.ok(run.stdout.startsWith(label.startsWith('candidate') ? 'Usage: yaoyaoche ' : 'Usage: claude '), `${label}: 缺少 CLI 帮助`)
   return run.stdout.replaceAll('\r\n', '\n').trim()
 }
 try {
@@ -67,9 +67,16 @@ try {
   const extraCandidateOptions = candidateOptions.filter(x => !referenceOptions.includes(x))
   assert.ok(referenceOptions.includes('--debug') && candidateOptions.includes('--debug'), '新版 debug 调试入口必须正常保留')
   assert.ok(!referenceOptions.includes('--mcp-debug') && !candidateOptions.includes('--mcp-debug'), '旧 MCP 调试入口已退场')
-  assert.deepEqual(extraCandidateOptions, [], '候选版不能额外公开已退场的旧版参数')
+  // Only these two user-facing local extensions are intentional. Retired
+  // official cloud/assistant switches remain strictly excluded.
+  const intentionalLocalOptions = ['--proactive', '--strict-command']
+  for (const flag of intentionalLocalOptions) {
+    assert.ok(extraCandidateOptions.includes(flag), `独立版新增参数缺失：${flag}`)
+  }
+  assert.deepEqual(extraCandidateOptions, intentionalLocalOptions,
+    '候选版存在未经确认的额外参数，需重新审查')
   writeFileSync(report, `${JSON.stringify({
-    target: '2.1.310',
+    target: '2.1.317',
     scenario: 'retired-assistant-command-help',
     reference_matches_general_help: true,
     candidate_matches_general_help: true,

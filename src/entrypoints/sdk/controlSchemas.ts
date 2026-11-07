@@ -89,6 +89,9 @@ export const SDKControlInitializeResponseSchema = lazySchema(() =>
         .optional()
         .describe('@internal CLI process PID for tmux socket isolation'),
       fast_mode_state: FastModeStateSchema().optional(),
+      /** 2.1.317 SDK requires this acknowledgment for blocking hooks. */
+      hook_on_failure_supported: z.boolean().optional(),
+      hooks_applied: z.boolean().optional(),
     })
     .describe(
       'Response from session initialization with available commands, models, and account info.',
@@ -112,12 +115,25 @@ export const SDKControlPermissionRequestSchema = lazySchema(() =>
       input: z.record(z.string(), z.unknown()),
       permission_suggestions: z.array(PermissionUpdateSchema()).optional(),
       blocked_path: z.string().optional(),
+      mcp_server: z.object({ name: z.string(), source: z.string() }).optional(),
       decision_reason: z.string().optional(),
+      decision_reason_type: z.string().optional(),
+      decision_reason_code: z.string().optional(),
+      server_policy_ask_only: z.boolean().optional(),
       title: z.string().optional(),
       display_name: z.string().optional(),
+      description: z.string().optional(),
+      default_to_no: z.boolean().optional(),
+      suppress_always_allow_rule: z.boolean().optional(),
       tool_use_id: z.string(),
       agent_id: z.string().optional(),
-      description: z.string().optional(),
+      plugin: z.string().optional(),
+      requires_user_interaction: z.boolean().optional(),
+      server_prompt: z.string().optional(),
+      computer_folder: z.object({ path: z.string(), computer_name: z.string() }).optional(),
+      matched_ask_rule: z.object({
+        source: z.string(), tool_name: z.string(), rule_content: z.unknown().optional(),
+      }).optional(),
     })
     .describe('Requests permission to use a tool with the given input.'),
 )
@@ -530,6 +546,9 @@ export const SDKControlElicitationRequestSchema = lazySchema(() =>
       url: z.string().optional(),
       elicitation_id: z.string().optional(),
       requested_schema: z.record(z.string(), z.unknown()).optional(),
+      title: z.string().optional(),
+      display_name: z.string().optional(),
+      description: z.string().optional(),
     })
     .describe(
       'Requests the SDK consumer to handle an MCP elicitation (user input request).',
@@ -545,6 +564,19 @@ export const SDKControlElicitationResponseSchema = lazySchema(() =>
     .describe('Response from the SDK consumer for an elicitation request.'),
 )
 
+
+// SDK-to-host requests in 2.1.317. Keep unrecognized payload fields intact
+// so a trusted host can show the entire request and return a typed response.
+// Elicitation already has its own strict schema above.
+export const SDK_HOST_CONTROL_SUBTYPES = [
+  'request_user_dialog', 'oauth_token_refresh', 'host_auth_token_refresh',
+  'remote_control_work_secret', 'ui_copy', 'ui_prompt_read',
+  'ui_prompt_fill', 'ui_prompt_paint', 'ui_prompt_suggest',
+  'ui_read_selection',
+] as const
+export const SDKHostControlRequestSchema = lazySchema(() =>
+  z.object({ subtype: z.enum(SDK_HOST_CONTROL_SUBTYPES) }).catchall(z.unknown()),
+)
 
 // SDK/remote-control extensions consumed by the headless CLI. Keep these
 // request payloads in the same validated control union as legacy requests;
@@ -643,6 +675,7 @@ export const SDKControlRequestInnerSchema = lazySchema(() =>
     SDKControlApplyFlagSettingsRequestSchema(),
     SDKControlGetSettingsRequestSchema(),
     SDKControlElicitationRequestSchema(),
+    SDKHostControlRequestSchema(),
     SDKControlEndSessionRequestSchema(),
     SDKControlChannelEnableRequestSchema(),
     SDKControlMcpAuthenticateRequestSchema(),
@@ -670,6 +703,11 @@ export const ControlResponseSchema = lazySchema(() =>
     subtype: z.literal('success'),
     request_id: z.string(),
     response: z.record(z.string(), z.unknown()).optional(),
+    // A second 2.1.317 initialize re-delivers parked requests so the
+    // attaching host can resume them without inventing new request IDs.
+    pending_permission_requests: z.array(SDKControlRequestSchema()).optional(),
+    pending_user_dialog_requests: z.array(SDKControlRequestSchema()).optional(),
+    pending_elicitation_requests: z.array(SDKControlRequestSchema()).optional(),
   }),
 )
 

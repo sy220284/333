@@ -14,6 +14,57 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const WORKFLOW_ONLY = process.argv.includes('--workflow-only')
+const CI_SUPPLEMENTAL = process.argv.includes('--ci-supplemental')
+const CI_ORACLE = process.argv.includes('--ci-oracle')
+const EXCLUDE_ORACLE = process.argv.includes('--exclude-oracle')
+const CI_PORTABLE = process.argv.includes('--ci-portable')
+
+// External fixture suites are executed by their dedicated real-environment CI jobs.
+// The offline toolchain tests all other suites without requiring PostgreSQL,
+// a graphical Electron release, or a separately installed TypeScript AST parser.
+// Their coverage is checked against executable workflow commands before planning.
+export const PORTABLE_EXTERNAL_FIXTURES = Object.freeze({
+  'tests/chinese-source-integrity.test.mjs': '.github/workflows/chinese-only-ui.yml',
+  'tests/deployed-electron-ui.test.mjs': '.github/workflows/desktop-communication.yml',
+  'tests/governance-contract-trace.test.mjs': '.github/workflows/governance-audit.yml',
+  'tests/m1-ink-paste-event.test.mjs': '.github/workflows/m1-evidence.yml',
+  'tests/m1-source-gap-ast.test.mjs': '.github/workflows/m1-evidence.yml',
+})
+
+export function verifyPortableCoverage(root = ROOT) {
+  const fixtures = Object.entries(PORTABLE_EXTERNAL_FIXTURES)
+  for (const [suite, workflow] of fixtures) {
+    if (!existsSync(resolve(root, suite)))
+      throw new Error(`离线测试分工引用了已不存在的套件：${suite}`)
+    if (!existsSync(resolve(root, workflow)))
+      throw new Error(`离线测试分工缺少真实环境工作流：${workflow}`)
+    const runCommands = workflowRunCommands(readFileSync(resolve(root, workflow), 'utf8'))
+    if (!runCommands.includes(suite))
+      throw new Error(`真实环境工作流未执行 ${suite}：${workflow}`)
+  }
+  return fixtures
+}
+
+
+// Official native parity is executed once with a verified 2.1.317 binary,
+// rather than silently skipped on each of the six supplemental shards.
+export const ORACLE_TESTS = Object.freeze([
+  "tests/m1-coldstart-official-native-317.test.mjs",
+  "tests/m3-plugin-command-source-native-317.test.mjs",
+  "tests/m3-plugin-config-native-parity-317.test.mjs",
+  "tests/m3-plugin-details-native-parity-317.test.mjs",
+  "tests/m3-plugin-init-native-parity-317.test.mjs",
+  "tests/m3-plugin-tag-native-parity-317.test.mjs",
+  "tests/m4-plugin-prune-native-parity-317.test.mjs",
+  "tests/m1-317-json-wire-e2e.test.mjs",
+  "tests/m1-background-agent-parity.test.mjs",
+  "tests/m1-obsolete-command-parity.test.mjs",
+  "tests/m3-plugin-install-transaction-317.test.mjs",
+  "tests/m1-background-lifecycle.test.mjs",
+  "tests/fallback-529-integration.test.mjs",
+  "tests/upgrade-mode-integration.test.mjs"
+])
+const ORACLE_SET = new Set(ORACLE_TESTS)
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -23,21 +74,54 @@ function walk(dir) {
   })
 }
 
+/** Extract only executable YAML run commands, excluding filters and labels. */
+export function workflowRunCommands(source) {
+  const lines = source.split(/\r?\n/)
+  const commands = []
+  for (let i = 0; i < lines.length; i++) {
+    const match = /^(\s*)(?:-\s+)?run:\s*(.*)$/.exec(lines[i])
+    if (!match || match[1].length < 6) continue
+    const indent = match[1].length
+    const inline = match[2].trim()
+    if (inline && !['|','>','|-','>-','|+','>+'].includes(inline)) {
+      commands.push(inline)
+      continue
+    }
+    while (i + 1 < lines.length) {
+      const row = lines[i + 1]
+      if (row.trim() && row.length - row.trimStart().length <= indent) break
+      commands.push(row)
+      i++
+    }
+  }
+  return commands.join('\n')
+}
+
 export function discoverUnregisteredTests(root = ROOT, options = {}) {
   const tests = walk(join(root, 'tests'))
     .map(abs => relative(root, abs).split(sep).join('/'))
     .filter(path => /\.test\.(mjs|ts)$/.test(path)).sort()
   const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
   const commands = Object.values(manifest.scripts ?? {}).join('\n')
+  // An entry in paths: or a retired workflow does not execute a test.
   const workflows = walk(join(root, '.github', 'workflows'))
     .filter(path => /\.ya?ml$/.test(path))
-    .map(path => readFileSync(path, 'utf8')).join('\n')
+    .map(path => readFileSync(path, 'utf8'))
+    .filter(source => /^ {2}(?:pull_request|workflow_call):\s*$/m.test(source))
+    .map(workflowRunCommands).join('\n')
   const workflowOnly = options.workflowOnly === true
-  const registered = tests.filter(path => workflowOnly
-    ? commands.includes(path) || !workflows.includes(path)
-    : commands.includes(path) || workflows.includes(path))
-  const pending = tests.filter(path => !commands.includes(path) &&
-    (workflowOnly ? workflows.includes(path) : !workflows.includes(path)))
+  const supplemental = options.ciSupplemental === true
+  const oracleOnly = options.ciOracle === true
+  const excludeOracle = options.excludeOracle === true
+  const pending = tests.filter(path =>
+    oracleOnly ? ORACLE_SET.has(path)
+      : !commands.includes(path) &&
+        (supplemental || (workflowOnly ? workflows.includes(path) : !workflows.includes(path))) &&
+        !(excludeOracle && ORACLE_SET.has(path)))
+  // Registered means excluded from this execution mode. Keep the sets disjoint
+  // for normal, workflow-only, and supplemental runs alike.
+  const selected = new Set(pending)
+  const registered = tests.filter(path => !selected.has(path))
   if (pending.length + registered.length !== tests.length) throw Error('Test inventory inconsistent')
   return { tests, registered, pending }
 }
@@ -55,7 +139,8 @@ function checked(program, args, options = {}) {
 export function runtimeForTest(file, source = readFileSync(resolve(ROOT, file), 'utf8')) {
   // This node:test suite embeds TypeScript imports in a subprocess script
   // string; run it under Node to avoid Bun's 5s implicit test timeout.
-  if (file === 'tests/m1-runner-declares-317.test.mjs') return 'node'
+  if (file === 'tests/m1-runner-declares-317.test.mjs' ||
+      file === 'tests/github-integration-flow.test.mjs') return 'node'
   if (file.endsWith('.ts') || /\b(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"]bun(?::|['"])/.test(source) ||
       /\bBun\.(?:serve|spawn|file|SQL|env|sleep)\b/.test(source) ||
       /(?:from|import)\s*(?:\(|.*?\sfrom\s*)?['"][^'"]+\.ts['"]/.test(source)) {
@@ -133,25 +218,56 @@ function runTest(file, runtime, options = {}) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, { workflowOnly: WORKFLOW_ONLY })
-  const plan = pending.map(file => ({ file, runtime: runtimeForTest(file) }))
+  const { tests, registered, pending } = discoverUnregisteredTests(ROOT, {
+    workflowOnly: WORKFLOW_ONLY, ciSupplemental: CI_SUPPLEMENTAL,
+    ciOracle: CI_ORACLE, excludeOracle: EXCLUDE_ORACLE,
+  })
+  if (CI_ORACLE) {
+    const missing = ORACLE_TESTS.filter(path => !tests.includes(path))
+    if (missing.length) throw new Error(`Official parity test missing from repository: ${missing.join(', ')}`)
+    if (!process.argv.includes('--list')) {
+      for (const key of ['CLAUDE_TARGET_X64', 'CLAUDE_REFERENCE_BIN']) {
+        if (!process.env[key] || !existsSync(process.env[key]))
+          throw new Error(`Official parity cannot run without verified ${key}`)
+      }
+    }
+  }
+  const value = flag => {
+    const item = process.argv.find(arg => arg.startsWith(`${flag}=`))
+    return item ? Number(item.slice(flag.length + 1)) : null
+  }
+  const shardCount = value('--shard-count') ?? 1
+  const shardIndex = value('--shard-index') ?? 0
+  if (!Number.isSafeInteger(shardCount) || shardCount < 1 ||
+    !Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount)
+    throw new Error('无效测试分片范围')
+  if (CI_PORTABLE && !CI_SUPPLEMENTAL)
+    throw new Error('--ci-portable 只可与 --ci-supplemental 同时使用')
+  const externalFixtures = CI_PORTABLE ? verifyPortableCoverage(ROOT) : []
+  const externalSet = new Set(externalFixtures.map(([file]) => file))
+  const selected = pending.filter((file, i) =>
+    i % shardCount === shardIndex && !externalSet.has(file))
+  const plan = selected.map(file => ({ file, runtime: runtimeForTest(file) }))
   console.log(JSON.stringify({
-    mode: WORKFLOW_ONLY ? 'workflow-only' : 'unregistered',
+    mode: CI_PORTABLE ? 'ci-portable' : CI_ORACLE ? 'ci-oracle' : CI_SUPPLEMENTAL ? 'ci-supplemental' : (WORKFLOW_ONLY ? 'workflow-only' : 'unregistered'),
     total: tests.length, explicitlyScheduled: registered.length,
-    discoveredForExecution: plan.length, planned: plan,
+    candidateCount: pending.length, shardIndex, shardCount,
+    discoveredForExecution: plan.length, externalFixtureSuites: externalFixtures, planned: plan,
   }, null, 2))
   if (!process.argv.includes('--list')) {
     const failures = []
+    let executed = 0
     for (const { file, runtime } of plan) {
+      executed++
       try {
         runTest(file, runtime)
       } catch (error) {
         failures.push({ test: file, runtime, cause: String(error) })
         console.error(JSON.stringify({ failedTest: file, runtime, cause: String(error) }))
-        if (!WORKFLOW_ONLY) break
+        if (process.argv.includes('--fail-fast')) break
       }
     }
-    console.log(JSON.stringify({ executed: plan.length, failed: failures.length, failures }, null, 2))
+    console.log(JSON.stringify({ executed, failed: failures.length, failures }, null, 2))
     if (failures.length) process.exitCode = 1
   }
 }

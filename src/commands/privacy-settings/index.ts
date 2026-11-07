@@ -1,13 +1,11 @@
 import type { Command } from '../../commands.js'
-import { isConsumerSubscriber } from '../../utils/auth.js'
 
 const privacySettings = {
-  type: 'local-jsx',
+  type: 'local',
   name: 'privacy-settings',
-  description: 'View and update your privacy settings',
-  isEnabled: () => {
-    return isConsumerSubscriber()
-  },
+  description: '查看及设置本机隐私级别，所有设置保存在本地',
+  argumentHint: '[status|default|no-telemetry|essential-traffic]',
+  supportsNonInteractive: true,
   load: () => import('./privacy-settings.js'),
 } satisfies Command
 

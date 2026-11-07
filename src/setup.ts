@@ -1,7 +1,6 @@
 /* eslint-disable custom-rules/no-process-exit */
 
 import { isCrossSessionMessagingEnabled } from './utils/crossSessionMessaging.js'
-import { feature } from 'bun:bundle'
 import chalk from 'chalk'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -73,7 +72,7 @@ export async function setup(
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.error(
       chalk.bold.red(
-        'Error: Claude Code requires Node.js version 18 or higher.',
+        'Error: 摇摇车 requires Node.js version 22.15.0 or higher.',
       ),
     )
     process.exit(1)
@@ -341,11 +340,6 @@ export async function setup(
     void import('./utils/sessionFileAccessHooks.js').then(m =>
       m.registerSessionFileAccessHooks(),
     ) // Register session file access analytics hooks
-    if (feature('TEAMMEM')) {
-      void import('./services/teamMemorySync/watcher.js').then(m =>
-        m.startTeamMemoryWatcher(),
-      ) // Start team memory sync watcher
-    }
   }
   initSinks() // Attach error log + analytics sinks and drain queued events
 

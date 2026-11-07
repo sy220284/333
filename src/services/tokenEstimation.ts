@@ -24,8 +24,10 @@ import {
 } from '../utils/model/model.js'
 import { jsonStringify } from '../utils/slowOperations.js'
 import { isToolReferenceBlock } from '../utils/toolSearch.js'
-import { getAPIMetadata, getExtraBodyParams } from './api/claude.js'
+import { getExtraBodyParams } from './api/claude.js'
 import { getAnthropicClient } from './api/client.js'
+import { resolveIndependentModel } from './api/multimodel/registry.js'
+import { countIndependentModelTokens } from './api/multimodel/tokenCounting.js'
 import { withTokenCountVCR } from './vcr.js'
 
 // Minimal values for token counting with thinking enabled
@@ -145,6 +147,10 @@ export async function countMessagesTokensWithAPI(
   return withTokenCountVCR(messages, tools, async () => {
     try {
       const model = getMainLoopModel()
+      if (resolveIndependentModel(model)) {
+        const counted = await countIndependentModelTokens(model, messages, tools)
+        return counted.tokens
+      }
       const betas = getModelBetas(model)
       const containsThinking = hasThinkingBlocks(messages)
 
@@ -306,7 +312,6 @@ export async function countTokensViaHaikuFallback(
     messages: messagesToSend,
     tools: tools.length > 0 ? tools : undefined,
     ...(filteredBetas.length > 0 && { betas: filteredBetas }),
-    metadata: getAPIMetadata(),
     ...getExtraBodyParams(),
     // Enable thinking if messages contain thinking blocks
     ...(containsThinking && {

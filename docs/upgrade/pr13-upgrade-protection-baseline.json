@@ -3577,5 +3577,104 @@
       "win32-arm64"
     ]
   },
-  "approvedChanges": []
+  "approvedChanges": [
+    {
+      "scope": "release-installed",
+      "key": "node_modules/@smithy/fetch-http-handler#version",
+      "before": "5.8.0",
+      "after": "5.8.1",
+      "technicalBasis": "PR19 锁文件升级：node_modules/@smithy/fetch-http-handler 已从 5.8.0 更新为 5.8.1，对照公开 NPM 包的版本、下载来源及完整性校验值逐项固定。",
+      "replacementCoverage": "保留包锁中全部依赖与 SHA512 完整性检查；发行构建、离线隔离验证、依赖保护及跨平台验证维持为真实阻断门禁。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    },
+    {
+      "scope": "release-installed",
+      "key": "node_modules/@smithy/fetch-http-handler#integrity",
+      "before": "sha512-ycSJu3tFAQ4v04CBB0agqFMVsSQ1iG3yw+SpgxRqKfaURpQD4CZ8Wn0zPMmSnOuTpTh65Vz+EA0rMrw089wvkA==",
+      "after": "sha512-h8BdMUrUBhMhMaeK7QqAdINRZezCGuYOCpcOZZ1ewxbHST9rdTd09xwNpvLTYfzDRehxQiReK4SKbdYZxBA+ew==",
+      "technicalBasis": "PR19 锁文件升级：node_modules/@smithy/fetch-http-handler 已从 5.8.0 更新为 5.8.1，对照公开 NPM 包的版本、下载来源及完整性校验值逐项固定。",
+      "replacementCoverage": "保留包锁中全部依赖与 SHA512 完整性检查；发行构建、离线隔离验证、依赖保护及跨平台验证维持为真实阻断门禁。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    },
+    {
+      "scope": "release-installed",
+      "key": "node_modules/@smithy/fetch-http-handler#resolved",
+      "before": "https://registry.npmjs.org/@smithy/fetch-http-handler/-/fetch-http-handler-5.8.0.tgz",
+      "after": "https://registry.npmjs.org/@smithy/fetch-http-handler/-/fetch-http-handler-5.8.1.tgz",
+      "technicalBasis": "PR19 锁文件升级：node_modules/@smithy/fetch-http-handler 已从 5.8.0 更新为 5.8.1，对照公开 NPM 包的版本、下载来源及完整性校验值逐项固定。",
+      "replacementCoverage": "保留包锁中全部依赖与 SHA512 完整性检查；发行构建、离线隔离验证、依赖保护及跨平台验证维持为真实阻断门禁。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    },
+    {
+      "scope": "release-installed",
+      "key": "node_modules/glob#version",
+      "before": "13.0.6",
+      "after": "13.0.7",
+      "technicalBasis": "PR19 锁文件升级：node_modules/glob 已从 13.0.6 更新为 13.0.7，对照公开 NPM 包的版本、下载来源及完整性校验值逐项固定。",
+      "replacementCoverage": "保留包锁中全部依赖与 SHA512 完整性检查；发行构建、离线隔离验证、依赖保护及跨平台验证维持为真实阻断门禁。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    },
+    {
+      "scope": "release-installed",
+      "key": "node_modules/glob#integrity",
+      "before": "sha512-Wjlyrolmm8uDpm/ogGyXZXb1Z+Ca2B8NbJwqBVg0axK9GbBeoS7yGV6vjXnYdGm6X53iehEuxxbyiKp8QmN4Vw==",
+      "after": "sha512-wfsFgXQ8A3SEI9XGf7Nl3Y9l7ffSrGh7SUCT7vU/2CzYPep9kjxAn1S40F9OPKxAMGCVl7HtNlJhrCJUeUq83g==",
+      "technicalBasis": "PR19 锁文件升级：node_modules/glob 已从 13.0.6 更新为 13.0.7，对照公开 NPM 包的版本、下载来源及完整性校验值逐项固定。",
+      "replacementCoverage": "保留包锁中全部依赖与 SHA512 完整性检查；发行构建、离线隔离验证、依赖保护及跨平台验证维持为真实阻断门禁。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    },
+    {
+      "scope": "release-installed",
+      "key": "node_modules/glob#resolved",
+      "before": "https://registry.npmjs.org/glob/-/glob-13.0.6.tgz",
+      "after": "https://registry.npmjs.org/glob/-/glob-13.0.7.tgz",
+      "technicalBasis": "PR19 锁文件升级：node_modules/glob 已从 13.0.6 更新为 13.0.7，对照公开 NPM 包的版本、下载来源及完整性校验值逐项固定。",
+      "replacementCoverage": "保留包锁中全部依赖与 SHA512 完整性检查；发行构建、离线隔离验证、依赖保护及跨平台验证维持为真实阻断门禁。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    },
+    {
+      "scope": "release-lock",
+      "key": "build/public-dependencies.lock.json",
+      "before": "5f15fb94b2280d848b7ad7267787aa66886769b1",
+      "after": "03376c0becbc8fec7917a195d0b216b59ea8dbb5",
+      "technicalBasis": "PR19 统一发布版本为 2.1.317，修正旧版 2.1.88 根清单版本，同时记录已逐项审查的两项锁定传递依赖变更。",
+      "replacementCoverage": "锁定依赖节点保持 511 个，包名、依赖清单、包完整性校验继续由原保护门禁逐项核实；独立源码发行和六架构回归继续运行。",
+      "tests": [
+        "tests/upgrade-protection.test.mjs",
+        "tests/release-integrity.test.mjs",
+        "tests/distribution-isolation.test.mjs"
+      ],
+      "evidence": "https://github.com/sy220284/333/pull/19/files"
+    }
+  ]
 }

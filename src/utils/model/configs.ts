@@ -35,6 +35,8 @@ export const CLAUDE_OPUS_5_CONFIG = config('claude-opus-5')
 export const CLAUDE_OPUS_5_5_CONFIG = config('claude-opus-5-5')
 export const CLAUDE_FABLE_5_CONFIG = config('claude-fable-5')
 export const CLAUDE_FABLE_5_1_CONFIG = config('claude-fable-5-1')
+export const CLAUDE_MYTHOS_5_CONFIG = config('claude-mythos-5')
+export const CLAUDE_MYTHOS_5_1_CONFIG = config('claude-mythos-5-1')
 
 export const ALL_MODEL_CONFIGS = {
   haiku35: CLAUDE_3_5_HAIKU_CONFIG,
@@ -57,6 +59,8 @@ export const ALL_MODEL_CONFIGS = {
   opus55: CLAUDE_OPUS_5_5_CONFIG,
   fable5: CLAUDE_FABLE_5_CONFIG,
   fable51: CLAUDE_FABLE_5_1_CONFIG,
+  mythos5: CLAUDE_MYTHOS_5_CONFIG,
+  mythos51: CLAUDE_MYTHOS_5_1_CONFIG,
 } as const satisfies Record<string, ModelConfig>
 
 export type ModelKey = keyof typeof ALL_MODEL_CONFIGS

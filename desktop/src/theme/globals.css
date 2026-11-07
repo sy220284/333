@@ -1,0 +1,1058 @@
+/* 摇摇车桌面 UI：仅保留实际使用的原生六套设计令牌、基础层、对话弹窗和加载动画。
+ * 基于 cc-haha 来源样式删去原项目独有功能规则；版权与完整许可见 desktop/THIRD_PARTY_CC_HAHA_LICENSE.txt。
+ */
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, [data-theme="ink-blue"], [data-theme="ink-blue"] *));
+
+:root {
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-scrim: 40;
+  --z-drawer: 50;
+  --z-dialog: 60;
+  --z-sheet: 65;
+  --z-dropdown: 70;
+  --z-popover: 75;
+  --z-tooltip: 80;
+  --z-toast: 90;
+}
+
+@theme {
+  --color-primary: #A24A2E;
+  --color-primary-container: #8C3F26;
+  --color-primary-fixed: #F6ECE7;
+  --color-primary-fixed-dim: #E8CFC3;
+
+  --color-on-primary: #FFFFFF;
+  --color-on-primary-container: #FFFFFF;
+  --color-on-surface: #1F1E1C;
+  --color-on-surface-variant: #55524D;
+
+  --color-surface: #FFFFFF;
+  --color-surface-bright: #FFFFFF;
+  --color-surface-dim: #F1F0EE;
+  --color-surface-container: #F5F5F3;
+  --color-surface-container-low: #F7F7F6;
+  --color-surface-container-high: #F1F0EE;
+  --color-surface-container-highest: #E9E8E5;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-variant: #F7F7F6;
+
+  --color-background: #FFFFFF;
+
+  --color-outline: #D9D7D3;
+  --color-outline-variant: #E9E8E5;
+
+  --color-secondary: #2C66C9;
+  --color-secondary-container: #E9F0FB;
+  --color-tertiary: #3B7068;
+  --color-tertiary-container: #F1F5F4;
+
+  --color-error: #C42B3C;
+  --color-on-error: #FFFFFF;
+  --color-error-container: #FBE9EC;
+  --color-on-error-container: #B12636;
+
+  --color-inverse-surface: #1F1E1C;
+  --color-inverse-on-surface: #FFFFFF;
+  --color-inverse-primary: #E8CFC3;
+
+  --color-success: #2E7D4F;
+  --color-success-container: #E7F3EB;
+  --color-on-success-container: #2A7148;
+  --color-info: #2C66C9;
+  --color-info-container: #E9F0FB;
+  --color-on-info-container: #2459B3;
+  --color-warning: #A5650F;
+  --color-warning-container: #FBF0DC;
+  --color-on-warning-container: #8A540C;
+
+  /* Software chrome shares one sans-serif family. Keep the editorial serif
+     explicit for content that requests it, instead of inheriting it in tools. */
+  /* Latin runs in the self-hosted Inter (400–600); CJK falls through to the
+     platform face. Weights above 600 are not shipped, so the UI tops out at
+     semibold instead of letting the browser synthesize a smeared bold. */
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-headline: var(--font-body);
+  --font-serif: 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  --font-label: var(--font-body);
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* Corner scale (「素」): 4 chips / 6 rows and small controls / 8 controls and
+     inner blocks / 12 cards / 16 composer and large panels / 20 dialogs. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-full: 9999px;
+}
+
+:root,
+[data-theme="white"] {
+  color-scheme: light;
+
+  /* 「素 Porcelain」(2026-10 visual direction). One warm-neutral ramp that
+     climbs in a single direction — page → sidebar (s0) → card lining (s2) →
+     hover/selected (s1) — and every shadow below uses the same warm hue, so
+     the surfaces no longer mix cool greys with brown shadows. Terracotta is
+     kept for the brand, the send key and selection only; info is a separate
+     blue and error a crimson, so status never reads as brand. */
+  --cc-bg: #FFFFFF;
+  --cc-s0: #F7F7F6;
+  --cc-s1: #F1F0EE;
+  --cc-s2: #F5F5F3;
+  --cc-bd: #E9E8E5;
+  --cc-bd2: #D9D7D3;
+  /* Control boundary — clears WCAG 1.4.11's 3:1 on the card lining. */
+  --cc-bd-strong: #8C8984;
+  /* Tab strip. Trough stays --cc-s0, so these two carry the shape. */
+  --cc-tab-edge: #D7D5D1;
+  --cc-tab-sep: #E6E4E1;
+  /* Reading tiers keep the warm neutral hue while leaving small descriptions
+     enough contrast on hover and raised control fills as well as the page. */
+  --cc-t1: #1A1917;
+  --cc-t2: #494640;
+  --cc-t3: #625E58;
+
+  --cc-ac: #A24A2E;
+  --cc-ac2: #8C3F26;
+  --cc-ac-soft: #F6ECE7;
+  --cc-ac-soft-hover: #F0DFD6;
+  --cc-ac-border: #E8CFC3;
+  --cc-ac-ink: #93432A;
+  --cc-on-ac: #FFFFFF;
+
+  --cc-ok: #2E7D4F;
+  --cc-ok-soft: #E7F3EB;
+  --cc-ok-ink: #2A7148;
+  --cc-wn: #A5650F;
+  --cc-wn-soft: #FBF0DC;
+  --cc-wn-ink: #8A540C;
+  --cc-er: #C42B3C;
+  --cc-er-soft: #FBE9EC;
+  --cc-er-soft-hover: #F6D6DB;
+  --cc-er-ink: #B12636;
+  --cc-info: #2C66C9;
+  --cc-info-soft: #E9F0FB;
+  --cc-info-ink: #2459B3;
+
+  --cc-teal: #3B7068;
+  --cc-teal-soft: #F1F5F4;
+  --cc-teal-border: #C0D1CF;
+  --cc-teal-icon: #EBF1F0;
+
+  --cc-diff-add: #EAF5ED;
+  --cc-diff-add-gutter: #DCEEE2;
+  --cc-diff-add-word: #CFE8D6;
+  --cc-diff-del: #FCEFEE;
+  --cc-diff-del-gutter: #F8E1DE;
+  --cc-diff-del-word: #F2CDC8;
+  --cc-diff-mark: #F7F0E4;
+  --cc-diff-mark-gutter: #EFE3CF;
+  --cc-code: #F7F6F4;
+
+  /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
+     Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
+     neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
+  --cc-series-1: #058D85;
+  --cc-series-2: #86412C;
+  --cc-series-3: #5066A3;
+  --cc-series-4: #99732B;
+  --cc-series-5: #A8A49C;
+
+  --cc-shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05), 0 6px 20px rgba(28, 25, 23, 0.06);
+  --cc-shadow-composer: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 28px rgba(28, 25, 23, 0.07);
+  --cc-shadow-overlay: 0 2px 6px rgba(28, 25, 23, 0.05), 0 16px 40px rgba(28, 25, 23, 0.12);
+
+  --cc-bg-rgb: 255, 255, 255;
+  --cc-s1-rgb: 241, 240, 238;
+  --cc-t1-rgb: 26, 25, 23;
+  --cc-t2-rgb: 73, 70, 64;
+  --cc-bd2-rgb: 217, 215, 211;
+  --cc-ac-rgb: 162, 74, 46;
+  --cc-er-rgb: 196, 43, 60;
+  --cc-scrim-rgb: 24, 22, 20;
+}
+
+[data-theme="paper"] {
+  color-scheme: light;
+
+  --cc-bg: #FBF9F4;
+  --cc-s0: #F3EFE5;
+  --cc-s1: #ECE6D8;
+  --cc-s2: #F7F4EC;
+  --cc-bd: #E7E0CF;
+  --cc-bd2: #D5C9B0;
+  /* Control boundary — clears WCAG 1.4.11's 3:1 on the card lining. */
+  --cc-bd-strong: #938A76;
+  /* Tab strip. Trough stays --cc-s0, so these two carry the shape. */
+  --cc-tab-edge: #DBCFB5;
+  --cc-tab-sep: #E5D9BE;
+  --cc-t1: #231D12;
+  --cc-t2: #6E6350;
+  --cc-t3: #796E5B;
+
+  --cc-ac: #96442B;
+  --cc-ac2: #7C3620;
+  --cc-ac-soft: #F3E6DA;
+  --cc-ac-soft-hover: #EBD8C8;
+  --cc-ac-border: #E2C7B3;
+  --cc-ac-ink: #96442B;
+  --cc-on-ac: #FBF6EC;
+
+  --cc-ok: #477C52;
+  --cc-ok-soft: #E8EFE1;
+  --cc-ok-ink: #43754D;
+  --cc-wn: #A8751F;
+  --cc-wn-soft: #F6EED9;
+  --cc-wn-ink: #8E631A;
+  --cc-er: #C24532;
+  --cc-er-soft: #F7E7DF;
+  --cc-er-soft-hover: #F2D7CE;
+  --cc-er-ink: #B6412F;
+  --cc-info: #96442B;
+  --cc-info-soft: #F1E7E0;
+  --cc-info-ink: #96442B;
+
+  --cc-teal: #3B7068;
+  --cc-teal-soft: #EEEFEA;
+  --cc-teal-border: #BECDC7;
+  --cc-teal-icon: #E8EBE6;
+
+  --cc-diff-add: #E9EFDC;
+  --cc-diff-add-gutter: #DCE7C9;
+  --cc-diff-add-word: #E0E9CF;
+  --cc-diff-del: #F6E9E3;
+  --cc-diff-del-gutter: #F2DCD5;
+  --cc-diff-del-word: #ECCAC2;
+  --cc-diff-mark: #F0E8D8;
+  --cc-diff-mark-gutter: #E9DCC5;
+  --cc-code: #F5F1E4;
+
+  /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
+     Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
+     neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
+  --cc-series-1: #058D85;
+  --cc-series-2: #86412C;
+  --cc-series-3: #5066A3;
+  --cc-series-4: #99732B;
+  --cc-series-5: #A8A49C;
+
+  --cc-shadow-card: 0 1px 3px rgba(64, 49, 26, 0.05), 0 6px 24px rgba(64, 49, 26, 0.07);
+  --cc-shadow-composer: 0 1px 2px rgba(64, 49, 26, 0.06), 0 14px 44px rgba(64, 49, 26, 0.10);
+  --cc-shadow-overlay: 0 8px 24px rgba(64, 49, 26, 0.12), 0 24px 64px rgba(64, 49, 26, 0.16);
+
+  --cc-bg-rgb: 251, 249, 244;
+  --cc-s1-rgb: 236, 230, 216;
+  --cc-t1-rgb: 35, 29, 18;
+  --cc-t2-rgb: 110, 99, 80;
+  --cc-bd2-rgb: 213, 201, 176;
+  --cc-ac-rgb: 150, 68, 43;
+  --cc-er-rgb: 194, 69, 50;
+  --cc-scrim-rgb: 21, 17, 11;
+}
+
+[data-theme="warm-classic"] {
+  color-scheme: light;
+
+  --cc-bg: #F6F0E1;
+  --cc-s0: #EDE5D1;
+  --cc-s1: #E5DBC3;
+  --cc-s2: #F1EBDA;
+  --cc-bd: #DED2B8;
+  --cc-bd2: #C8B897;
+  /* Control boundary — clears WCAG 1.4.11's 3:1 on the card lining. */
+  --cc-bd-strong: #908369;
+  /* Tab strip. Trough stays --cc-s0, so these two carry the shape. */
+  --cc-tab-edge: #D6C5A2;
+  --cc-tab-sep: #E2CFAA;
+  --cc-t1: #251E11;
+  --cc-t2: #6E6146;
+  --cc-t3: #746951;
+
+  --cc-ac: #96442B;
+  --cc-ac2: #7C3620;
+  --cc-ac-soft: #F0E1D0;
+  --cc-ac-soft-hover: #E8D2BE;
+  --cc-ac-border: #DFC0A8;
+  --cc-ac-ink: #96442B;
+  --cc-on-ac: #FBF6EC;
+
+  --cc-ok: #3E8153;
+  --cc-ok-soft: #E8F2E9;
+  --cc-ok-ink: #3A784D;
+  --cc-wn: #A8751F;
+  --cc-wn-soft: #F8F0DC;
+  --cc-wn-ink: #90641B;
+  --cc-er: #C74436;
+  --cc-er-soft: #FAECE8;
+  --cc-er-soft-hover: #F5DBD6;
+  --cc-er-ink: #BD4133;
+  --cc-info: #96442B;
+  --cc-info-soft: #ECDFCF;
+  --cc-info-ink: #96442B;
+
+  --cc-teal: #3E6B58;
+  --cc-teal-soft: #E9E7D7;
+  --cc-teal-border: #BBC5B5;
+  --cc-teal-icon: #E4E3D3;
+
+  --cc-diff-add: #E6ECD3;
+  --cc-diff-add-gutter: #D8E2BF;
+  --cc-diff-add-word: #DCE5C5;
+  --cc-diff-del: #F2E1D2;
+  --cc-diff-del-gutter: #EED4C6;
+  --cc-diff-del-word: #EAC3B5;
+  --cc-diff-mark: #ECE0C8;
+  --cc-diff-mark-gutter: #E5D5B6;
+  --cc-code: #EFE8D3;
+
+  /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
+     Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
+     neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
+  --cc-series-1: #058D85;
+  --cc-series-2: #86412C;
+  --cc-series-3: #5066A3;
+  --cc-series-4: #99732B;
+  --cc-series-5: #A8A49C;
+
+  --cc-shadow-card: 0 1px 3px rgba(64, 49, 26, 0.05), 0 6px 24px rgba(64, 49, 26, 0.07);
+  --cc-shadow-composer: 0 1px 2px rgba(64, 49, 26, 0.06), 0 14px 44px rgba(64, 49, 26, 0.10);
+  --cc-shadow-overlay: 0 8px 24px rgba(64, 49, 26, 0.12), 0 24px 64px rgba(64, 49, 26, 0.16);
+
+  --cc-bg-rgb: 246, 240, 225;
+  --cc-s1-rgb: 229, 219, 195;
+  --cc-t1-rgb: 37, 30, 17;
+  --cc-t2-rgb: 110, 97, 70;
+  --cc-bd2-rgb: 200, 184, 151;
+  --cc-ac-rgb: 150, 68, 43;
+  --cc-er-rgb: 199, 68, 54;
+  --cc-scrim-rgb: 22, 18, 10;
+}
+
+[data-theme="celadon"] {
+  color-scheme: light;
+
+  --cc-bg: #F5F8F5;
+  --cc-s0: #EAF0EB;
+  --cc-s1: #E0E9E2;
+  --cc-s2: #F0F4F0;
+  --cc-bd: #DCE5DE;
+  --cc-bd2: #C6D4C9;
+  /* Control boundary — clears WCAG 1.4.11's 3:1 on the card lining. */
+  --cc-bd-strong: #818D84;
+  /* Tab strip. Trough stays --cc-s0, so these two carry the shape. */
+  --cc-tab-edge: #C5D3C8;
+  --cc-tab-sep: #CEDCD1;
+  --cc-t1: #1C231D;
+  --cc-t2: #5D6B60;
+  --cc-t3: #667268;
+
+  --cc-ac: #96442B;
+  --cc-ac2: #7C3620;
+  --cc-ac-soft: #F0E7DC;
+  --cc-ac-soft-hover: #E8DACB;
+  --cc-ac-border: #DFC9B6;
+  --cc-ac-ink: #96442B;
+  --cc-on-ac: #FBF6EC;
+
+  --cc-ok: #3E8153;
+  --cc-ok-soft: #E3EFE5;
+  --cc-ok-ink: #39764C;
+  --cc-wn: #A8751F;
+  --cc-wn-soft: #F8F0DC;
+  --cc-wn-ink: #90641B;
+  --cc-er: #C74436;
+  --cc-er-soft: #FAECE8;
+  --cc-er-soft-hover: #F5DBD6;
+  --cc-er-ink: #BD4133;
+  --cc-info: #96442B;
+  --cc-info-soft: #ECE6E1;
+  --cc-info-ink: #96442B;
+
+  --cc-teal: #2F6E63;
+  --cc-teal-soft: #E7EEEB;
+  --cc-teal-border: #B6CCC6;
+  --cc-teal-icon: #E1EAE6;
+
+  --cc-diff-add: #E4F0E5;
+  --cc-diff-add-gutter: #D4E6D7;
+  --cc-diff-add-word: #D9E9DB;
+  --cc-diff-del: #F1E8E4;
+  --cc-diff-del-gutter: #EEDBD6;
+  --cc-diff-del-word: #E9C9C3;
+  --cc-diff-mark: #EBE7D9;
+  --cc-diff-mark-gutter: #E4DBC6;
+  --cc-code: #EFF4F0;
+
+  /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
+     Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
+     neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
+  --cc-series-1: #058D85;
+  --cc-series-2: #86412C;
+  --cc-series-3: #5066A3;
+  --cc-series-4: #99732B;
+  --cc-series-5: #A8A49C;
+
+  --cc-shadow-card: 0 1px 3px rgba(28, 42, 32, 0.05), 0 6px 24px rgba(28, 42, 32, 0.06);
+  --cc-shadow-composer: 0 1px 2px rgba(28, 42, 32, 0.05), 0 14px 44px rgba(28, 42, 32, 0.08);
+  --cc-shadow-overlay: 0 8px 24px rgba(28, 42, 32, 0.10), 0 24px 64px rgba(28, 42, 32, 0.15);
+
+  --cc-bg-rgb: 245, 248, 245;
+  --cc-s1-rgb: 224, 233, 226;
+  --cc-t1-rgb: 28, 35, 29;
+  --cc-t2-rgb: 93, 107, 96;
+  --cc-bd2-rgb: 198, 212, 201;
+  --cc-ac-rgb: 150, 68, 43;
+  --cc-er-rgb: 199, 68, 54;
+  --cc-scrim-rgb: 17, 21, 17;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --cc-bg: #201D17;
+  --cc-s0: #1A1813;
+  --cc-s1: #2B271F;
+  --cc-s2: #252119;
+  --cc-bd: #383226;
+  --cc-bd2: #4C4433;
+  /* Control boundary — clears WCAG 1.4.11's 3:1 on the card lining. */
+  --cc-bd-strong: #756D5C;
+  /* Tab strip. Trough stays --cc-s0, so these two carry the shape. Both go
+     *lighter* than the trough here: an ink theme's paper is already so dark
+     that pure black is only 1.26:1 against it, so there is no room downward. */
+  --cc-tab-edge: #353024;
+  --cc-tab-sep: #2D281F;
+  /* Lift all reading tiers, including the small descriptions that previously
+     fell below 4.5:1 on the raised hover/dialog ground. */
+  --cc-t1: #F2EEE6;
+  --cc-t2: #C4BBA9;
+  --cc-t3: #AAA08E;
+
+  --cc-ac: #D07B52;
+  --cc-ac2: #DE8F66;
+  --cc-ac-soft: #3B2A1E;
+  --cc-ac-soft-hover: #493424;
+  --cc-ac-border: #59402C;
+  --cc-ac-ink: #D2815B;
+  --cc-on-ac: #201D17;
+
+  --cc-ok: #84B383;
+  --cc-ok-soft: #28301D;
+  --cc-ok-ink: #84B383;
+  --cc-wn: #D3A34C;
+  --cc-wn-soft: #332916;
+  --cc-wn-ink: #D3A34C;
+  --cc-er: #E06B52;
+  --cc-er-soft: #3A241B;
+  --cc-er-soft-hover: #552F24;
+  --cc-er-ink: #E17058;
+  --cc-info: #D07B52;
+  --cc-info-soft: #3C2C20;
+  --cc-info-ink: #D3845E;
+
+  --cc-teal: #7DD3C7;
+  --cc-teal-soft: #2B332C;
+  --cc-teal-border: #3C544C;
+  --cc-teal-icon: #313E37;
+
+  --cc-diff-add: #2B331E;
+  --cc-diff-add-gutter: #354026;
+  --cc-diff-add-word: #323C24;
+  --cc-diff-del: #3B281F;
+  --cc-diff-del-gutter: #462D23;
+  --cc-diff-del-word: #563328;
+  --cc-diff-mark: #39301E;
+  --cc-diff-mark-gutter: #443822;
+  --cc-code: #1A1813;
+
+  /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
+     Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
+     neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
+  --cc-series-1: #35A69D;
+  --cc-series-2: #AD644E;
+  --cc-series-3: #6177B6;
+  --cc-series-4: #99732B;
+  --cc-series-5: #B4B0A6;
+
+  --cc-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 6px 24px rgba(0, 0, 0, 0.35);
+  --cc-shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.45), 0 14px 44px rgba(0, 0, 0, 0.50);
+  --cc-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.50), 0 24px 64px rgba(0, 0, 0, 0.55);
+
+  --cc-bg-rgb: 32, 29, 23;
+  --cc-s1-rgb: 43, 39, 31;
+  --cc-t1-rgb: 242, 238, 230;
+  --cc-t2-rgb: 196, 187, 169;
+  --cc-bd2-rgb: 76, 68, 51;
+  --cc-ac-rgb: 208, 123, 82;
+  --cc-er-rgb: 224, 107, 82;
+  --cc-scrim-rgb: 6, 6, 6;
+}
+
+[data-theme="ink-blue"] {
+  color-scheme: dark;
+
+  --cc-bg: #1A1D24;
+  --cc-s0: #15181E;
+  --cc-s1: #252A35;
+  --cc-s2: #20242D;
+  --cc-bd: #2F3441;
+  --cc-bd2: #434A5B;
+  /* Control boundary — clears WCAG 1.4.11's 3:1 on the card lining. */
+  --cc-bd-strong: #6A707E;
+  /* Tab strip. Trough stays --cc-s0, so these two carry the shape. Both go
+     *lighter* than the trough here: an ink theme's paper is already so dark
+     that pure black is only 1.25:1 against it, so there is no room downward. */
+  --cc-tab-edge: #2C303C;
+  --cc-tab-sep: #252833;
+  --cc-t1: #E8EAF0;
+  --cc-t2: #9AA1B2;
+  --cc-t3: #858B97;
+
+  --cc-ac: #D07B52;
+  --cc-ac2: #DE8F66;
+  --cc-ac-soft: #37281F;
+  --cc-ac-soft-hover: #453326;
+  --cc-ac-border: #57402F;
+  --cc-ac-ink: #D17E56;
+  --cc-on-ac: #1A1D24;
+
+  --cc-ok: #6FB58C;
+  --cc-ok-soft: #213026;
+  --cc-ok-ink: #6FB58C;
+  --cc-wn: #D3A34C;
+  --cc-wn-soft: #2F2917;
+  --cc-wn-ink: #D3A34C;
+  --cc-er: #E0685E;
+  --cc-er-soft: #37211D;
+  --cc-er-soft-hover: #522C27;
+  --cc-er-ink: #E06A60;
+  --cc-info: #8FA8E8;
+  --cc-info-soft: #2D3343;
+  --cc-info-ink: #8FA8E8;
+
+  --cc-teal: #7DD3C7;
+  --cc-teal-soft: #263338;
+  --cc-teal-border: #385455;
+  --cc-teal-icon: #2C3E41;
+
+  --cc-diff-add: #233028;
+  --cc-diff-add-gutter: #2C3B31;
+  --cc-diff-add-word: #29382E;
+  --cc-diff-del: #36282C;
+  --cc-diff-del-gutter: #422C30;
+  --cc-diff-del-word: #513234;
+  --cc-diff-mark: #34302A;
+  --cc-diff-mark-gutter: #3F382C;
+  --cc-code: #15181E;
+
+  /* Model series: four hues for the four biggest models, then a neutral gray every other model shares.
+     Validated per theme surface (lightness band, chroma, color-blind and normal-vision separation of
+     neighbours, contrast); the gray is the one slot below 3:1, so the legend and day card name it. */
+  --cc-series-1: #35A69D;
+  --cc-series-2: #AD644E;
+  --cc-series-3: #6177B6;
+  --cc-series-4: #99732B;
+  --cc-series-5: #B4B0A6;
+
+  --cc-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.35), 0 6px 24px rgba(0, 0, 0, 0.35);
+  --cc-shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.45), 0 14px 44px rgba(0, 0, 0, 0.50);
+  --cc-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.50), 0 24px 64px rgba(0, 0, 0, 0.55);
+
+  --cc-bg-rgb: 26, 29, 36;
+  --cc-s1-rgb: 37, 42, 53;
+  --cc-t1-rgb: 232, 234, 240;
+  --cc-t2-rgb: 154, 161, 178;
+  --cc-bd2-rgb: 67, 74, 91;
+  --cc-ac-rgb: 208, 123, 82;
+  --cc-er-rgb: 224, 104, 94;
+  --cc-scrim-rgb: 6, 6, 6;
+}
+
+:root {
+  /* Layout dimensions */
+  --sidebar-width: 280px;
+  --sidebar-rail-width: 72px;
+  --titlebar-height: 52px;
+  --motion-sidebar-duration: 280ms;
+  --motion-sidebar-easing: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Surfaces. The handoff has four grounds: page (--bg), sidebar and
+     secondary panels (--s0), hover/selected (--s1), card lining (--s2). */
+  --color-background: var(--cc-bg);
+  --color-surface: var(--cc-bg);
+  --color-surface-bright: var(--cc-bg);
+  --color-surface-container-lowest: var(--cc-bg);
+  --color-surface-container: var(--cc-s2);
+  --color-surface-container-low: var(--cc-s0);
+  --color-surface-container-high: var(--cc-s1);
+  --color-surface-container-highest: var(--cc-bd);
+  --color-surface-variant: var(--cc-s0);
+  --color-surface-dim: var(--cc-s1);
+  --color-surface-sidebar: var(--cc-s0);
+  --color-surface-hover: var(--cc-s1);
+  --color-surface-selected: var(--cc-s1);
+  --color-surface-info: var(--cc-s0);
+  --color-surface-user-msg: var(--cc-s1);
+
+  /* Borders */
+  --color-outline: var(--cc-bd2);
+  --color-outline-variant: var(--cc-bd);
+  --color-border: var(--cc-bd);
+  /* For CONTROL boundaries (checkbox/radio outlines): --color-border is a
+     hairline separator at ~1.2:1 and fails WCAG 1.4.11 the moment it has to
+     delineate an interactive control. */
+  --color-border-strong: var(--cc-bd-strong);
+  --color-border-separator: var(--cc-bd);
+  /* Neutral on purpose: a terracotta ring sat one hue step from the error red
+     and read as "this field is invalid". */
+  --color-border-focus: var(--cc-t3);
+  /* Tab strip outlines. The strip's trough deliberately stays the sidebar's
+     own ground, so the selected tab's fill is only 1.05–1.10:1 against it in
+     all six themes — far too little for a rounded corner to be *visible*, and
+     a curve nobody can see is not a curve. These two carry the shape instead:
+     `tab-edge` traces the selected tab at ~1.35:1 against the trough,
+     `tab-separator` is the hairline between two neighbouring idle tabs at
+     ~1.22:1. They cannot be folded into `--color-border`/`--color-outline`:
+     those are calibrated against paper, and on the trough they land at 1.12
+     (invisible) and 1.36–2.01 (a drawn box) respectively, in opposite
+     directions per theme family. */
+  --color-tab-edge: var(--cc-tab-edge);
+  --color-tab-separator: var(--cc-tab-sep);
+
+  /* Text */
+  --color-on-surface: var(--cc-t1);
+  --color-on-surface-variant: var(--cc-t2);
+  --color-text-primary: var(--cc-t1);
+  --color-text-secondary: var(--cc-t2);
+  --color-text-tertiary: var(--cc-t3);
+  --color-text-accent: var(--cc-info);
+
+  /* Terracotta seal — the brand accent */
+  --color-primary: var(--cc-ac);
+  --color-primary-container: var(--cc-ac2);
+  --color-primary-fixed: var(--cc-ac-soft);
+  --color-primary-fixed-dim: var(--cc-ac-border);
+  --color-on-primary: var(--cc-on-ac);
+  --color-on-primary-container: var(--cc-on-ac);
+  --color-brand: var(--cc-ac);
+  --color-brand-hover: var(--cc-ac2);
+  /* Opaque on purpose: the `/10` alpha modifier compiles to a color function
+     Safari 15 WebViews cannot parse (guarded in vite-config.test.ts). */
+  --color-brand-soft: var(--cc-ac-soft);
+  --color-brand-soft-hover: var(--cc-ac-soft-hover);
+  /* Text sitting ON `--color-brand-soft`. Not the same as `--color-brand`:
+     the two ink palettes' terracotta lands at 4.3–4.5:1 on their own soft
+     fill, so a terracotta chip label has to use this darkened pair instead. */
+  --color-on-brand-soft: var(--cc-ac-ink);
+  /* Inner rule engraved on the large seal — the accent's own foreground at
+     40%, so it stays a highlight rather than a hard white line. */
+  --color-brand-seal-rule: rgba(251, 246, 236, 0.4);
+  --color-inverse-surface: var(--cc-t1);
+  --color-inverse-on-surface: var(--cc-bg);
+  --color-inverse-primary: var(--cc-ac-border);
+
+  --color-secondary: var(--cc-info);
+  --color-secondary-container: var(--cc-info-soft);
+  --color-tertiary: var(--cc-teal);
+  --color-tertiary-container: var(--cc-teal-soft);
+
+  /* Status tones. `--color-on-<tone>-container` is the AA-checked foreground
+     for `--color-<tone>-container`; `--color-<tone>` alone is too light on its
+     own fill (that is the 2.66:1 warning badge contrast.test.ts guards). */
+  --color-success: var(--cc-ok);
+  --color-success-container: var(--cc-ok-soft);
+  --color-on-success-container: var(--cc-ok-ink);
+  --color-warning: var(--cc-wn);
+  --color-warning-container: var(--cc-wn-soft);
+  --color-on-warning-container: var(--cc-wn-ink);
+  --color-error: var(--cc-er);
+  --color-on-error: var(--cc-on-ac);
+  --color-error-container: var(--cc-er-soft);
+  --color-on-error-container: var(--cc-er-ink);
+  --color-error-soft: var(--cc-er-soft);
+  --color-error-soft-hover: var(--cc-er-soft-hover);
+  --color-info: var(--cc-info);
+  --color-info-container: var(--cc-info-soft);
+  --color-on-info-container: var(--cc-info-ink);
+
+  /* Language identity is independent of the app's status/brand palette. */
+  --color-file-typescript-container: #DDEDFC;
+  --color-on-file-typescript-container: #215D96;
+  --color-file-javascript-container: #F7E8A2;
+  --color-on-file-javascript-container: #685615;
+
+  /* Memory / goal surfaces keep a teal identity of their own */
+  --color-memory-accent: var(--cc-teal);
+  --color-memory-surface: var(--cc-teal-soft);
+  --color-memory-border: var(--cc-teal-border);
+  --color-memory-icon-bg: var(--cc-teal-icon);
+  --color-goal-accent: var(--cc-teal);
+  --color-goal-surface: var(--cc-teal-soft);
+  --color-goal-border: var(--cc-teal-border);
+  --color-goal-icon-bg: var(--cc-teal-icon);
+  --color-goal-chip-bg: var(--cc-bg);
+  --color-goal-chip-border: var(--cc-bd);
+
+  /* Controls */
+  --color-model-option-selected-bg: var(--cc-ac-soft);
+  --color-model-option-selected-border: var(--cc-ac-border);
+  --color-switch-checked-bg: var(--color-brand);
+  --color-switch-thumb: var(--cc-bg);
+  --color-btn-primary-bg: var(--cc-t1);
+  --color-btn-primary-fg: var(--cc-bg);
+  /* Primary stays ink on hover (a lighter ink), it no longer flips to brand. */
+  --color-btn-primary-hover: rgba(var(--cc-t1-rgb), 0.86);
+  /* A neutral disc one step up from the dialog surface it sits on (`IconButton
+     soft`). The ink themes raise that surface to `--cc-s1`, so they raise this
+     too — the same value would vanish into the composer. */
+  --color-btn-soft-bg: var(--cc-s1);
+  --color-btn-soft-hover: var(--cc-bd);
+  /* Flat ink, not a gradient: the handoff's primary action is a solid ink
+     block that turns terracotta on hover. Kept as gradient-shaped tokens so
+     existing call sites keep resolving. */
+  --gradient-btn-primary: linear-gradient(var(--cc-t1), var(--cc-t1));
+  --gradient-btn-primary-hover: linear-gradient(var(--color-btn-primary-hover), var(--color-btn-primary-hover));
+
+  /* Sidebar chrome */
+  --color-sidebar-filter-bg: var(--cc-bg);
+  --color-sidebar-filter-border: var(--cc-bd);
+  --color-sidebar-filter-icon-bg: transparent;
+  --color-sidebar-search-bg: var(--cc-bg);
+  --color-sidebar-search-border: var(--cc-bd);
+  --color-sidebar-item-hover: var(--cc-s1);
+  --color-sidebar-item-active: var(--cc-bg);
+  --color-sidebar-item-active-border: var(--cc-bd);
+  --sidebar-panel-bg-image: none;
+
+  /* Activity heatmap */
+  --color-series-1: var(--cc-series-1);
+  --color-series-2: var(--cc-series-2);
+  --color-series-3: var(--cc-series-3);
+  --color-series-4: var(--cc-series-4);
+  --color-series-5: var(--cc-series-5);
+  --color-activity-cell-border: rgba(var(--cc-bd2-rgb), 0.42);
+  --color-activity-cell-border-hover: rgba(var(--cc-ac-rgb), 0.58);
+  --color-activity-cell-border-active: var(--cc-t1);
+  --shadow-activity-cell-hover: 0 0 0 2px rgba(var(--cc-ac-rgb), 0.14), 0 8px 18px rgba(var(--cc-scrim-rgb), 0.18);
+  --color-activity-tooltip-surface: var(--cc-t1);
+  --color-activity-tooltip-border: rgba(var(--cc-bg-rgb), 0.16);
+  --color-activity-tooltip-text: var(--cc-bg);
+  --color-activity-tooltip-muted: var(--cc-ac-border);
+
+  /* Trace inspector: the handoff renders it with the ordinary panel palette
+     rather than a private one, so these now alias straight through. */
+  --color-inspector-surface: var(--cc-bg);
+  --color-inspector-panel: var(--cc-s0);
+  --color-inspector-chip: var(--cc-s1);
+  --color-inspector-border: var(--cc-bd);
+  --color-inspector-accent: var(--cc-ac);
+  --color-inspector-accent-hover: var(--cc-ac2);
+  --color-inspector-accent-secondary: var(--cc-info);
+  --color-inspector-text: var(--cc-t1);
+  --color-inspector-heading: var(--cc-t1);
+  --color-inspector-muted: var(--cc-t3);
+  --color-inspector-muted-strong: var(--cc-t2);
+  --color-inspector-success: var(--cc-ok-ink);
+  --color-inspector-success-bg: var(--cc-ok-soft);
+  --color-inspector-danger: var(--cc-er-ink);
+  --color-inspector-danger-bg: var(--cc-er-soft);
+  --color-inspector-danger-surface: var(--cc-er-soft);
+  --color-inspector-danger-border: var(--cc-er-soft-hover);
+  --color-inspector-capacity: var(--cc-t3);
+
+  /* Overlays */
+  /* `--color-overlay-scrim` dims for non-modal layers (the mobile sidebar
+     drawer); `--color-modal-scrim` is the heavier one true modals sit on. */
+  --color-overlay-scrim: rgba(var(--cc-scrim-rgb), 0.42);
+  --color-modal-scrim: rgba(var(--cc-scrim-rgb), 0.5);
+  /* Dialogs are opaque: see `.dialog-panel`. Light themes put the paper at the
+     top of the ramp, so the lifted surface is the background value itself. */
+  --color-surface-dialog: var(--cc-bg);
+  --color-surface-glass: rgba(var(--cc-bg-rgb), 0.92);
+  --color-surface-glass-border: rgba(var(--cc-bd2-rgb), 0.4);
+
+  /* Shadows: card / composer / floating overlay */
+  --shadow-card: var(--cc-shadow-card);
+  --shadow-composer: var(--cc-shadow-composer);
+  --shadow-overlay: var(--cc-shadow-overlay);
+  --shadow-dropdown: var(--cc-shadow-overlay);
+  --shadow-inspector: var(--cc-shadow-overlay);
+  --shadow-sidebar-filter: none;
+  --shadow-focus-ring: 0 0 0 3px rgba(var(--cc-t1-rgb), 0.10);
+  --shadow-error-ring: 0 0 0 1px rgba(var(--cc-er-rgb), 0.26);
+  --shadow-button-primary: 0 1px 2px rgba(var(--cc-t1-rgb), 0.16);
+  /* A row or chip lifted one hair off its ground (the selected sidebar row). */
+  --shadow-raised: 0 1px 2px rgba(var(--cc-t1-rgb), 0.06);
+  /* The selected segment of a segmented control: lifted one hair off its track. */
+  --shadow-segment: 0 1px 2px rgba(var(--cc-t1-rgb), 0.10), 0 0 0 0.5px rgba(var(--cc-t1-rgb), 0.06);
+
+  /* Code + diff */
+  --color-code-bg: var(--cc-code);
+  --color-code-fg: var(--cc-t1);
+  --color-diff-added-bg: var(--cc-diff-add);
+  --color-diff-added-word: var(--cc-diff-add-word);
+  --color-diff-added-gutter: var(--cc-diff-add-gutter);
+  --color-diff-added-text: var(--cc-ok-ink);
+  --color-diff-removed-bg: var(--cc-diff-del);
+  --color-diff-removed-word: var(--cc-diff-del-word);
+  --color-diff-removed-gutter: var(--cc-diff-del-gutter);
+  --color-diff-removed-text: var(--cc-er-ink);
+  --color-diff-highlight-bg: var(--cc-diff-mark);
+  --color-diff-highlight-gutter: var(--cc-diff-mark-gutter);
+  --color-diff-title-bg: var(--cc-s0);
+  --color-diff-title-color: var(--cc-t3);
+  --color-diff-title-border: var(--cc-bd);
+
+  /* Syntax highlighting. One ramp for the four paper themes; the two ink
+     themes override it below. */
+  --color-code-comment: #8F8A82;
+  --color-code-string: #3F7A2A;
+  --color-code-keyword: #A2442B;
+  --color-code-function: #2A5EA8;
+  --color-code-number: #A2602A;
+  --color-code-property: #7A3E20;
+  --color-code-type: #7A4FB0;
+  --color-code-parameter: #5C3D2E;
+  --color-code-punctuation: #5C504A;
+  --color-code-inserted: var(--cc-ok-ink);
+  --color-code-deleted: var(--cc-er-ink);
+
+  --color-diff-syntax-foreground: var(--cc-t1);
+  --color-diff-syntax-comment: #8F8A82;
+  --color-diff-syntax-string: #3F7A2A;
+  --color-diff-syntax-number: #A2602A;
+  --color-diff-syntax-regexp: #2A5EA8;
+  --color-diff-syntax-keyword: #A2442B;
+  --color-diff-syntax-variable: #7A3E20;
+  --color-diff-syntax-parameter: #5C504A;
+  --color-diff-syntax-property: #7A3E20;
+  --color-diff-syntax-function: #2A5EA8;
+  --color-diff-syntax-type: #7A4FB0;
+  --color-diff-syntax-punctuation: #5C504A;
+
+  /* The terminal belongs to the current workspace theme. */
+  --color-terminal-header: var(--cc-bg);
+  --color-terminal-bg: var(--cc-bg);
+  --color-terminal-border: var(--cc-bd);
+  --color-terminal-fg: var(--cc-t1);
+  --color-terminal-cursor: var(--cc-t1);
+  --color-terminal-selection: var(--cc-ac-soft);
+  --color-terminal-muted: var(--cc-t3);
+  --color-terminal-accent: var(--cc-ok-ink);
+  --color-terminal-danger: var(--cc-er-ink);
+  --color-terminal-warning: var(--cc-wn-ink);
+  --color-terminal-scrollbar: var(--cc-bd2);
+  --color-terminal-scrollbar-hover: var(--cc-t3);
+
+  /* Image viewing keeps a dark neutral surround independently of terminals. */
+  --color-media-bg: #191713;
+  --color-media-header: #221F19;
+  --color-media-border: #4C4433;
+  --color-media-fg: #E4DCCA;
+  --color-media-muted: #B5AA96;
+  --color-media-selection: #4C4433;
+  --color-media-cursor: #D07B52;
+  --color-media-danger: #E06B52;
+  --color-lightbox-scrim: rgba(0, 0, 0, 0.82);
+  --color-lightbox-control-bg: #FAFAFA;
+  --color-lightbox-control-fg: #242628;
+  --color-lightbox-control-hover: #E6E7E8;
+
+  /* Find-in-page highlights. These paint over arbitrary page content, not
+     over a brand-soft panel, so they get their own pair instead of borrowing
+     the brand chip tokens: an amber wash for matches (browser convention),
+     full-strength terracotta for the active one. */
+  --color-search-highlight: var(--cc-diff-mark);
+  --color-on-search-highlight: var(--cc-t1);
+  --color-search-highlight-active: var(--cc-ac);
+  --color-on-search-highlight-active: var(--cc-on-ac);
+
+  /* A document page. PDF and Word pages are white paper whatever the app theme:
+     inverting one would change what the document says — a highlighted passage, a
+     figure drawn on white. Only the surround around the page follows the theme. */
+  --color-document-paper: #FFFFFF;
+  --color-document-ink: #1A1A1A;
+  /* A selected passage of a document. The words are drawn on a canvas beneath the
+     transparent text that gets selected, so this has to let them show through:
+     the app's own selection colour is opaque and would blank what it covers. */
+  --color-document-selection: rgba(var(--cc-ac-rgb), 0.3);
+
+  /* Misc */
+  --color-window-close-hover: #C74436;
+  --color-selection-bg: var(--cc-ac-border);
+  --color-selection-fg: var(--cc-t1);
+  --color-chat-navigation-target: rgba(var(--cc-ac-rgb), 0.10);
+  --color-text-secondary-a72: rgba(var(--cc-t2-rgb), 0.72);
+  --color-text-secondary-a68: rgba(var(--cc-t2-rgb), 0.68);
+  --color-text-primary-a88: rgba(var(--cc-t1-rgb), 0.88);
+  --color-text-primary-a82: rgba(var(--cc-t1-rgb), 0.82);
+  --color-text-primary-a78: rgba(var(--cc-t1-rgb), 0.78);
+  --color-surface-hover-a34: rgba(var(--cc-s1-rgb), 0.34);
+  --color-surface-hover-a54: rgba(var(--cc-s1-rgb), 0.54);
+  --color-outline-a72: rgba(var(--cc-bd2-rgb), 0.72);
+  --color-outline-a78: rgba(var(--cc-bd2-rgb), 0.78);
+  --color-outline-a92: rgba(var(--cc-bd2-rgb), 0.92);
+
+  /* Radii — mirrored from `@theme` so `var(--radius-*)` resolves at runtime */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-full: 9999px;
+}
+
+[data-theme="dark"],
+[data-theme="ink-blue"] {
+  --color-file-typescript-container: #203B55;
+  --color-on-file-typescript-container: #92CAF7;
+  --color-file-javascript-container: #BFA453;
+  --color-on-file-javascript-container: #221C0C;
+
+  --color-code-comment: #8F8683;
+  --color-code-string: #A8CE8C;
+  --color-code-keyword: #E9926B;
+  --color-code-function: #7FC7E8;
+  --color-code-number: #86D0C4;
+  --color-code-property: #E8BBA1;
+  --color-code-type: #D9BE8A;
+  --color-code-parameter: var(--cc-t1);
+  --color-code-punctuation: #9B908C;
+
+  --color-diff-syntax-comment: #8F8683;
+  --color-diff-syntax-string: #A8CE8C;
+  --color-diff-syntax-number: #86D0C4;
+  --color-diff-syntax-regexp: #7FC7E8;
+  --color-diff-syntax-keyword: #E9926B;
+  --color-diff-syntax-variable: #E8BBA1;
+  --color-diff-syntax-parameter: #9B908C;
+  --color-diff-syntax-property: #E8BBA1;
+  --color-diff-syntax-function: #7FC7E8;
+  --color-diff-syntax-type: #D9BE8A;
+  --color-diff-syntax-punctuation: #9B908C;
+
+  --color-selection-fg: var(--cc-t1);
+  /* Ink themes run the background at the bottom of the ramp, so a lifted
+     surface has to climb it — `--cc-s1`, not the light themes' `--cc-bg`. */
+  --color-surface-dialog: var(--cc-s1);
+  --color-btn-soft-bg: var(--cc-bd);
+  --color-btn-soft-hover: var(--cc-bd2);
+  --color-surface-glass: rgba(var(--cc-bg-rgb), 0.93);
+  --color-modal-scrim: rgba(var(--cc-scrim-rgb), 0.66);
+  --color-overlay-scrim: rgba(var(--cc-scrim-rgb), 0.56);
+  --shadow-button-primary: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-segment: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --color-activity-tooltip-border: rgba(var(--cc-bg-rgb), 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  color: var(--color-on-surface);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, kbd, pre, samp, .font-mono {
+  font-variant-ligatures: none;
+}
+
+::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-selection-fg);
+}
+
+[data-desktop-drag-region] {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
+[data-desktop-drag-region] :is(button, input, textarea, select, a, [role="button"], [draggable="true"]),
+[data-desktop-drag-region] .tab-bar-interactive,
+[data-desktop-drag-region] .tab-bar-interactive * {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+}
+
+body > :not(#root, [role="tooltip"]) {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+}
+
+body > :not(#root, [role="tooltip"]) * {
+  app-region: initial;
+  -webkit-app-region: initial;
+}
+
+.dialog-panel {
+  background: var(--color-surface-dialog);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-overlay);
+}
+
+.app-shell-viewport {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.sidebar-shell {
+  position: relative;
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width var(--motion-sidebar-duration) var(--motion-sidebar-easing);
+  /* Do not promote this shell with will-change. A permanent compositing
+     layer makes Electron drop -webkit-app-region hits on macOS, so the
+     title padding around the traffic lights cannot drag the window. */
+}
+
+.sidebar-panel {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background-image: var(--sidebar-panel-bg-image);
+  background-repeat: no-repeat;
+  transition:
+    background-color var(--motion-sidebar-duration) var(--motion-sidebar-easing),
+    border-color var(--motion-sidebar-duration) var(--motion-sidebar-easing);
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+
+::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar-thumb { background: var(--color-outline); border-radius: 9999px; }
+
+::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin { animation: spin 0.9s linear infinite; }

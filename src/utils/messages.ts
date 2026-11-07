@@ -207,15 +207,18 @@ export const PLAN_REJECTION_PREFIX =
   'The agent proposed a plan that was rejected by the user. The user chose to stay in plan mode rather than proceed with implementation.\n\nRejected plan:\n'
 
 /**
- * Shared guidance for permission denials, instructing the model on appropriate workarounds.
+ * Shared safety-boundary guidance. A denied operation cannot be retried by
+ * changing shell syntax, tool identity, or embedding the action in a script.
+ * Models may still make progress on genuinely independent, allowed tasks.
  */
 export const DENIAL_WORKAROUND_GUIDANCE =
-  `IMPORTANT: You *may* attempt to accomplish this action using other tools that might naturally be used to accomplish this goal, ` +
-  `e.g. using head instead of cat. But you *should not* attempt to work around this denial in malicious ways, ` +
-  `e.g. do not use your ability to run tests to execute non-test actions. ` +
-  `You should only try to work around this restriction in reasonable ways that do not attempt to bypass the intent behind this denial. ` +
-  `If you believe this capability is essential to complete the user's request, STOP and explain to the user ` +
-  `what you were trying to do and why you need this permission. Let the user decide how to proceed.`
+  `IMPORTANT: The permission denial applies to the intended operation, not just this exact command. ` +
+  `Do not retry the same action by rephrasing the command, splitting it into steps, ` +
+  `switching tools or languages, or executing it indirectly through scripts or tests. ` +
+  `A genuinely different, permitted operation (such as read-only inspection instead of deletion) is allowed. ` +
+  `If denied cleanup is optional, leave those files untouched and continue independent safe tasks. ` +
+  `Report the blocked cleanup once in your final summary. ` +
+  `If the blocked operation is essential, stop that part of the task and request explicit authorization.`
 
 export function AUTO_REJECT_MESSAGE(toolName: string): string {
   return `Permission to use ${toolName} has been denied. ${DENIAL_WORKAROUND_GUIDANCE}`

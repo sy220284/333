@@ -1,3 +1,4 @@
+import { getIndependentProfile } from '../services/api/multimodel/profiles.js'
 import { findKeywordTriggerPositions } from './ultraplan/keyword.js'
 import { getCatalogModel, getModelCapabilityEnvOverride } from './model/modelCatalog.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -82,6 +83,8 @@ export function getRainbowColor(
 // TODO(inigo): add support for probing unknown models via API error detection
 // Provider-aware thinking support detection (aligns with modelSupportsISP in betas.ts)
 export function modelSupportsThinking(model: string): boolean {
+  const declared = getIndependentProfile(model)?.supportsReasoning
+  if (declared !== undefined) return declared
   const supported3P = get3PModelCapabilityOverride(model, 'thinking')
   if (supported3P !== undefined) return supported3P
   return !getCanonicalName(model).includes('claude-3-')
@@ -89,6 +92,7 @@ export function modelSupportsThinking(model: string): boolean {
 
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports adaptive thinking.
 export function modelSupportsAdaptiveThinking(model: string): boolean {
+  if (getIndependentProfile(model)?.supportsReasoning === false) return false
   const supported3P = get3PModelCapabilityOverride(model, 'adaptive_thinking')
   if (supported3P !== undefined) {
     return supported3P

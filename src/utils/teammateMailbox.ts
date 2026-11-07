@@ -7,8 +7,8 @@
  * Note: Inboxes are keyed by agent name within a team.
  */
 
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { z } from 'zod/v4'
 import { TEAMMATE_MESSAGE_TAG } from '../constants/xml.js'
 import { PermissionModeSchema } from '../entrypoints/sdk/coreSchemas.js'
@@ -17,7 +17,6 @@ import type { Message } from '../types/message.js'
 import { generateRequestId } from './agentId.js'
 import { count } from './array.js'
 import { logForDebugging } from './debug.js'
-import { getTeamsDir } from './envUtils.js'
 import { getErrnoCode } from './errors.js'
 import { lazySchema } from './lazySchema.js'
 import * as lockfile from './lockfile.js'
@@ -25,6 +24,8 @@ import { logError } from './log.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
 import type { BackendType } from './swarm/backends/types.js'
 import { TEAM_LEAD_NAME } from './swarm/constants.js'
+import { getTeamDir, getTeamFilePath, type TeamFile } from './swarm/teamHelpers.js'
+import { withTeamLifecycleLock } from './swarm/teamLifecycleLock.js'
 import { sanitizePathComponent } from './tasks.js'
 import { getAgentName, getTeammateColor, getTeamName } from './teammate.js'
 
@@ -47,6 +48,8 @@ export type TeammateMessage = {
   read: boolean
   color?: string // Sender's assigned color (e.g., 'red', 'blue', 'green')
   summary?: string // 5-10 word summary shown as preview in the UI
+  /** Optional stable key for idempotent desktop delivery. */
+  messageId?: string
 }
 
 /**
@@ -55,9 +58,10 @@ export type TeammateMessage = {
  */
 export function getInboxPath(agentName: string, teamName?: string): string {
   const team = teamName || getTeamName() || 'default'
-  const safeTeam = sanitizePathComponent(team)
   const safeAgentName = sanitizePathComponent(agentName)
-  const inboxDir = join(getTeamsDir(), safeTeam, 'inboxes')
+  // Team config and message inboxes must resolve to the same canonical
+  // directory, including mixed-case, punctuation and Chinese team names.
+  const inboxDir = join(getTeamDir(team), 'inboxes')
   const fullPath = join(inboxDir, `${safeAgentName}.json`)
   logForDebugging(
     `[TeammateMailbox] getInboxPath: agent=${agentName}, team=${team}, fullPath=${fullPath}`,
@@ -70,8 +74,7 @@ export function getInboxPath(agentName: string, teamName?: string): string {
  */
 async function ensureInboxDir(teamName?: string): Promise<void> {
   const team = teamName || getTeamName() || 'default'
-  const safeTeam = sanitizePathComponent(team)
-  const inboxDir = join(getTeamsDir(), safeTeam, 'inboxes')
+  const inboxDir = join(getTeamDir(team), 'inboxes')
   await mkdir(inboxDir, { recursive: true })
   logForDebugging(`[TeammateMailbox] Ensured inbox directory: ${inboxDir}`)
 }
@@ -137,65 +140,97 @@ export async function writeToMailbox(
   recipientName: string,
   message: Omit<TeammateMessage, 'read'>,
   teamName?: string,
+  scope?: { projectDir: string },
 ): Promise<void> {
-  await ensureInboxDir(teamName)
-
-  const inboxPath = getInboxPath(recipientName, teamName)
-  const lockFilePath = `${inboxPath}.lock`
-
-  logForDebugging(
-    `[TeammateMailbox] writeToMailbox: recipient=${recipientName}, from=${message.from}, path=${inboxPath}`,
-  )
-
-  // Ensure the inbox file exists before locking (proper-lockfile requires the file to exist)
-  try {
-    await writeFile(inboxPath, '[]', { encoding: 'utf-8', flag: 'wx' })
-    logForDebugging(`[TeammateMailbox] writeToMailbox: created new inbox file`)
-  } catch (error) {
-    const code = getErrnoCode(error)
-    if (code !== 'EEXIST') {
-      logForDebugging(
-        `[TeammateMailbox] writeToMailbox: failed to create inbox file: ${error}`,
-      )
-      logError(error)
-      // A failed mailbox creation cannot be reported as delivered.
-      throw error
-    }
+  const resolvedTeam = teamName ?? getTeamName()
+  if (!resolvedTeam) {
+    throw new Error('Cannot send teammate message without an active team')
   }
-
-  let release: (() => Promise<void>) | undefined
-  try {
-    release = await lockfile.lock(inboxPath, {
-      lockfilePath: lockFilePath,
-      ...LOCK_OPTIONS,
-    })
-
-    // Re-read messages after acquiring lock to get the latest state
-    const messages = await readMailbox(recipientName, teamName)
-
-    const newMessage: TeammateMessage = {
-      ...message,
-      read: false,
+  // The parent guard must be acquired BEFORE creating any inbox path.
+  // Cleanup holds the same lock, so a late message cannot resurrect a team.
+  return withTeamLifecycleLock(resolvedTeam, async () => {
+    const teamFileContent = await readFile(getTeamFilePath(resolvedTeam), 'utf-8')
+    if (scope) {
+      // This scope check runs inside the team lifecycle lock, together with
+      // mailbox delivery. A removed member or team cannot be re-created by
+      // a stale desktop request.
+      const teamFile = jsonParse(teamFileContent) as TeamFile
+      const lead = teamFile?.members?.find(member => member.name === TEAM_LEAD_NAME)
+      if (!lead || resolve(teamFile.projectDir ?? lead.cwd) !== resolve(scope.projectDir))
+        throw new Error('团队不属于当前项目')
+      if (recipientName === TEAM_LEAD_NAME ||
+          !teamFile.members.some(member => member.name === recipientName))
+        throw new Error('接收人不属于当前团队')
     }
 
-    messages.push(newMessage)
+    await ensureInboxDir(teamName)
 
-    await writeFile(inboxPath, jsonStringify(messages, null, 2), 'utf-8')
+    const inboxPath = getInboxPath(recipientName, teamName)
+    const lockFilePath = `${inboxPath}.lock`
+
     logForDebugging(
-      `[TeammateMailbox] Wrote message to ${recipientName}'s inbox from ${message.from}`,
+      `[TeammateMailbox] writeToMailbox: recipient=${recipientName}, from=${message.from}, path=${inboxPath}`,
     )
-  } catch (error) {
-    logForDebugging(`Failed to write to inbox for ${recipientName}: ${error}`)
-    logError(error)
-    // SendMessage must never acknowledge a failed append/lock/rewrite.
-    throw error
-  } finally {
-    if (release) {
-      await release()
-    }
-  }
-}
 
+    // Ensure the inbox file exists before locking (proper-lockfile requires the file to exist)
+    try {
+      await writeFile(inboxPath, '[]', { encoding: 'utf-8', flag: 'wx' })
+      logForDebugging(`[TeammateMailbox] writeToMailbox: created new inbox file`)
+    } catch (error) {
+      const code = getErrnoCode(error)
+      if (code !== 'EEXIST') {
+        logForDebugging(
+          `[TeammateMailbox] writeToMailbox: failed to create inbox file: ${error}`,
+        )
+        logError(error)
+        // A failed mailbox creation cannot be reported as delivered.
+        throw error
+      }
+    }
+
+    let release: (() => Promise<void>) | undefined
+    try {
+      release = await lockfile.lock(inboxPath, {
+        lockfilePath: lockFilePath,
+        ...LOCK_OPTIONS,
+      })
+
+      // Re-read messages after acquiring lock to get the latest state
+      const messages = await readMailbox(recipientName, teamName)
+      // Retrying the same desktop request must not duplicate an assignment.
+      if (message.messageId) {
+        const prior = messages.find(existing => existing.messageId === message.messageId)
+        if (prior) {
+          if (prior.from !== message.from || prior.text !== message.text)
+            throw new Error('同一消息标识对应不同内容，请重新生成发送请求')
+          return
+        }
+      }
+
+      const newMessage: TeammateMessage = {
+        ...message,
+        read: false,
+      }
+
+      messages.push(newMessage)
+
+      await writeFile(inboxPath, jsonStringify(messages, null, 2), 'utf-8')
+      logForDebugging(
+        `[TeammateMailbox] Wrote message to ${recipientName}'s inbox from ${message.from}`,
+      )
+    } catch (error) {
+      logForDebugging(`Failed to write to inbox for ${recipientName}: ${error}`)
+      logError(error)
+      // SendMessage must never acknowledge a failed append/lock/rewrite.
+      throw error
+    } finally {
+      if (release) {
+        await release()
+      }
+    }
+  })
+
+}
 /**
  * Mark a specific message in a teammate's inbox as read by index
  * Uses file locking to prevent race conditions

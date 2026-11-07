@@ -1,3 +1,5 @@
+import { resolveIndependentModel } from './multimodel/registry.js'
+import { getIndependentProfile } from './multimodel/profiles.js'
 import type {
   BetaContentBlock,
   BetaImageBlockParam,
@@ -23,7 +25,6 @@ import { resolvePromptSnapshot, promptSnapshotMode } from '../cli/systemPromptSn
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '../../constants/systemPromptBoundary.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
 import {
   getAttributionHeader,
@@ -56,13 +57,11 @@ import {
   splitSysPromptPrefix,
   toolToAPISchema,
 } from '../../utils/api.js'
-import { getOauthAccountInfo } from '../../utils/auth.js'
 import {
   getBedrockExtraBodyParamsBetas,
   getMergedBetas,
   getModelBetas,
 } from '../../utils/betas.js'
-import { getOrCreateUserID } from '../../utils/config.js'
 import {
   CAPPED_DEFAULT_MAX_TOKENS,
   getModelMaxOutputTokens,
@@ -148,13 +147,6 @@ import type { Notification } from 'src/context/notifications.js'
 import { addToTotalSessionCost } from 'src/cost-tracker.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
 import type { AgentId } from 'src/types/ids.js'
-import {
-  ADVISOR_TOOL_INSTRUCTIONS,
-  getExperimentAdvisorModels,
-  isAdvisorEnabled,
-  isValidAdvisorModel,
-  modelSupportsAdvisor,
-} from 'src/utils/advisor.js'
 import { getAgentContext } from 'src/utils/agentContext.js'
 import { isClaudeAISubscriber } from 'src/utils/auth.js'
 import {
@@ -163,8 +155,6 @@ import {
   shouldIncludeFirstPartyOnlyBetas,
   shouldUseGlobalCacheScope,
 } from 'src/utils/betas.js'
-import { CLAUDE_IN_CHROME_MCP_SERVER_NAME } from 'src/utils/claudeInChrome/common.js'
-import { CHROME_TOOL_SEARCH_INSTRUCTIONS } from 'src/utils/claudeInChrome/prompt.js'
 import { getMaxThinkingTokensForModel } from 'src/utils/context.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import { logForDiagnosticsNoPII } from 'src/utils/diagLogs.js'
@@ -177,7 +167,7 @@ import {
 } from 'src/utils/fastMode.js'
 import { returnValue } from 'src/utils/generators.js'
 import { headlessProfilerCheckpoint } from 'src/utils/headlessProfiler.js'
-import { isMcpInstructionsDeltaEnabled } from 'src/utils/mcpInstructionsDelta.js'
+
 import { calculateUSDCost } from 'src/utils/modelCost.js'
 import { endQueryProfile, queryCheckpoint } from 'src/utils/queryProfiler.js'
 import {
@@ -191,7 +181,6 @@ import {
   isToolSearchEnabled,
 } from 'src/utils/toolSearch.js'
 import { API_MAX_MEDIA_PER_REQUEST } from '../../constants/apiLimits.js'
-import { ADVISOR_BETA_HEADER } from '../../constants/betas.js'
 import {
   formatDeferredToolLine,
   isDeferredTool,
@@ -201,10 +190,7 @@ import { count } from '../../utils/array.js'
 import { validateBoundedIntEnvVar } from '../../utils/envValidation.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { getInferenceProfileBackingModel } from '../../utils/model/bedrock.js'
-import {
-  normalizeModelStringForAPI,
-  parseUserSpecifiedModel,
-} from '../../utils/model/model.js'
+import { normalizeModelStringForAPI } from '../../utils/model/model.js';
 import {
   startSessionActivity,
   stopSessionActivity,
@@ -222,9 +208,9 @@ import {
 } from '../analytics/index.js'
 import { COMPACTABLE_TOOLS } from '../compact/microCompact.js'
 import { getInitializationStatus } from '../lsp/manager.js'
-import { isToolFromMcpServer } from '../mcp/utils.js'
+
 import { withStreamingVCR, withVCR } from '../vcr.js'
-import { CLIENT_REQUEST_ID_HEADER, getAnthropicClient } from './client.js'
+import { getAnthropicClient } from './client.js'
 import {
   ContextHintRecoveryError,
   createContextHintController,
@@ -501,33 +487,6 @@ export function configureTaskBudgetParams(
   }
 }
 
-export function getAPIMetadata() : { user_id: string; } {
-  // https://docs.google.com/document/d/1dURO9ycXXQCBS0V4Vhl4poDBRgkelFc5t2BNPoEgH5Q/edit?tab=t.0#heading=h.5g7nec5b09w5
-  let extra: JsonObject = {}
-  const extraStr = process.env.CLAUDE_CODE_EXTRA_METADATA
-  if (extraStr) {
-    const parsed = safeParseJSON(extraStr, false)
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      extra = parsed as JsonObject
-    } else {
-      logForDebugging(
-        `CLAUDE_CODE_EXTRA_METADATA env var must be a JSON object, but was given ${extraStr}`,
-        { level: 'error' },
-      )
-    }
-  }
-
-  return {
-    user_id: jsonStringify({
-      ...extra,
-      device_id: getOrCreateUserID(),
-      // Only include OAuth account UUID when actively using OAuth authentication
-      account_uuid: getOauthAccountInfo()?.accountUuid ?? '',
-      session_id: getSessionId(),
-    }),
-  }
-}
-
 export async function verifyApiKey(
   apiKey: string,
   isNonInteractiveSession: boolean,
@@ -557,7 +516,6 @@ export async function verifyApiKey(
             max_tokens: 1,
             messages,
             ...(betas.length > 0 && { betas }),
-            metadata: getAPIMetadata(),
             ...getExtraBodyParams(),
           })
           return true
@@ -697,7 +655,6 @@ export type Options = {
   agentId?: AgentId // Only set for subagents
   outputFormat?: BetaJSONOutputFormat
   fastMode?: boolean
-  advisorModel?: string
   addNotification?: (notif: Notification) => void
   // API-side task budget (output_config.task_budget). Distinct from the
   // tokenBudget.ts +500k auto-continue feature — this one is sent to the API
@@ -1099,54 +1056,10 @@ async function* queryModel(
     options.querySource === 'verification_agent'
   const betas = getMergedBetas(options.model, { isAgenticQuery })
 
-  // Always send the advisor beta header when advisor is enabled, so
-  // non-agentic queries (compact, side_question, extract_memories, etc.)
-  // can parse advisor server_tool_use blocks already in the conversation history.
-  if (isAdvisorEnabled()) {
-    betas.push(ADVISOR_BETA_HEADER)
-  }
-
-  let advisorModel: string | undefined
-  if (isAgenticQuery && isAdvisorEnabled()) {
-    let advisorOption = options.advisorModel
-
-    const advisorExperiment = getExperimentAdvisorModels()
-    if (advisorExperiment !== undefined) {
-      if (
-        normalizeModelStringForAPI(advisorExperiment.baseModel) ===
-        normalizeModelStringForAPI(options.model)
-      ) {
-        // Override the advisor model if the base model matches. We
-        // should only have experiment models if the user cannot
-        // configure it themselves.
-        advisorOption = advisorExperiment.advisorModel
-      }
-    }
-
-    if (advisorOption) {
-      const normalizedAdvisorModel = normalizeModelStringForAPI(
-        parseUserSpecifiedModel(advisorOption),
-      )
-      if (!modelSupportsAdvisor(options.model)) {
-        logForDebugging(
-          `[AdvisorTool] Skipping advisor - base model ${options.model} does not support advisor`,
-        )
-      } else if (!isValidAdvisorModel(normalizedAdvisorModel)) {
-        logForDebugging(
-          `[AdvisorTool] Skipping advisor - ${normalizedAdvisorModel} is not a valid advisor model`,
-        )
-      } else {
-        advisorModel = normalizedAdvisorModel
-        logForDebugging(
-          `[AdvisorTool] Server-side tool enabled with ${advisorModel} as the advisor model`,
-        )
-      }
-    }
-  }
-
   // Check if tool search is enabled (checks mode, model support, and threshold for auto mode)
   // This is async because it may need to calculate MCP tool description sizes for TstAuto mode
-  let useToolSearch = await isToolSearchEnabled(
+  const independentRoute = resolveIndependentModel(options.model)
+  let useToolSearch = !independentRoute && await isToolSearchEnabled(
     options.model,
     tools,
     options.getToolPermissionContext,
@@ -1198,6 +1111,10 @@ async function* queryModel(
     filteredTools = tools.filter(
       t => !toolMatchesName(t, TOOL_SEARCH_TOOL_NAME),
     )
+  }
+
+  if (independentRoute && getIndependentProfile(options.model)?.supportsTools === false) {
+    filteredTools = []
   }
 
   // Add tool search beta header if enabled - required for defer_loading to be accepted
@@ -1304,12 +1221,20 @@ async function* queryModel(
   // Repair tool_use/tool_result pairing mismatches that can occur when resuming
   // remote/teleport sessions. Inserts synthetic error tool_results for orphaned
   // tool_uses and strips orphaned tool_results referencing non-existent tool_uses.
+  if (!independentRoute) {
+    messagesForAPI = messagesForAPI.flatMap<(typeof messagesForAPI)[number]>(message => {
+      if (message.type !== 'assistant') return [message]
+      const content = message.message.content.filter(block =>
+        !(block.type === 'thinking' && block.signature.startsWith('333-replay:')) &&
+        !(block.type === 'redacted_thinking' && block.data.startsWith('333-replay:')))
+      if (content.length === message.message.content.length) return [message]
+      return content.length ? [{ ...message, message: { ...message.message, content } }] : []
+    })
+  }
   messagesForAPI = ensureToolResultPairing(messagesForAPI)
 
-  // Strip advisor blocks — the API rejects them without the beta header.
-  if (!betas.includes(ADVISOR_BETA_HEADER)) {
-    messagesForAPI = stripAdvisorBlocks(messagesForAPI)
-  }
+  // 旧会话的顾问数据只供本地显示，不进入模型请求。
+  messagesForAPI = stripAdvisorBlocks(messagesForAPI)
 
   // Strip excess media items before making the API call.
   // The API rejects requests with >100 media items but returns a confusing error.
@@ -1370,27 +1295,16 @@ async function* queryModel(
     }
   }
 
-  // Chrome tool-search instructions: when the delta attachment is enabled,
-  // these are carried as a client-side block in mcp_instructions_delta
-  // (attachments.ts) instead of here. This per-request sys-prompt append
-  // busts the prompt cache when chrome connects late.
-  const hasChromeTools = filteredTools.some(t =>
-    isToolFromMcpServer(t.name, CLAUDE_IN_CHROME_MCP_SERVER_NAME),
-  )
-  const injectChromeHere =
-    useToolSearch && hasChromeTools && !isMcpInstructionsDeltaEnabled()
-
   // filter(Boolean) works by converting each element to a boolean - empty strings become false and are filtered out.
   systemPrompt = asSystemPrompt(
     [
-      getAttributionHeader(fingerprint),
+      // Provider-specific billing markers belong only on Anthropic requests.
+      independentRoute ? '' : getAttributionHeader(fingerprint),
       getCLISyspromptPrefix({
         isNonInteractive: options.isNonInteractiveSession,
         hasAppendSystemPrompt: options.hasAppendSystemPrompt,
       }),
       ...systemPrompt,
-      ...(advisorModel ? [ADVISOR_TOOL_INSTRUCTIONS] : []),
-      ...(injectChromeHere ? [CHROME_TOOL_SEARCH_INSTRUCTIONS] : []),
     ].filter(Boolean),
   )
 
@@ -1442,16 +1356,6 @@ async function* queryModel(
   // Note: The actual new_context message extraction is done in sessionTracing.ts using
   // hash-based tracking per querySource (agent) from the messagesForAPI array
   const extraToolSchemas = [...(options.extraToolSchemas ?? [])]
-  if (advisorModel) {
-    // Server tools must be in the tools array by API contract. Appended after
-    // toolSchemas (which carries the cache_control marker) so toggling /advisor
-    // only churns the small suffix, not the cached prefix.
-    extraToolSchemas.push({
-      type: 'advisor_20260301',
-      name: 'advisor',
-      model: advisorModel,
-    } as unknown as BetaToolUnion)
-  }
   const allTools = [...toolSchemas, ...extraToolSchemas]
 
   const isFastMode =
@@ -1554,7 +1458,6 @@ async function* queryModel(
   const attemptStartTimes: number[] = []
   let stream: Stream<BetaRawMessageStreamEvent> | undefined = undefined
   let streamRequestId: string | null | undefined = undefined
-  let clientRequestId: string | undefined = undefined
   // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins -- Response is available in Node 18+ and is used by the SDK
   let streamResponse: Response | undefined = undefined
 
@@ -1735,7 +1638,6 @@ async function* queryModel(
       tools: allTools,
       tool_choice: options.toolChoice,
       ...(useBetas && { betas: betasParams }),
-      metadata: getAPIMetadata(),
       max_tokens: maxOutputTokens,
       thinking,
       ...(temperature !== undefined && { temperature }),
@@ -1798,7 +1700,6 @@ async function* queryModel(
   let responseHeaders: globalThis.Headers | undefined = undefined
   let research: unknown = undefined
   let isFastModeRequest = isFastMode // Keep separate state as it may change if falling back
-  let isAdvisorInProgress = false
 
   try {
     queryCheckpoint('query_client_creation_start')
@@ -1836,14 +1737,6 @@ async function* queryModel(
           headlessProfilerCheckpoint('api_request_sent')
         }
 
-        // Generate and track client request ID so timeouts (which return no
-        // server request ID) can still be correlated with server logs.
-        // First-party only — 3P providers don't log it (inc-4029 class).
-        clientRequestId =
-          getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
-            ? randomUUID()
-            : undefined
-
         // Use raw stream instead of BetaMessageStream to avoid O(n²) partial JSON parsing
         // BetaMessageStream calls partialParse() on every input_json_delta, which we don't need
         // since we handle tool input accumulation ourselves
@@ -1856,12 +1749,7 @@ async function* queryModel(
           result = await anthropic.beta.messages
             .create(
               { ...params, stream: true },
-              {
-                signal,
-                ...(clientRequestId && {
-                  headers: { [CLIENT_REQUEST_ID_HEADER]: clientRequestId },
-                }),
-              },
+              { signal },
             )
             .withResponse()
         } catch (error) {
@@ -1908,7 +1796,6 @@ async function* queryModel(
     contentBlocks.length = 0
     usage = EMPTY_USAGE
     stopReason = null
-    isAdvisorInProgress = false
 
     // Streaming idle timeout watchdog: abort the stream if no chunks arrive
     // for STREAM_IDLE_TIMEOUT_MS. Unlike the stall detection below (which only
@@ -2053,16 +1940,6 @@ async function* queryModel(
                   ...part.content_block,
                   input: '' as unknown as { [key: string]: unknown },
                 }
-                if ((part.content_block.name as string) === 'advisor') {
-                  isAdvisorInProgress = true
-                  logForDebugging(`[AdvisorTool] Advisor tool called`)
-                  logEvent('tengu_advisor_tool_call', {
-                    model:
-                      options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                    advisor_model: (advisorModel ??
-                      'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                  })
-                }
                 break
               case 'text':
                 contentBlocks[part.index] = {
@@ -2092,12 +1969,6 @@ async function* queryModel(
                 // as it works. we want the blocks to be immutable, so that we can
                 // accumulate state ourselves.
                 contentBlocks[part.index] = { ...part.content_block }
-                if (
-                  (part.content_block.type as string) === 'advisor_tool_result'
-                ) {
-                  isAdvisorInProgress = false
-                  logForDebugging(`[AdvisorTool] Advisor tool result received`)
-                }
                 break
             }
             break
@@ -2266,7 +2137,6 @@ async function* queryModel(
               ...(thinkingDisplay !== undefined && { thinkingDisplay }),
               ...(process.env.USER_TYPE === 'ant' &&
                 research !== undefined && { research }),
-              ...(advisorModel && { advisorModel }),
             }
             newMessages.push(m)
             yield m
@@ -2514,14 +2384,6 @@ async function* queryModel(
           logForDebugging(
             `Streaming aborted by user: ${errorMessage(streamingError)}`,
           )
-          if (isAdvisorInProgress) {
-            logEvent('tengu_advisor_tool_interrupted', {
-              model:
-                options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              advisor_model: (advisorModel ??
-                'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            })
-          }
           throw streamingError
         } else {
           // The SDK threw APIUserAbortError but our signal wasn't aborted
@@ -2659,9 +2521,6 @@ async function* queryModel(
           research !== undefined && {
             research,
           }),
-        ...(advisorModel && {
-          advisorModel,
-        }),
       }
       newMessages.push(m)
       fallbackMessage = m
@@ -2771,7 +2630,6 @@ async function* queryModel(
           timestamp: new Date().toISOString(),
           ...(process.env.USER_TYPE === 'ant' &&
             research !== undefined && { research }),
-          ...(advisorModel && { advisorModel }),
         }
         newMessages.push(m)
         fallbackMessage = m
@@ -2817,7 +2675,6 @@ async function* queryModel(
           durationMsIncludingRetries: Date.now() - startIncludingRetries,
           attempt: attemptNumber,
           requestId,
-          clientRequestId,
           didFallBackToNonStreaming,
           queryTracking: options.queryTracking,
           querySource: options.querySource,
@@ -2873,7 +2730,6 @@ async function* queryModel(
         durationMsIncludingRetries: Date.now() - startIncludingRetries,
         attempt: attemptNumber,
         requestId,
-        clientRequestId,
         didFallBackToNonStreaming,
         queryTracking: options.queryTracking,
         querySource: options.querySource,

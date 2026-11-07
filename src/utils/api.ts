@@ -465,7 +465,7 @@ export function prependUserContext(
         .map(([key, value]) => `# ${key}\n${value}`)
         .join('\n')}
 
-      Claude Code attached this context automatically; it isn't part of the user's message. It describes the user's own account and workspace, so they don't need it reported back.\n</system-reminder>\n`,
+      333 attached this context automatically; it isn't part of the user's message. It describes the user's own account and workspace, so they don't need it reported back.\n</system-reminder>\n`,
       isMeta: true,
     }),
     ...messages,

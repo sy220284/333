@@ -43,6 +43,11 @@ test('release vendor inventory matches exactly the current source tree', () => {
   assert.deepEqual(packagedFiles, sourceFiles);
   assert.deepEqual(indexedFiles, sourceFiles);
   assert.ok(existsSync(join(dist,'cli.js')));
+  for (const entry of ['desktopHost.js', 'desktopHost.js.map']) {
+    assert.ok(existsSync(join(dist, entry)), `Desktop host missing: ${entry}`);
+    assert.ok(metadata.files.some(file => file.path === entry), `Desktop host missing integrity entry: ${entry}`);
+  }
+  assert.ok(existsSync(join(dist,'desktopHost.js')));
   assert.ok(existsSync(join(dist,'launcher.cjs')));
 });
 test('official 2.1.317 Linux x64 native resources survive packaging and load in Node', {
@@ -97,9 +102,11 @@ test('every packaged file matches signed-style SHA-256 content manifest', () => 
 test("repository package uses rebuilt launcher canonical entrypoint", () => {
   const rootPackage = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const releasePackage = JSON.parse(readFileSync(join(dist, 'package.json'), 'utf8'));
-  assert.equal(rootPackage.bin.claude, 'dist/launcher.cjs');
-  assert.equal(releasePackage.bin.claude, './launcher.cjs');
-  assert.ok(existsSync(join(root, rootPackage.bin.claude)));
+  assert.equal(rootPackage.bin.yaoyaoche, 'dist/launcher.cjs');
+  assert.equal(releasePackage.bin.yaoyaoche, './launcher.cjs');
+  assert.equal(releasePackage.bin['yaoyaoche-desktop'], './' +
+    (process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost'));
+  assert.ok(existsSync(join(root, rootPackage.bin.yaoyaoche)));
 });
 
 test('new distributable CLI is distinct from original binary', () => {
@@ -107,7 +114,7 @@ test('new distributable CLI is distinct from original binary', () => {
   assert.notEqual(hash(join(root,'cli.js')),hash(join(dist,'cli.js')));
 });
 test('compiled platform executable is packaged, signed and runs without system Bun', () => {
-  const name = process.platform === 'win32' ? 'claude.exe' : 'claude';
+  const name = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche';
   const binary = join(dist, name);
   assert.ok(existsSync(binary), name + ' missing from release');
   const bytes = readFileSync(binary);
@@ -116,7 +123,7 @@ test('compiled platform executable is packaged, signed and runs without system B
   assert.ok(record, 'Native executable missing from SHA-256 release manifest');
   assert.equal(record.bytes, bytes.length);
   assert.equal(record.sha256, createHash('sha256').update(bytes).digest('hex'));
-  const sandbox = mkdtempSync(join(tmpdir(), '333-native-launch-'));
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-native-launch-'));
   try {
     const env = { ...process.env, PATH: '', Path: '' };
     for (const [entrypoint, args] of [
@@ -128,7 +135,7 @@ test('compiled platform executable is packaged, signed and runs without system B
       });
       assert.equal(actual.error, undefined, String(actual.error));
       assert.equal(actual.status, 0, actual.stderr);
-      assert.equal(actual.stdout.trim(), expectedVersion + ' (Claude Code)');
+      assert.equal(actual.stdout.trim(), `${expectedVersion} (摇摇车)`);
     }
   } finally {
     rmSync(sandbox, { recursive: true, force: true });
@@ -137,11 +144,11 @@ test('compiled platform executable is packaged, signed and runs without system B
 test('installed launcher invokes newly built CLI', () => {
   const p=spawnSync(process.execPath,[join(dist,'launcher.cjs'),'--version'],{encoding:'utf8',timeout:15000});
   assert.equal(p.status,0,p.stderr);
-  assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
+  assert.equal(p.stdout.trim(), `${expectedVersion} (摇摇车)`);
 });
 
 test('release is runnable from an isolated folder without repository node_modules', () => {
-  const sandbox = mkdtempSync(join(tmpdir(), '333-distributable-'));
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-distributable-'));
   try {
     const installed = join(sandbox, 'installed');
     cpSync(dist, installed, { recursive: true });
@@ -155,14 +162,14 @@ test('release is runnable from an isolated folder without repository node_module
       });
       assert.equal(p.error, undefined, p.error?.message);
       assert.equal(p.status, 0, JSON.stringify({ args, stdout: p.stdout?.slice(-1200), stderr: p.stderr?.slice(-1200) }));
-      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
+      if (args[0] === '--version') assert.equal(p.stdout.trim(), `${expectedVersion} (摇摇车)`);
       else assert.match(p.stdout, /Usage:/);
     }
     const p = spawnSync(process.execPath, [join(installed, 'launcher.cjs'), '--version'], {
       cwd: sandbox, encoding: 'utf8', timeout: 25000,
     });
     assert.equal(p.status, 0, p.stderr);
-    assert.equal(p.stdout.trim(), `${expectedVersion} (Claude Code)`);
+    assert.equal(p.stdout.trim(), `${expectedVersion} (摇摇车)`);
   } finally {
     // On Windows ARM64, the native launcher can exit before Windows releases
     // its just-executed .exe file handle. Node's built-in recursive removal
@@ -175,4 +182,32 @@ test('release is runnable from an isolated folder without repository node_module
     });
     assert.equal(existsSync(sandbox), false, 'isolated release directory was not removed');
   }
+});
+
+test('packaged desktop bridge is SHA-256 verified and serves its protocol without a system Bun runtime', () => {
+  const native = process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost';
+  for (const name of ['desktopHost.js', 'desktopHost.js.map', native]) {
+    const path = join(dist, name);
+    assert.ok(existsSync(path), `Missing desktop release artifact: ${name}`);
+    const bytes = readFileSync(path);
+    const entry = metadata.files.find(file => file.path === name);
+    assert.ok(entry, `Desktop artifact missing from integrity manifest: ${name}`);
+    assert.equal(entry.bytes, bytes.length);
+    assert.equal(entry.sha256, createHash('sha256').update(bytes).digest('hex'));
+  }
+  const sandbox = mkdtempSync(join(tmpdir(), 'yaoyaoche-desktop-isolated-'));
+  try {
+    const result = spawnSync(join(dist, native), [], {
+      cwd: sandbox, encoding: 'utf8', timeout: 30_000,
+      input: '{"id":"from-release","method":"hello"}\n',
+      env: { ...process.env, PATH: '', Path: '' }, windowsHide: true,
+    });
+    assert.equal(result.error, undefined, String(result.error));
+    assert.equal(result.status, 0, result.stderr);
+    const frames = result.stdout.trim().split('\n').map(line => JSON.parse(line));
+    const hello = frames.find(frame => frame.id === 'from-release');
+    assert.equal(hello?.ok, true);
+    assert.equal(hello?.result?.protocolVersion, 1);
+    assert.equal(hello?.result?.transport, 'stdio-jsonl');
+  } finally { rmSync(sandbox, { recursive: true, force: true }); }
 });

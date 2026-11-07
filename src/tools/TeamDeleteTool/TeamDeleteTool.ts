@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+import { findMissionByAssignmentId, finishMissionAssignment, getMissionExecutionProjectDir } from '../../utils/agentMissions.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
 import type { Tool } from '../../Tool.js'
@@ -72,6 +73,7 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
     const { setAppState, getAppState } = context
     const appState = getAppState()
     const teamName = appState.teamContext?.teamName
+    let missionUpdateError: unknown
 
     if (teamName) {
       // Read team config to check for active members
@@ -99,8 +101,16 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       }
 
       await cleanupTeamDirectories(teamName)
-      // Already cleaned — don't try again on gracefulShutdown.
+      // The team has been deleted; always complete the in-memory cleanup even
+      // when the separate mission journal needs repair.
       unregisterTeamForSessionCleanup(teamName)
+      try {
+        const projectDir = teamFile?.projectDir ?? teamFile?.members.find(member => member.name === TEAM_LEAD_NAME)?.cwd ?? getMissionExecutionProjectDir()
+        const missionId = await findMissionByAssignmentId(`team:${teamName}`, undefined, projectDir)
+        if (missionId) await finishMissionAssignment(missionId, `team:${teamName}`, 'completed')
+      } catch (error) {
+        missionUpdateError = error
+      }
 
       // Clear color assignments so new teams start fresh
       clearTeammateColors()
@@ -122,6 +132,10 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
         messages: [], // Clear any queued messages
       },
     }))
+
+    if (missionUpdateError) {
+      throw new Error(`团队已清理，但长期任务档案更新失败：${String(missionUpdateError)}`)
+    }
 
     return {
       data: {

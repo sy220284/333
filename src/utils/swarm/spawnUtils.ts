@@ -6,6 +6,7 @@ import {
   getChromeFlagOverride,
   getFlagSettingsPath,
   getInlinePlugins,
+  getInlinePluginsWithoutMcp,
   getMainLoopModelOverride,
   getSessionBypassPermissionsMode,
 } from '../../bootstrap/state.js'
@@ -14,6 +15,7 @@ import { isInBundledMode } from '../bundledMode.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getTeammateModeFromSnapshot } from './backends/teammateModeSnapshot.js'
 import { TEAMMATE_COMMAND_ENV_VAR } from './constants.js'
+import { teammatePermissionCliFlags317 } from './teammatePermissionMode317.js'
 
 /**
  * Gets the command to use for spawning teammate processes.
@@ -42,18 +44,7 @@ export function buildInheritedCliFlags(options?: {
   const flags: string[] = []
   const { planModeRequired, permissionMode } = options || {}
 
-  // Propagate permission mode to teammates, but NOT if plan mode is required
-  // Plan mode takes precedence over bypass permissions for safety
-  if (planModeRequired) {
-    // Don't inherit bypass permissions when plan mode is required
-  } else if (
-    permissionMode === 'bypassPermissions' ||
-    getSessionBypassPermissionsMode()
-  ) {
-    flags.push('--dangerously-skip-permissions')
-  } else if (permissionMode === 'acceptEdits') {
-    flags.push('--permission-mode acceptEdits')
-  }
+  flags.push(teammatePermissionCliFlags317(permissionMode, Boolean(planModeRequired), getSessionBypassPermissionsMode()))
 
   // Propagate --model if explicitly set via CLI
   const modelOverride = getMainLoopModelOverride()
@@ -67,10 +58,12 @@ export function buildInheritedCliFlags(options?: {
     flags.push(`--settings ${quote([settingsPath])}`)
   }
 
-  // Propagate --plugin-dir for each inline plugin
+  // Preserve the SDK MCP discovery policy when a teammate is forked.
   const inlinePlugins = getInlinePlugins()
+  const withoutMcp = new Set(getInlinePluginsWithoutMcp())
   for (const pluginDir of inlinePlugins) {
-    flags.push(`--plugin-dir ${quote([pluginDir])}`)
+    const flag = withoutMcp.has(pluginDir) ? '--plugin-dir-no-mcp' : '--plugin-dir'
+    flags.push(`${flag} ${quote([pluginDir])}`)
   }
 
   // Propagate --teammate-mode so tmux teammates use the same mode as leader

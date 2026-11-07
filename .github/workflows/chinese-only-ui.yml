@@ -18,7 +18,7 @@ on:
       - '.github/workflows/chinese-only-ui.yml'
   workflow_call:
 concurrency:
-  group: main-ci-chinese-only-ui-${{ github.event.pull_request.number || github.ref }}
+  group: reusable-chinese-only-ui-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

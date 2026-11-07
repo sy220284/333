@@ -69,3 +69,16 @@ test('20条主功能链与366项增量更新的既有编号不得丢失', () => 
   assert.ok(errors.some(x => x.includes('routes C01')))
   assert.ok(errors.some(x => x.includes(`incrementalUpdates ${removed}`)))
 })
+
+
+test('PR19 经批准的依赖升级与发行锁版本一致，其他传递依赖漂移仍会阻断', () => {
+  const state = original()
+  assert.equal(state.release.version, state.baseline.source.release)
+  assert.equal(state.release.packages[''].version, state.baseline.source.release)
+  assert.deepEqual(validateUpgradeProtection(state), [])
+  const expected = state.baseline.approvedChanges.map(item => `${item.scope}:${item.key}`)
+  assert.equal(new Set(expected).size, expected.length)
+  assert.equal(state.baseline.approvedChanges.length, 7)
+  state.release.packages['node_modules/glob'].version = '13.0.0'
+  assert.ok(validateUpgradeProtection(state).some(line => line.includes('node_modules/glob#version')))
+})

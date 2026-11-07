@@ -1,0 +1,181 @@
+name: 桌面通信 SDK 双向协议专项验收
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Match the repository-wide PR gating policy. Checkout below remains
+# pinned to the exact head SHA for each run.
+concurrency:
+  group: reusable-desktop-communication-${{ github.event.pull_request.number || github.ref }}-${{ github.run_attempt == 1 && 'latest' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
+
+jobs:
+  desktop-contract:
+    name: 独立桌面宿主、审批、Agent事件和会话恢复
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装冻结的 SDK 及编译依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 分套件独立校验通信接口及 SDK stream-json 双向实测
+        run: |
+          set -euo pipefail
+          for suite in artifact-registry project-supervisor handoff-tool capability-draft-tool agent-registry experience-tool team-handoffs experience-memory capability-catalog skill-workshop superagents-capability-protocol desktop-team-operations mission-jobs conversation-headless desktop-file-read desktop-maintenance desktop-communication desktop-stdio desktop-sdk-stream-json desktop-client; do
+            echo "::group::桌面通信套件 ${suite}"
+            timeout --signal=TERM --kill-after=5s 60s bun test "tests/${suite}.test.ts"
+            echo "::endgroup::"
+          done
+
+  desktop-release:
+    name: 桌面宿主独立编译、协议握手与发行完整性
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装冻结的 SDK 及编译依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 编译原 CLI 和独立桌面通信宿主并检查发布完整性
+        run: |
+          bun build/rebuild.mjs
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
+          test -x dist/yaoyaoche
+          test -x dist/desktopHost
+          node --input-type=module -e '
+            import { readFileSync, statSync } from "node:fs"
+            const manifest = JSON.parse(readFileSync("dist/integrity.json", "utf8"))
+            const files = new Set(manifest.files.map(file => file.path))
+            for (const path of ["desktopHost", "desktopHost.js", "desktopHost.js.map", "yaoyaoche"]) {
+              if (!files.has(path)) throw new Error("Desktop release missing signed asset: " + path)
+              if (!statSync("dist/" + path).isFile()) throw new Error("Invalid released asset: " + path)
+            }
+          '
+
+      - name: 启动实际编译出的桌面宿主，完成本地任务闭环与重启部署验收
+        run: node --test tests/deployed-desktop-host.test.mjs
+
+      - name: 实际生成 Linux AppImage 与 DEB 安装包
+        run: |
+          cd desktop
+          npm install --no-audit --no-fund
+          npm run package:linux
+          test -d release/linux-unpacked
+          ls -lh release/*.{AppImage,deb}
+          DEB="$(find release -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$DEB"
+          dpkg-deb -f "$DEB" Depends | grep -q 'fonts-noto-cjk'
+      - name: 安装并核对真实中文字体，确保用户界面没有缺失字形
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk fontconfig
+          fc-list :lang=zh-cn family > /tmp/yaoyaoche-fonts.txt
+          grep -q 'Noto Sans CJK' /tmp/yaoyaoche-fonts.txt
+      - name: 图形环境中启动发行版并检查真实页面与 SDK Host 握手
+        run: |
+          command -v xvfb-run
+          node --test tests/deployed-electron-ui.test.mjs
+      - name: 保存已验收安装包和桌面实测截图
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yaoyaoche-linux-desktop-smoke
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            desktop/release/*.AppImage
+            desktop/release/*.deb
+            desktop/release/deployed-workbench-smoke.png
+            desktop/release/deployed-agents-smoke.png
+            desktop/release/deployed-missions-smoke.png
+            desktop/release/deployed-mission-created-smoke.png
+            desktop/release/deployed-mission-queued-smoke.png
+            desktop/release/deployed-agents-super-smoke.png
+
+      - name: 独立保存桌面三个页面截图供用户体验复核
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yaoyaoche-linux-desktop-ui-views
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            desktop/release/deployed-workbench-smoke.png
+            desktop/release/deployed-agents-smoke.png
+            desktop/release/deployed-missions-smoke.png
+            desktop/release/deployed-mission-created-smoke.png
+            desktop/release/deployed-mission-queued-smoke.png
+            desktop/release/deployed-agents-super-smoke.png
+  desktop-workbench:
+    name: Electron 工作台类型、行为与打包前构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 读取固定工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装 SDK 与桌面依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          cd desktop
+          npm install --no-audit --no-fund
+      - name: 执行真实消息投影与安全边界测试
+        working-directory: desktop
+        run: npm test
+      - name: 运行 React 页面真实交互测试
+        working-directory: desktop
+        run: npm run test:ui
+      - name: 检查 React 类型与桌面页面构建
+        working-directory: desktop
+        run: |
+          npm run typecheck
+          npm run build
+          test -s dist/index.html
+          test -s dist-electron/main.cjs
+          test -s dist-electron/preload.cjs
+      - name: 检查生产页面和通信边界
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs"
+            const html = readFileSync("desktop/dist/index.html","utf8")
+            if (!html.includes("Content-Security-Policy")) throw new Error("缺少 CSP")
+            const main = readFileSync("desktop/dist-electron/main.cjs","utf8")
+            if (!main.includes("desktop:call")) throw new Error("Electron IPC 未构建")
+          '

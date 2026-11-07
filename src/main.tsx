@@ -23,18 +23,16 @@ import { feature } from 'bun:bundle';
 import { parseFallbackModels } from './services/api/fallbackModels.ts';
 import { isScreenReaderEnabled, getScreenReaderSubprocessEnvironment } from './utils/accessibility/screenReaderRuntime.js';
 import { parsePromptSuggestions, restrictedToolDenyList } from './services/cli/upgradeMode.ts';
-import { resolveCloudTarget, validateCloudEnvironment } from './services/cli/cloudTarget.ts';
 import { parseAutoCompactWindowOption } from './services/api/autoCompactWindow.ts';
 import { setCliAutoCompactWindow } from './services/compact/autoCompact.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import mapValues from 'lodash-es/mapValues.js';
-import pickBy from 'lodash-es/pickBy.js';
 import uniqBy from 'lodash-es/uniqBy.js';
 import React from 'react';
 import { getOauthConfig } from './constants/oauth.js';
-import { getRemoteSessionUrl } from './constants/product.js';
+
 import { getSystemContext, getUserContext } from './context.js';
 import { init, initializeTelemetryAfterTrust } from './entrypoints/init.js';
 import { addToHistory } from './history.js';
@@ -43,27 +41,22 @@ import { launchRepl } from './replLauncher.js';
 import { hasGrowthBookEnvOverride, initializeGrowthBook, refreshGrowthBookAfterAuthChange } from './services/analytics/growthbook.js';
 import { fetchBootstrapData } from './services/api/bootstrap.js';
 import { type DownloadResult, downloadSessionFiles, type FilesApiConfig, parseFileSpecs } from './services/api/filesApi.js';
-import { prefetchPassesEligibility } from './services/api/referral.js';
 import { prefetchOfficialMcpUrls } from './services/mcp/officialRegistry.js';
 import type { McpSdkServerConfig, McpServerConfig, ScopedMcpServerConfig } from './services/mcp/types.js';
-import { isPolicyAllowed, loadPolicyLimits, refreshPolicyLimits, waitForPolicyLimitsToLoad } from './services/policyLimits/index.js';
-import { loadRemoteManagedSettings, refreshRemoteManagedSettings } from './services/remoteManagedSettings/index.js';
 import type { ToolInputJSONSchema } from './Tool.js';
 import { createSyntheticOutputTool, isSyntheticOutputToolEnabled } from './tools/SyntheticOutputTool/SyntheticOutputTool.js';
 import { getTools } from './tools.js';
-import { canUserConfigureAdvisor, getInitialAdvisorSetting, isAdvisorEnabled, isValidAdvisorModel, modelSupportsAdvisor } from './utils/advisor.js';
 import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js';
 import { count, uniq } from './utils/array.js';
 import { installAsciicastRecorder } from './utils/asciicast.js';
-import { getSubscriptionType, isClaudeAISubscriber, prefetchAwsCredentialsAndBedRockInfoIfSafe, prefetchGcpCredentialsIfSafe, validateForceLoginOrg } from './utils/auth.js';
-import { checkHasTrustDialogAccepted, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from './utils/config.js';
+import { getSubscriptionType, prefetchAwsCredentialsAndBedRockInfoIfSafe, prefetchGcpCredentialsIfSafe, validateForceLoginOrg } from './utils/auth.js';
+import { checkHasTrustDialogAccepted, getGlobalConfig, isAutoUpdaterDisabled, saveGlobalConfig } from './utils/config.js';
 import { seedEarlyInput, stopCapturingEarlyInput } from './utils/earlyInput.js';
 import { parseEffortValue } from './utils/effort.js';
-import { getInitialFastModeSetting, isFastModeEnabled, prefetchFastModeStatus, resolveFastModeStatusFromCache } from './utils/fastMode.js';
+import { getInitialFastModeSetting, isFastModeEnabled } from './utils/fastMode.js';
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
 import { createSystemMessage, createUserMessage } from './utils/messages.js';
 import { getPlatform } from './utils/platform.js';
-import { getBaseRenderOptions } from './utils/renderOptions.js';
 import { getSessionIngressAuthToken } from './utils/sessionIngressAuth.js';
 import { settingsChangeDetector } from './utils/settings/changeDetector.js';
 import { skillChangeDetector } from './utils/skills/skillChangeDetector.js';
@@ -89,25 +82,20 @@ import { isAnalyticsDisabled } from 'src/services/analytics/config.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
 import { initializeAnalyticsGates } from 'src/services/analytics/sink.js';
-import { getOriginalCwd, setAdditionalDirectoriesForClaudeMd, setIsRemoteMode, setMainLoopModelOverride, setMainThreadAgentType, setTeleportedSessionInfo } from './bootstrap/state.js';
-import { filterCommandsForRemoteMode, getCommands } from './commands.js';
+import { getOriginalCwd, setAdditionalDirectoriesForClaudeMd, setMainLoopModelOverride, setMainThreadAgentType } from './bootstrap/state.js';
+import { getCommands } from './commands.js';
 import type { StatsStore } from './context/stats.js';
-import { launchInvalidSettingsDialog, launchResumeChooser, launchSnapshotUpdateDialog, launchTeleportRepoMismatchDialog, launchTeleportResumeWrapper } from './dialogLaunchers.js';
+import { launchInvalidSettingsDialog, launchResumeChooser, launchSnapshotUpdateDialog } from './dialogLaunchers.js';
 import { SHOW_CURSOR } from './ink/termio/dec.js';
 import { exitWithError, getRenderContext, renderAndRun, showSetupScreens } from './interactiveHelpers.js';
 import { initBuiltinPlugins } from './plugins/bundled/index.js';
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { checkQuotaStatus } from './services/claudeAiLimits.js';
 import { getMcpToolsCommandsAndResources, prefetchAllMcpResources } from './services/mcp/client.js';
 import { VALID_INSTALLABLE_SCOPES, VALID_UPDATE_SCOPES } from './services/plugins/pluginCliCommands.js';
 import { initBundledSkills } from './skills/bundled/index.js';
-import type { AgentColorName } from './tools/AgentTool/agentColorManager.js';
 import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAgent, isCustomAgent, parseAgentsFromJson, validateCliAgentsConfiguration } from './tools/AgentTool/loadAgentsDir.js';
 import type { LogOption } from './types/logs.js';
-import type { Message as MessageType } from './types/message.js';
 import { assertMinVersion } from './utils/autoUpdater.js';
-import { CLAUDE_IN_CHROME_SKILL_HINT, CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER } from './utils/claudeInChrome/prompt.js';
-import { setupClaudeInChrome, shouldAutoEnableClaudeInChrome, shouldEnableClaudeInChrome } from './utils/claudeInChrome/setup.js';
 import { getContextWindowForModel } from './utils/context.js';
 import { loadConversationForResume } from './utils/conversationRecovery.js';
 import { buildDeepLinkBanner } from './utils/deepLink/banner.js';
@@ -115,13 +103,13 @@ import { hasNodeOption, isBareMode, isEnvTruthy, isInProtectedNamespace } from '
 import { refreshExampleCommands } from './utils/exampleCommands.js';
 import type { FpsMetrics } from './utils/fpsTracker.js';
 import { getWorktreePaths } from './utils/getWorktreePaths.js';
-import { findGitRoot, getBranch, getIsGit, getWorktreeCount } from './utils/git.js';
+import { findGitRoot, getIsGit, getWorktreeCount } from './utils/git.js';
 import { getGhAuthStatus } from './utils/github/ghAuthStatus.js';
 import { safeParseJSON } from './utils/json.js';
 import { loadCliAgentsConfiguration } from './utils/cliAgents.js';
 import { logError } from './utils/log.js';
 import { getModelDeprecationWarning } from './utils/model/deprecation.js';
-import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, normalizeModelStringForAPI, parseUserSpecifiedModel } from './utils/model/model.js';
+import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, parseUserSpecifiedModel } from './utils/model/model.js';
 import { ensureModelStringsInitialized } from './utils/model/modelStrings.js';
 import { PERMISSION_MODES } from './utils/permissions/PermissionMode.js';
 import { checkAndDisableBypassPermissions, getAutoModeEnabledStateIfCached, initializeToolPermissionContext, initialPermissionModeFromCLI, isDefaultPermissionModeAuto, parseToolListFromCLI, removeDangerousPermissions, stripDangerousPermissionsForAutoMode, verifyAutoModeGateAccess } from './utils/permissions/permissionSetup.js';
@@ -147,37 +135,32 @@ import { validateUuid } from './utils/uuid.js';
 import { registerMcpAddCommand } from 'src/commands/mcp/addCommand.js';
 import { registerMcpXaaIdpCommand } from 'src/commands/mcp/xaaIdpCommand.js';
 import { logPermissionContextForAnts } from 'src/services/internalLogging.js';
-import { fetchClaudeAIMcpConfigsIfEligible } from 'src/services/mcp/claudeai.js';
-import { clearServerCache } from 'src/services/mcp/client.js';
-import { areMcpConfigsAllowedWithEnterpriseMcpConfig, dedupClaudeAiMcpServers, doesEnterpriseMcpConfigExist, filterMcpServersByPolicy, getClaudeCodeMcpConfigs, getMcpServerSignature, parseMcpConfig, parseMcpConfigFromFilePath } from 'src/services/mcp/config.js';
-import { excludeCommandsByServer, excludeResourcesByServer } from 'src/services/mcp/utils.js';
+import { filterMcpServersByPolicy, getClaudeCodeMcpConfigs, parseMcpConfig, parseMcpConfigFromFilePath } from 'src/services/mcp/config.js';
 import { isXaaEnabled } from 'src/services/mcp/xaaIdpLogin.js';
 import { getRelevantTips } from 'src/services/tips/tipRegistry.js';
 import { logContextMetrics } from 'src/utils/api.js';
-import { CLAUDE_IN_CHROME_MCP_SERVER_NAME, isClaudeInChromeMCPServer } from 'src/utils/claudeInChrome/common.js';
 import { registerCleanup } from 'src/utils/cleanupRegistry.js';
 import { eagerParseCliFlag } from 'src/utils/cliArgs.js';
 import { createEmptyAttributionState } from 'src/utils/commitAttribution.js';
 import { countConcurrentSessions, registerSession, updateSessionName } from 'src/utils/concurrentSessions.js';
 import { getCwd } from 'src/utils/cwd.js';
 import { logForDebugging, setHasFormattedOutput } from 'src/utils/debug.js';
-import { errorMessage, getErrnoCode, isENOENT, TeleportOperationError, toError } from 'src/utils/errors.js';
+import { errorMessage, getErrnoCode, isENOENT } from 'src/utils/errors.js';
 import { getFsImplementation, safeResolvePath } from 'src/utils/fsOperations.js';
 import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown.js';
 import { setAllHookEventsEnabled } from 'src/utils/hooks/hookEvents.js';
 import { refreshModelCapabilities } from 'src/utils/model/modelCapabilities.js';
 import { peekForStdinData, writeToStderr } from 'src/utils/process.js';
-import { setCwd } from 'src/utils/Shell.js';
+
 import { type ProcessedResume, processResumedConversation } from 'src/utils/sessionRestore.js';
 import { parseSettingSourcesFlag } from 'src/utils/settings/constants.js';
 import { plural } from 'src/utils/stringUtils.js';
-import { type ChannelEntry, getInitialMainLoopModel, getIsNonInteractiveSession, getSdkBetas, getSessionId, getUserMsgOptIn, setAllowedChannels, setAllowedSettingSources, setChromeFlagOverride, setClientType, setFlagSettingsPath, setInitialMainLoopModel, setInlinePlugins, setIsInteractive, setOriginalCwd, setQuestionPreviewFormat, setSdkBetas, setSessionBypassPermissionsMode, setSessionPersistenceDisabled, setSessionSource, setUserMsgOptIn, switchSession } from './bootstrap/state.js';
+import { type ChannelEntry, getInitialMainLoopModel, getIsNonInteractiveSession, getSdkBetas, getSessionId, getUserMsgOptIn, setAllowedChannels, setAllowedSettingSources, setClientType, setFlagSettingsPath, setInitialMainLoopModel, setInlinePlugins, setInlinePluginsWithoutMcp, setIsInteractive, setQuestionPreviewFormat, setSdkBetas, setSessionBypassPermissionsMode, setSessionPersistenceDisabled, setSessionSource, setUserMsgOptIn } from './bootstrap/state.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER') ? require('./utils/permissions/autoModeState.js') as typeof import('./utils/permissions/autoModeState.js') : null;
 
 // TeleportRepoMismatchDialog, TeleportResumeWrapper dynamically imported at call sites
-import { createRemoteSessionConfig } from './remote/RemoteSessionManager.js';
 /* eslint-enable @typescript-eslint/no-require-imports */
 // teleportWithProgress dynamically imported at call site
 import { initializeLspServerManager } from './services/lsp/manager.js';
@@ -185,15 +168,13 @@ import { shouldEnablePromptSuggestion } from './services/PromptSuggestion/prompt
 import { type AppState, getDefaultAppState, IDLE_SPECULATION_STATE } from './state/AppStateStore.js';
 import { onChangeAppState } from './state/onChangeAppState.js';
 import { createStore } from './state/store.js';
-import { asSessionId } from './types/ids.js';
+
 import { filterAllowedSdkBetas } from './utils/betas.js';
 import { isInBundledMode, isRunningWithBun } from './utils/bundledMode.js';
 import { logForDiagnosticsNoPII } from './utils/diagLogs.js';
-import { filterExistingPaths, getKnownPathsForRepo } from './utils/githubRepoPathMapping.js';
+
 import { clearPluginCache, loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js';
 import { SandboxManager } from './utils/sandbox/sandbox-adapter.js';
-import { fetchSession, prepareApiRequest } from './utils/teleport/api.js';
-import { checkOutTeleportedSessionBranch, processMessagesForTeleportResume, teleportToRemoteWithErrorHandling, validateGitState, validateSessionRepository } from './utils/teleport.js';
 import { shouldEnableThinkingByDefault, type ThinkingConfig } from './utils/thinking.js';
 import { initUser, resetUserCache } from './utils/user.js';
 import { getTmuxInstallInstructions, isTmuxAvailable, parsePRReference } from './utils/worktree.js';
@@ -729,34 +710,25 @@ async function run(): Promise<CommanderCommand> {
     // builds the type as options are added. Narrow with a runtime guard;
     // the collect accumulator + [] default guarantee string[] in practice.
     const pluginDir = thisCommand.getOptionValue('pluginDir');
+    const pluginDirNoMcp = thisCommand.getOptionValue('pluginDirNoMcp');
     const pluginUrl = thisCommand.getOptionValue('pluginUrl');
     if (!process.argv.includes('--safe-mode')) {
       const dirs = Array.isArray(pluginDir) && pluginDir.every(p => typeof p === 'string') ? pluginDir as string[] : [];
+      const noMcpDirs = Array.isArray(pluginDirNoMcp) && pluginDirNoMcp.every(p => typeof p === 'string') ? pluginDirNoMcp as string[] : [];
       const urls = Array.isArray(pluginUrl) && pluginUrl.every(p => typeof p === 'string') ? pluginUrl as string[] : [];
-      if (dirs.length || urls.length) {
+      if (dirs.length || noMcpDirs.length || urls.length) {
         const { prepareSessionPluginPaths } = await import('./utils/plugins/sessionPluginSources.js');
+        // Resolve these groups separately so extracted ZIP roots keep their MCP policy.
         const sources = await prepareSessionPluginPaths(dirs, urls);
-        setInlinePlugins(sources);
-        clearPluginCache('preAction: --plugin-dir or --plugin-url inline plugins');
+        const noMcpSources = await prepareSessionPluginPaths(noMcpDirs, []);
+        setInlinePlugins([...sources, ...noMcpSources]);
+        setInlinePluginsWithoutMcp(noMcpSources);
+        clearPluginCache('preAction: inline plugins and MCP discovery policy');
       }
     }
 
-    // Load remote managed settings for enterprise customers (non-blocking)
-    // Fails open - if fetch fails, continues without remote settings
-    // Settings are applied via hot-reload when they arrive
-    // Must happen after init() to ensure config reading is allowed
-    void loadRemoteManagedSettings();
-    void loadPolicyLimits();
-    profileCheckpoint('preAction_after_remote_settings');
-
-    // Load settings sync (non-blocking, fail-open)
-    // CLI: uploads local settings to remote (CCR download is handled by print.ts)
-    if (feature('UPLOAD_USER_SETTINGS')) {
-      void import('./services/settingsSync/index.js').then(m => m.uploadUserSettingsInBackground());
-    }
-    profileCheckpoint('preAction_after_settings_sync');
   });
-  program.name('claude').description(`Claude Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
+  program.name('yaoyaoche').description(`摇摇车 - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
   // setting it once here covers mcp, plugin, auth, and all other subcommands.
   .helpOption('-h, --help', 'Display help for command').option('-d, --debug [filter]', 'Enable debug mode with optional category filtering (e.g., "api,hooks" or "!1p,!file")', (_value: string | true) => {
@@ -781,7 +753,7 @@ async function run(): Promise<CommanderCommand> {
     return Number.isFinite(n) ? n : undefined;
   }).hideHelp()).option('--from-pr [value]', 'Resume a session linked to a PR by PR number/URL, or open interactive picker with optional search term', value => value || true).option('--no-session-persistence', 'Disable session persistence - sessions will not be saved to disk and cannot be resumed (only works with --print)').addOption(new Option('--resume-session-at <message id>', 'When resuming, only messages up to and including the assistant message with <message.id> (use with --resume in print mode)').argParser(String).hideHelp()).addOption(new Option('--rewind-files <user-message-id>', 'Restore files to state at the specified user message and exit (requires --resume)').hideHelp())
   // @[MODEL LAUNCH]: Update the example model ID in the --model help text.
-  .option('--model <model>', `Model for the current session. Provide an alias for the latest model (e.g. 'sonnet' or 'opus') or a model's full name (e.g. 'claude-sonnet-4-6').`).addOption(new Option('--effort <level>', `Effort level for the current session (low, medium, high, xhigh, max)`).argParser((rawValue: string) => {
+  .option('--model <model>', `模型名称：Claude 原有别名或服务商/模型，如 openai/gpt-6.1-sol、deepseek/deepseek-chat、qwen/qwen-plus。`).addOption(new Option('--effort <level>', `Effort level for the current session (low, medium, high, xhigh, max)`).argParser((rawValue: string) => {
     const value = rawValue.trim().toLowerCase() === 'med' ? 'medium' : rawValue.trim().toLowerCase();
     const allowed = ['low', 'medium', 'high', 'xhigh', 'max'];
     if (!allowed.includes(value)) {
@@ -798,7 +770,14 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--desktop', 'Open in the Claude Desktop app instead of the terminal (with --continue or --resume <id> to pick the session)', () => true).action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory or .zip for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-dir-no-mcp <path>', 'Load session plugins without MCP server discovery (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--plugin-url <url>', 'Fetch a plugin .zip from HTTPS for this session only (repeatable)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--desktop', 'Open in the Claude Desktop app instead of the terminal (with --continue or --resume <id> to pick the session)', () => true).option('--strict-command <command>', '严格任务模式：仅可执行指定的完整 Bash 命令').action(async (prompt, options) => {
+    if (options.strictCommand !== undefined) {
+      const command = String(options.strictCommand);
+      if (!command.trim() || command.includes('\0') || command.includes('\n')) {
+        throw new Error('--strict-command 需要一条非空且不含换行符的完整命令');
+      }
+      process.env.YAOYAOCHE_STRICT_COMMAND = command.trim();
+    }
     profileCheckpoint('action_handler_start');
 
     if ((options as { desktop?: boolean }).desktop) {
@@ -820,7 +799,7 @@ async function run(): Promise<CommanderCommand> {
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});
       // biome-ignore lint/suspicious/noConsole:: intentional console output
-      console.warn(chalk.yellow('Tip: You can launch Claude Code with just `claude`'));
+      console.warn(chalk.yellow('Tip: You can launch 摇摇车 with just `yaoyaoche`'));
       prompt = undefined;
     }
 
@@ -1049,53 +1028,7 @@ async function run(): Promise<CommanderCommand> {
       }
     }
 
-    // Extract teleport option
-    let teleport = (options as {
-      teleport?: string | true;
-    }).teleport ?? null;
-    const cloudFlag = (options as { cloud?: string | true }).cloud;
-    const cloudEnvironment = validateCloudEnvironment((options as { environment?: string }).environment);
-    const snapshotFlag = (options as { systemPromptSnapshot?: string }).systemPromptSnapshot;
-    if (snapshotFlag !== undefined) process.env.CLAUDE_CODE_SYSTEM_PROMPT_SNAPSHOT = snapshotFlag;
-    if (cloudFlag !== undefined && restricted) {
-      throw new InvalidArgumentError('Cloud sessions cannot be created from a --restricted session');
-    }
-    if (cloudEnvironment && restricted) {
-      throw new InvalidArgumentError('--environment cannot be used from a --restricted session');
-    }
-    if (cloudFlag !== undefined && (options as { remote?: string | true }).remote !== undefined) {
-      throw new InvalidArgumentError('Use either --cloud or --remote for a session, not both');
-    }
-    const cloudTarget = cloudFlag !== undefined || cloudEnvironment !== undefined
-      ? resolveCloudTarget(cloudFlag, prompt)
-      : null;
-    const remoteOption = cloudTarget?.kind === 'create'
-      ? cloudTarget.description
-      : (options as { remote?: string | true }).remote;
-    if (cloudTarget?.kind === 'attach') {
-      if (cloudEnvironment) throw new InvalidArgumentError('--environment creates a new session; it cannot attach to an existing one');
-      teleport = cloudTarget.sessionId;
-    }
-    const remote = remoteOption === true ? '' : remoteOption ?? null;
-
-    // Extract --remote-control / --rc flag (enable bridge in interactive session)
-    const remoteControlOption = (options as {
-      remoteControl?: string | true;
-    }).remoteControl ?? (options as {
-      rc?: string | true;
-    }).rc;
-    // Actual bridge check is deferred to after showSetupScreens() so that
-    // trust is established and GrowthBook has auth headers.
-    let remoteControl = false;
-    const remoteControlName = typeof remoteControlOption === 'string' && remoteControlOption.length > 0 ? remoteControlOption : undefined;
-    const remoteControlPrefix = (options as { remoteControlSessionNamePrefix?: string }).remoteControlSessionNamePrefix;
-    if (remoteControlPrefix !== undefined) {
-      if (!remoteControlPrefix.trim() || /[\\r\\n\\0]/.test(remoteControlPrefix) || remoteControlPrefix.length > 100) {
-        throw new InvalidArgumentError('--remote-control-session-name-prefix expects a non-empty name up to 100 characters');
-      }
-      process.env.CLAUDE_CODE_REMOTE_CONTROL_NAME_PREFIX = remoteControlPrefix.trim();
-    }
-
+    // 官方云端会话入口已收敛到本地规划与任务管理。
     // Validate session ID if provided
     if (sessionId) {
       // Check for conflicting flags
@@ -1250,8 +1183,8 @@ async function run(): Promise<CommanderCommand> {
         let configs: Record<string, McpServerConfig> | null = null;
         let errors: ValidationError[] = [];
 
-        // First try to parse as JSON string
-        const parsedJson = safeParseJSON(configItem);
+        // An inline MCP configuration is a JSON object. Treat other inputs as paths.
+        const parsedJson = configItem.startsWith('{') ? safeParseJSON(configItem) : null;
         if (parsedJson) {
           const result = parseMcpConfig({
             configObject: parsedJson,
@@ -1301,9 +1234,7 @@ async function run(): Promise<CommanderCommand> {
         // built-in names — skip reserved-name checks for type:'sdk'.
         const nonSdkConfigNames = Object.entries(allConfigs).filter(([, config]) => config.type !== 'sdk').map(([name]) => name);
         let reservedNameError: string | null = null;
-        if (nonSdkConfigNames.some(isClaudeInChromeMCPServer)) {
-          reservedNameError = `Invalid MCP configuration: "${CLAUDE_IN_CHROME_MCP_SERVER_NAME}" is a reserved MCP name.`;
-        } else if (feature('CHICAGO_MCP')) {
+        if (feature('CHICAGO_MCP')) {
           const {
             isComputerUseMCPServer,
             COMPUTER_USE_MCP_SERVER_NAME
@@ -1353,77 +1284,8 @@ async function run(): Promise<CommanderCommand> {
       }
     }
 
-    // Extract Claude in Chrome option and enforce claude.ai subscriber check (unless user is ant)
-    const chromeOpts = options as {
-      chrome?: boolean;
-    };
-    // Store the explicit CLI flag so teammates can inherit it
-    setChromeFlagOverride(chromeOpts.chrome);
-    const enableClaudeInChrome = shouldEnableClaudeInChrome(chromeOpts.chrome) && (process.env.USER_TYPE === 'ant' || isClaudeAISubscriber());
-    const autoEnableClaudeInChrome = !enableClaudeInChrome && shouldAutoEnableClaudeInChrome();
-    if (enableClaudeInChrome) {
-      const platform = getPlatform();
-      try {
-        logEvent('tengu_claude_in_chrome_setup', {
-          platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-        });
-        const {
-          mcpConfig: chromeMcpConfig,
-          allowedTools: chromeMcpTools,
-          systemPrompt: chromeSystemPrompt
-        } = setupClaudeInChrome();
-        dynamicMcpConfig = {
-          ...dynamicMcpConfig,
-          ...chromeMcpConfig
-        };
-        allowedTools.push(...chromeMcpTools);
-        if (chromeSystemPrompt) {
-          appendSystemPrompt = appendSystemPrompt ? `${chromeSystemPrompt}\n\n${appendSystemPrompt}` : chromeSystemPrompt;
-        }
-      } catch (error) {
-        logEvent('tengu_claude_in_chrome_setup_failed', {
-          platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-        });
-        logForDebugging(`[Claude in Chrome] Error: ${error}`);
-        logError(error);
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
-        console.error(`Error: Failed to run with Claude in Chrome.`);
-        process.exit(1);
-      }
-    } else if (autoEnableClaudeInChrome) {
-      try {
-        const {
-          mcpConfig: chromeMcpConfig
-        } = setupClaudeInChrome();
-        dynamicMcpConfig = {
-          ...dynamicMcpConfig,
-          ...chromeMcpConfig
-        };
-        const hint = feature('WEB_BROWSER_TOOL') && typeof Bun !== 'undefined' && 'WebView' in Bun ? CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER : CLAUDE_IN_CHROME_SKILL_HINT;
-        appendSystemPrompt = appendSystemPrompt ? `${appendSystemPrompt}\n\n${hint}` : hint;
-      } catch (error) {
-        // Silently skip any errors for the auto-enable
-        logForDebugging(`[Claude in Chrome] Error (auto-enable): ${error}`);
-      }
-    }
-
     // Extract strict MCP config flag
     const strictMcpConfig = options.strictMcpConfig || false;
-
-    // Check if enterprise MCP configuration exists. When it does, only allow dynamic MCP
-    // configs that contain special server types (sdk)
-    if (doesEnterpriseMcpConfigExist()) {
-      if (strictMcpConfig) {
-        process.stderr.write(chalk.red('You cannot use --strict-mcp-config when an enterprise MCP config is present'));
-        process.exit(1);
-      }
-
-      // For --mcp-config, allow if all servers are internal types (sdk)
-      if (dynamicMcpConfig && !areMcpConfigsAllowedWithEnterpriseMcpConfig(dynamicMcpConfig)) {
-        process.stderr.write(chalk.red('You cannot dynamically configure MCP servers when an enterprise MCP config is present'));
-        process.exit(1);
-      }
-    }
 
     // chicago MCP: guarded Computer Use (app allowlist + frontmost gate +
     // SCContentFilter screenshots). Ant-only, GrowthBook-gated — failures
@@ -1431,11 +1293,6 @@ async function run(): Promise<CommanderCommand> {
     // so non-macOS / print-mode ants skip the heavy @ant/computer-use-mcp
     // import entirely. gates.js is light (type-only package import).
     //
-    // Placed AFTER the enterprise-MCP-config check: that check rejects any
-    // dynamicMcpConfig entry with `type !== 'sdk'`, and our config is
-    // `type: 'stdio'`. An enterprise-config ant with the GB gate on would
-    // otherwise process.exit(1). Chrome has the same latent issue but has
-    // shipped without incident; chicago places itself correctly.
     if (feature('CHICAGO_MCP') && getPlatform() === 'macos' && !getIsNonInteractiveSession()) {
       try {
         const {
@@ -1604,25 +1461,6 @@ async function run(): Promise<CommanderCommand> {
       console.error(warning);
     });
     void assertMinVersion();
-
-    // claude.ai config fetch: -p mode only (interactive uses useManageMCPConnections
-    // two-phase loading). Kicked off here to overlap with setup(); awaited
-    // before runHeadless so single-turn -p sees connectors. Skipped under
-    // enterprise/strict MCP to preserve policy boundaries.
-    const claudeaiConfigPromise: Promise<Record<string, ScopedMcpServerConfig>> = isNonInteractiveSession && !strictMcpConfig && !doesEnterpriseMcpConfigExist() &&
-    // --bare / SIMPLE: skip claude.ai proxy servers (datadog, Gmail,
-    // Slack, BigQuery, PubMed — 6-14s each to connect). Scripted calls
-    // that need MCP pass --mcp-config explicitly.
-    !isBareMode() ? fetchClaudeAIMcpConfigsIfEligible().then(configs => {
-      const {
-        allowed,
-        blocked
-      } = filterMcpServersByPolicy(configs);
-      if (blocked.length > 0) {
-        process.stderr.write(`Warning: claude.ai MCP ${plural(blocked.length, 'server')} blocked by enterprise policy: ${blocked.join(', ')}\n`);
-      }
-      return allowed;
-    }) : Promise.resolve({});
 
     // Kick off MCP config loading early (safe - just reads files, no execution).
     // Both interactive and -p use getClaudeCodeMcpConfigs (local file reads only).
@@ -1935,29 +1773,6 @@ async function run(): Promise<CommanderCommand> {
     setInitialMainLoopModel(getUserSpecifiedModelSetting() || null);
     const initialMainLoopModel = getInitialMainLoopModel();
     const resolvedInitialModel = parseUserSpecifiedModel(initialMainLoopModel ?? getDefaultMainLoopModel());
-    let advisorModel: string | undefined;
-    if (isAdvisorEnabled()) {
-      const advisorOption = canUserConfigureAdvisor() ? (options as {
-        advisor?: string;
-      }).advisor : undefined;
-      if (advisorOption) {
-        logForDebugging(`[AdvisorTool] --advisor ${advisorOption}`);
-        if (!modelSupportsAdvisor(resolvedInitialModel)) {
-          process.stderr.write(chalk.red(`Error: The model "${resolvedInitialModel}" does not support the advisor tool.\n`));
-          process.exit(1);
-        }
-        const normalizedAdvisorModel = normalizeModelStringForAPI(parseUserSpecifiedModel(advisorOption));
-        if (!isValidAdvisorModel(normalizedAdvisorModel)) {
-          process.stderr.write(chalk.red(`Error: The model "${advisorOption}" cannot be used as an advisor.\n`));
-          process.exit(1);
-        }
-      }
-      advisorModel = canUserConfigureAdvisor() ? advisorOption ?? getInitialAdvisorSetting() : advisorOption;
-      if (advisorModel) {
-        logForDebugging(`[AdvisorTool] Advisor model: ${advisorModel}`);
-      }
-    }
-
     // For tmux teammates with --agent-type, append the custom agent's prompt
     if (isAgentSwarmsEnabled() && storedTeammateOpts?.agentId && storedTeammateOpts?.agentName && storedTeammateOpts?.teamName && storedTeammateOpts?.agentType) {
       // Look up the custom agent definition
@@ -2059,21 +1874,8 @@ async function run(): Promise<CommanderCommand> {
       });
       logForDebugging('[STARTUP] Running showSetupScreens()...');
       const setupScreensStart = Date.now();
-      const onboardingShown = await showSetupScreens(root, permissionMode, allowDangerouslySkipPermissions, commands, enableClaudeInChrome, devChannels);
+      const onboardingShown = await showSetupScreens(root, permissionMode, allowDangerouslySkipPermissions, commands, devChannels);
       logForDebugging(`[STARTUP] showSetupScreens() completed in ${Date.now() - setupScreensStart}ms`);
-
-      // Now that trust is established and GrowthBook has auth headers,
-      // resolve the --remote-control / --rc entitlement gate.
-      if (feature('BRIDGE_MODE') && remoteControlOption !== undefined) {
-        const {
-          getBridgeDisabledReason
-        } = await import('./bridge/bridgeEnabled.js');
-        const disabledReason = await getBridgeDisabledReason();
-        remoteControl = disabledReason === null;
-        if (disabledReason) {
-          process.stderr.write(chalk.yellow(`${disabledReason}\n--rc flag ignored.\n`));
-        }
-      }
 
       // Check for pending agent memory snapshot updates (only for --agent mode, ant-only)
       if (feature('AGENT_MEMORY_SNAPSHOT') && mainThreadAgentDefinition && isCustomAgent(mainThreadAgentDefinition) && mainThreadAgentDefinition.memory && mainThreadAgentDefinition.pendingSnapshotUpdate) {
@@ -2094,8 +1896,6 @@ async function run(): Promise<CommanderCommand> {
       if (onboardingShown) {
         // Refresh auth-dependent services now that the user has logged in during onboarding.
         // Keep in sync with the post-login logic in src/commands/login.tsx
-        void refreshRemoteManagedSettings();
-        void refreshPolicyLimits();
         // Clear user data cache BEFORE GrowthBook refresh so it picks up fresh credentials
         resetUserCache();
         // Refresh GrowthBook after login to get updated feature flags (e.g., for claude.ai MCPs)
@@ -2150,11 +1950,11 @@ async function run(): Promise<CommanderCommand> {
       }
     }
 
-    // Check quota status, fast mode, passes eligibility, and bootstrap data
+    // Check quota status, fast mode, and bootstrap data
     // after trust is established. These make API calls which could trigger
     // apiKeyHelper execution.
     // --bare / SIMPLE: skip — these are cache-warms for the REPL's
-    // first-turn responsiveness (quota, passes, fastMode, bootstrap data). Fast
+    // first-turn responsiveness (quota, fastMode, bootstrap data). Fast
     // mode doesn't apply to the Agent SDK anyway (see getFastModeUnavailableReason).
     const bgRefreshThrottleMs = getFeatureValue_CACHED_MAY_BE_STALE('tengu_cicada_nap_ms', 0);
     const lastPrefetched = getGlobalConfig().startupPrefetchedAt ?? 0;
@@ -2162,21 +1962,10 @@ async function run(): Promise<CommanderCommand> {
     if (!skipStartupPrefetches) {
       const lastPrefetchedInfo = lastPrefetched > 0 ? ` last ran ${Math.round((Date.now() - lastPrefetched) / 1000)}s ago` : '';
       logForDebugging(`Starting background startup prefetches${lastPrefetchedInfo}`);
-      checkQuotaStatus().catch(error => logError(error));
 
       // Fetch bootstrap data from the server and update all cache values.
       void fetchBootstrapData();
 
-      // TODO: Consolidate other prefetches into a single bootstrap request.
-      void prefetchPassesEligibility();
-      if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_miraculo_the_bard', false)) {
-        void prefetchFastModeStatus();
-      } else {
-        // Kill switch skips the network call, not org-policy enforcement.
-        // Resolve from cache so orgStatus doesn't stay 'pending' (which
-        // getFastModeUnavailableReason treats as permissive).
-        resolveFastModeStatusFromCache();
-      }
       if (bgRefreshThrottleMs > 0) {
         saveGlobalConfig(current => ({
           ...current,
@@ -2185,8 +1974,6 @@ async function run(): Promise<CommanderCommand> {
       }
     } else {
       logForDebugging(`Skipping startup prefetches, last ran ${Math.round((Date.now() - lastPrefetched) / 1000)}s ago`);
-      // Resolve fast mode org status from cache (no network)
-      resolveFastModeStatusFromCache();
     }
     if (!isNonInteractiveSession) {
       void refreshExampleCommands(); // Pre-fetch example commands (runs git log, no API call)
@@ -2225,24 +2012,7 @@ async function run(): Promise<CommanderCommand> {
       tools: [],
       commands: []
     }) : prefetchAllMcpResources(regularMcpConfigs);
-    const claudeaiMcpPromise = isNonInteractiveSession ? Promise.resolve({
-      clients: [],
-      tools: [],
-      commands: []
-    }) : claudeaiConfigPromise.then(configs => Object.keys(configs).length > 0 ? prefetchAllMcpResources(configs) : {
-      clients: [],
-      tools: [],
-      commands: []
-    });
-    // Merge with dedup by name: each prefetchAllMcpResources call independently
-    // adds helper tools (ListMcpResourcesTool, ReadMcpResourceTool) via
-    // local dedup flags, so merging two calls can yield duplicates. print.ts
-    // already uniqBy's the final tool pool, but dedup here keeps appState clean.
-    const mcpPromise = Promise.all([localMcpPromise, claudeaiMcpPromise]).then(([local, claudeai]) => ({
-      clients: [...local.clients, ...claudeai.clients],
-      tools: uniqBy([...local.tools, ...claudeai.tools], 'name'),
-      commands: uniqBy([...local.commands, ...claudeai.commands], 'name')
-    }));
+    const mcpPromise = localMcpPromise;
 
     // Start hooks early so they run in parallel with MCP connections.
     // Skip for initOnly/init/maintenance (handled separately), non-interactive
@@ -2410,7 +2180,7 @@ async function run(): Promise<CommanderCommand> {
       // undefined and the ?? fallback runs). Also skip when setupTrigger is
       // set — those paths run setup hooks first (print.ts:544), and session
       // start hooks must wait until setup completes.
-      const sessionStartHooksPromise = options.continue || options.resume || teleport || setupTrigger ? undefined : processSessionStartHooks('startup');
+      const sessionStartHooksPromise = options.continue || options.resume || setupTrigger ? undefined : processSessionStartHooks('startup');
       // Suppress transient unhandledRejection if this rejects before
       // loadInitialMessages awaits it. Downstream await still observes the
       // rejection — this just prevents the spurious global handler fire.
@@ -2425,7 +2195,11 @@ async function run(): Promise<CommanderCommand> {
 
       // Headless mode supports all prompt commands and some local commands
       // If disableSlashCommands is true, return empty array
-      const commandsHeadless = disableSlashCommands ? [] : commands.filter(command => command.type === 'prompt' && !command.disableNonInteractive || command.type === 'local' && command.supportsNonInteractive);
+      const commandsHeadless = disableSlashCommands ? [] : commands.filter(command =>
+        (command.type === 'prompt' && !command.disableNonInteractive) ||
+        (command.type === 'local' && command.supportsNonInteractive) ||
+        (command.type === 'local-jsx' && command.supportsNonInteractive)
+      );
       const defaultState = getDefaultAppState();
       const headlessInitialState: AppState = {
         ...defaultState,
@@ -2439,9 +2213,6 @@ async function run(): Promise<CommanderCommand> {
         effortValue: parseEffortValue(options.effort),
         ...(isFastModeEnabled() && {
           fastMode: getInitialFastModeSetting(effectiveModel ?? null)
-        }),
-        ...(isAdvisorEnabled() && advisorModel && {
-          advisorModel
         }),
         // kairosEnabled gates the async fire-and-forget path in
         // executeForkedSlashCommand (processSlashCommand.tsx:132) and
@@ -2534,86 +2305,6 @@ async function run(): Promise<CommanderCommand> {
       profileCheckpoint('before_connectMcp');
       await connectMcpBatch(regularMcpConfigs, 'regular');
       profileCheckpoint('after_connectMcp');
-      // Dedup: suppress plugin MCP servers that duplicate a claude.ai
-      // connector (connector wins), then connect claude.ai servers.
-      // Bounded wait — #23725 made this blocking so single-turn -p sees
-      // connectors, but with 40+ slow connectors tengu_startup_perf p99
-      // climbed to 76s. If fetch+connect doesn't finish in time, proceed;
-      // the promise keeps running and updates headlessStore in the
-      // background so turn 2+ still sees connectors.
-      const CLAUDE_AI_MCP_TIMEOUT_MS = 5_000;
-      const claudeaiConnect = claudeaiConfigPromise.then(claudeaiConfigs => {
-        if (Object.keys(claudeaiConfigs).length > 0) {
-          const claudeaiSigs = new Set<string>();
-          for (const config of Object.values(claudeaiConfigs)) {
-            const sig = getMcpServerSignature(config);
-            if (sig) claudeaiSigs.add(sig);
-          }
-          const suppressed = new Set<string>();
-          for (const [name, config] of Object.entries(regularMcpConfigs)) {
-            if (!name.startsWith('plugin:')) continue;
-            const sig = getMcpServerSignature(config);
-            if (sig && claudeaiSigs.has(sig)) suppressed.add(name);
-          }
-          if (suppressed.size > 0) {
-            logForDebugging(`[MCP] Lazy dedup: suppressing ${suppressed.size} plugin server(s) that duplicate claude.ai connectors: ${[...suppressed].join(', ')}`);
-            // Disconnect before filtering from state. Only connected
-            // servers need cleanup — clearServerCache on a never-connected
-            // server triggers a real connect just to kill it (memoize
-            // cache-miss path, see useManageMCPConnections.ts:870).
-            for (const c of headlessStore.getState().mcp.clients) {
-              if (!suppressed.has(c.name) || c.type !== 'connected') continue;
-              c.client.onclose = undefined;
-              void clearServerCache(c.name, c.config).catch(() => {});
-            }
-            headlessStore.setState(prev => {
-              let {
-                clients,
-                tools,
-                commands,
-                resources
-              } = prev.mcp;
-              clients = clients.filter(c => !suppressed.has(c.name));
-              tools = tools.filter(t => !t.mcpInfo || !suppressed.has(t.mcpInfo.serverName));
-              for (const name of suppressed) {
-                commands = excludeCommandsByServer(commands, name);
-                resources = excludeResourcesByServer(resources, name);
-              }
-              return {
-                ...prev,
-                mcp: {
-                  ...prev.mcp,
-                  clients,
-                  tools,
-                  commands,
-                  resources
-                }
-              };
-            });
-          }
-        }
-        // Suppress claude.ai connectors that duplicate an enabled
-        // manual server (URL-signature match). Plugin dedup above only
-        // handles `plugin:*` keys; this catches manual `.mcp.json` entries.
-        // plugin:* must be excluded here — step 1 already suppressed
-        // those (claude.ai wins); leaving them in suppresses the
-        // connector too, and neither survives (gh-39974).
-        const nonPluginConfigs = pickBy(regularMcpConfigs, (_, n) => !n.startsWith('plugin:'));
-        const {
-          servers: dedupedClaudeAi
-        } = dedupClaudeAiMcpServers(claudeaiConfigs, nonPluginConfigs);
-        return connectMcpBatch(dedupedClaudeAi, 'claudeai');
-      });
-      let claudeaiTimer: ReturnType<typeof setTimeout> | undefined;
-      const claudeaiTimedOut = await Promise.race([claudeaiConnect.then(() => false), new Promise<boolean>(resolve => {
-        claudeaiTimer = setTimeout(r => r(true), CLAUDE_AI_MCP_TIMEOUT_MS, resolve);
-      })]);
-      if (claudeaiTimer) clearTimeout(claudeaiTimer);
-      if (claudeaiTimedOut) {
-        logForDebugging(`[MCP] claude.ai connectors not ready after ${CLAUDE_AI_MCP_TIMEOUT_MS}ms — proceeding; background connection continues`);
-      }
-      profileCheckpoint('after_connectMcp_claudeai');
-
       // In headless mode, start deferred prefetches immediately (no user typing delay)
       // --bare / SIMPLE: startDeferredPrefetches early-returns internally.
       // --bare / SIMPLE bypasses deferred housekeeping in headless mode.
@@ -2649,7 +2340,7 @@ async function run(): Promise<CommanderCommand> {
         appendSystemPrompt,
         userSpecifiedModel: effectiveModel,
         fallbackModel: userSpecifiedFallbackModel,
-        teleport,
+        teleport: null,
         sdkUrl,
         replayUserMessages: effectiveReplayUserMessages,
         includePartialMessages: effectiveIncludePartialMessages,
@@ -2721,16 +2412,6 @@ async function run(): Promise<CommanderCommand> {
     // All startup opt-in paths (--tools, --brief, defaultView) have fired
     // above; initialIsBriefOnly just reads the resulting state.
     const initialIsBriefOnly = feature('KAIROS') || feature('KAIROS_BRIEF') ? getUserMsgOptIn() : false;
-    const fullRemoteControl = remoteControl || getRemoteControlAtStartup() || kairosEnabled;
-    let ccrMirrorEnabled = false;
-    if (feature('CCR_MIRROR') && !fullRemoteControl) {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const {
-        isCcrMirrorEnabled
-      } = require('./bridge/bridgeEnabled.js') as typeof import('./bridge/bridgeEnabled.js');
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      ccrMirrorEnabled = isCcrMirrorEnabled();
-    }
     const initialState: AppState = {
       settings: getInitialSettings(),
       tasks: {},
@@ -2771,9 +2452,9 @@ async function run(): Promise<CommanderCommand> {
       remoteSessionUrl: undefined,
       remoteConnectionStatus: 'connecting',
       remoteBackgroundTaskCount: 0,
-      replBridgeEnabled: fullRemoteControl || ccrMirrorEnabled,
-      replBridgeExplicit: remoteControl,
-      replBridgeOutboundOnly: ccrMirrorEnabled,
+      replBridgeEnabled: false,
+      replBridgeExplicit: false,
+      replBridgeOutboundOnly: false,
       replBridgeConnected: false,
       replBridgeSessionActive: false,
       replBridgeReconnecting: false,
@@ -2782,7 +2463,7 @@ async function run(): Promise<CommanderCommand> {
       replBridgeEnvironmentId: undefined,
       replBridgeSessionId: undefined,
       replBridgeError: undefined,
-      replBridgeInitialName: remoteControlName,
+      replBridgeInitialName: undefined,
       showRemoteCallout: false,
       notifications: {
         current: null,
@@ -2833,9 +2514,6 @@ async function run(): Promise<CommanderCommand> {
       effortValue: parseEffortValue(options.effort),
       activeOverlays: new Set<string>(),
       fastMode: getInitialFastModeSetting(resolvedInitialModel),
-      ...(isAdvisorEnabled() && advisorModel && {
-        advisorModel
-      }),
       // Compute teamContext synchronously to avoid useEffect setState during render.
       // Reuse the current teammate context when resuming or joining teams.
       teamContext: computeInitialTeamContext?.()
@@ -2943,7 +2621,7 @@ async function run(): Promise<CommanderCommand> {
         logError(error);
         process.exit(1);
       }
-    } else if (options.resume || options.fromPr || teleport || remote !== null) {
+    } else if (options.resume || options.fromPr) {
       // Handle resume flow - from file (ant-only), session ID, or interactive selector
 
       // Clear stale caches before resuming to ensure fresh file/skill discovery
@@ -2951,14 +2629,13 @@ async function run(): Promise<CommanderCommand> {
         clearSessionCaches
       } = await import('./commands/clear/caches.js');
       clearSessionCaches();
-      let messages: MessageType[] | null = null;
-      let processedResume: ProcessedResume | undefined = undefined;
+      let processedResume: ProcessedResume | undefined ;
       let maybeSessionId = validateUuid(options.resume);
-      let searchTerm: string | undefined = undefined;
+      let searchTerm: string | undefined ;
       // Store full LogOption when found by custom title (for cross-worktree resume)
       let matchedLog: LogOption | null = null;
       // PR filter for --from-pr flag
-      let filterByPr: boolean | number | string | undefined = undefined;
+      let filterByPr: boolean | number | string | undefined ;
 
       // Handle --from-pr flag
       if (options.fromPr) {
@@ -2989,186 +2666,6 @@ async function run(): Promise<CommanderCommand> {
         }
       }
 
-      // --remote and --teleport both create/resume Claude Code Web (CCR) sessions.
-      // Remote Control (--rc) is a separate feature gated in initReplBridge.ts.
-      if (remote !== null || teleport) {
-        await waitForPolicyLimitsToLoad();
-        if (!isPolicyAllowed('allow_remote_sessions')) {
-          return await exitWithError(root, "Error: Remote sessions are disabled by your organization's policy.", () => gracefulShutdown(1));
-        }
-      }
-      if (remote !== null) {
-        // Create remote session (optionally with initial prompt)
-        const hasInitialPrompt = remote.length > 0;
-
-        // Check if TUI mode is enabled - description is only optional in TUI mode
-        const isRemoteTuiEnabled = getFeatureValue_CACHED_MAY_BE_STALE('tengu_remote_backend', false);
-        if (!isRemoteTuiEnabled && !hasInitialPrompt) {
-          return await exitWithError(root, 'Error: --remote requires a description.\nUsage: claude --remote "your task description"', () => gracefulShutdown(1));
-        }
-        logEvent('tengu_remote_create_session', {
-          has_initial_prompt: String(hasInitialPrompt) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-        });
-
-        // Pass current branch so CCR clones the repo at the right revision
-        const currentBranch = await getBranch();
-        const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined, cloudEnvironment);
-        if (!createdSession) {
-          logEvent('tengu_remote_create_session_error', {
-            error: 'unable_to_create_session' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-          });
-          return await exitWithError(root, 'Error: Unable to create remote session', () => gracefulShutdown(1));
-        }
-        logEvent('tengu_remote_create_session_success', {
-          session_id: createdSession.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-        });
-
-        // Check if new remote TUI mode is enabled via feature gate
-        if (!isRemoteTuiEnabled) {
-          // Original behavior: print session info and exit
-          process.stdout.write(`Created remote session: ${createdSession.title}\n`);
-          process.stdout.write(`View: ${getRemoteSessionUrl(createdSession.id)}?m=0\n`);
-          process.stdout.write(`Resume with: claude --teleport ${createdSession.id}\n`);
-          await gracefulShutdown(0);
-          process.exit(0);
-        }
-
-        // New behavior: start local TUI with CCR engine
-        // Mark that we're in remote mode for command visibility
-        setIsRemoteMode(true);
-        switchSession(asSessionId(createdSession.id));
-
-        // Get OAuth credentials for remote session
-        let apiCreds: {
-          accessToken: string;
-          orgUUID: string;
-        };
-        try {
-          apiCreds = await prepareApiRequest();
-        } catch (error) {
-          logError(toError(error));
-          return await exitWithError(root, `Error: ${errorMessage(error) || 'Failed to authenticate'}`, () => gracefulShutdown(1));
-        }
-
-        // Create remote session config for the REPL
-        const {
-          getClaudeAIOAuthTokens: getTokensForRemote
-        } = await import('./utils/auth.js');
-        const getAccessTokenForRemote = (): string => getTokensForRemote()?.accessToken ?? apiCreds.accessToken;
-        const remoteSessionConfig = createRemoteSessionConfig(createdSession.id, getAccessTokenForRemote, apiCreds.orgUUID, hasInitialPrompt);
-
-        // Add remote session info as initial system message
-        const remoteSessionUrl = `${getRemoteSessionUrl(createdSession.id)}?m=0`;
-        const remoteInfoMessage = createSystemMessage(`/remote-control is active. Code in CLI or at ${remoteSessionUrl}`, 'info');
-
-        // Create initial user message from the prompt if provided (CCR echoes it back but we ignore that)
-        const initialUserMessage = hasInitialPrompt ? createUserMessage({
-          content: remote
-        }) : null;
-
-        // Set remote session URL in app state for footer indicator
-        const remoteInitialState = {
-          ...initialState,
-          remoteSessionUrl
-        };
-
-        // Pre-filter commands to only include remote-safe ones.
-        // CCR's init response may further refine the list (via handleRemoteInit in REPL).
-        const remoteCommands = filterCommandsForRemoteMode(commands);
-        await launchRepl(root, {
-          getFpsMetrics,
-          stats,
-          initialState: remoteInitialState
-        }, {
-          debug: debug || debugToStderr,
-          commands: remoteCommands,
-          initialTools: [],
-          initialMessages: initialUserMessage ? [remoteInfoMessage, initialUserMessage] : [remoteInfoMessage],
-          mcpClients: [],
-          autoConnectIdeFlag: ide,
-          mainThreadAgentDefinition,
-          disableSlashCommands,
-          remoteSessionConfig,
-          thinkingConfig
-        }, renderAndRun);
-        return;
-      } else if (teleport) {
-        if (teleport === true || teleport === '') {
-          // Interactive mode: show task selector and handle resume
-          logEvent('tengu_teleport_interactive_mode', {});
-          logForDebugging('selectAndResumeTeleportTask: Starting teleport flow...');
-          const teleportResult = await launchTeleportResumeWrapper(root);
-          if (!teleportResult) {
-            // User cancelled or error occurred
-            await gracefulShutdown(0);
-            process.exit(0);
-          }
-          const {
-            branchError
-          } = await checkOutTeleportedSessionBranch(teleportResult.branch);
-          messages = processMessagesForTeleportResume(teleportResult.log, branchError);
-        } else if (typeof teleport === 'string') {
-          logEvent('tengu_teleport_resume_session', {
-            mode: 'direct' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-          });
-          try {
-            // First, fetch session and validate repository before checking git state
-            const sessionData = await fetchSession(teleport);
-            const repoValidation = await validateSessionRepository(sessionData);
-
-            // Handle repo mismatch or not in repo cases
-            if (repoValidation.status === 'mismatch' || repoValidation.status === 'not_in_repo') {
-              const sessionRepo = repoValidation.sessionRepo;
-              if (sessionRepo) {
-                // Check for known paths
-                const knownPaths = getKnownPathsForRepo(sessionRepo);
-                const existingPaths = await filterExistingPaths(knownPaths);
-                if (existingPaths.length > 0) {
-                  // Show directory switch dialog
-                  const selectedPath = await launchTeleportRepoMismatchDialog(root, {
-                    targetRepo: sessionRepo,
-                    initialPaths: existingPaths
-                  });
-                  if (selectedPath) {
-                    // Change to the selected directory
-                    process.chdir(selectedPath);
-                    setCwd(selectedPath);
-                    setOriginalCwd(selectedPath);
-                  } else {
-                    // User cancelled
-                    await gracefulShutdown(0);
-                  }
-                } else {
-                  // No known paths - show original error
-                  throw new TeleportOperationError(`You must run claude --teleport ${teleport} from a checkout of ${sessionRepo}.`, chalk.red(`You must run claude --teleport ${teleport} from a checkout of ${chalk.bold(sessionRepo)}.\n`));
-                }
-              }
-            } else if (repoValidation.status === 'error') {
-              throw new TeleportOperationError(repoValidation.errorMessage || 'Failed to validate session', chalk.red(`Error: ${repoValidation.errorMessage || 'Failed to validate session'}\n`));
-            }
-            await validateGitState();
-
-            // Use progress UI for teleport
-            const {
-              teleportWithProgress
-            } = await import('./components/TeleportProgress.js');
-            const result = await teleportWithProgress(root, teleport);
-            // Track teleported session for reliability logging
-            setTeleportedSessionInfo({
-              sessionId: teleport
-            });
-            messages = result.messages;
-          } catch (error) {
-            if (error instanceof TeleportOperationError) {
-              process.stderr.write(`${error.formattedMessage}\n`);
-            } else {
-              logError(error);
-              process.stderr.write(chalk.red(`Error: ${errorMessage(error)}\n`));
-            }
-            await gracefulShutdown(1);
-          }
-        }
-      }
       if (process.env.USER_TYPE === 'ant') {
         if (options.resume && typeof options.resume === 'string' && !maybeSessionId) {
           // Load a local transcript; standard session ID resume remains available.
@@ -3270,15 +2767,7 @@ async function run(): Promise<CommanderCommand> {
       }
 
       // If we have a processed resume or teleport messages, render the REPL
-      const resumeData = processedResume ?? (Array.isArray(messages) ? {
-        messages,
-        fileHistorySnapshots: undefined,
-        agentName: undefined,
-        agentColor: undefined as AgentColorName | undefined,
-        restoredAgentDef: mainThreadAgentDefinition,
-        initialState,
-        contentReplacements: undefined
-      } : undefined);
+      const resumeData = processedResume;
       if (resumeData) {
         maybeActivateProactive(options);
         maybeActivateBrief(options);
@@ -3357,7 +2846,7 @@ async function run(): Promise<CommanderCommand> {
         pendingHookMessages
       }, renderAndRun);
     }
-  }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
+  }).version(`${MACRO.VERSION} (摇摇车)`, '-v, --version', 'Output the version number');
 
   // 2.1.310 options with functional consumers in this source tree.
   program.option('--bg, --background', 'Start the session in the background and return an id for attach/logs/stop/rm');
@@ -3365,8 +2854,6 @@ async function run(): Promise<CommanderCommand> {
   program.option('--exclude-dynamic-system-prompt-sections', 'Move per-machine system sections into the first user message for shared prompt caching');
   program.addOption(new Option('--session-mirror', 'Emit transcript_mirror frames on stdout').hideHelp());
   program.option('--forward-subagent-text', 'Forward subagent text and thinking as SDK messages with parent tool ID');
-  program.option('--cloud [description]', 'Create a cloud session or attach by session ID or claude.ai/code URL');
-  program.option('--environment <environment_id>', 'Create a session on the given self-hosted ccpool environment');
   program.addOption(new Option('--system-prompt-snapshot <mode>', 'Persist the complete initial system prompt until compaction')
     .choices(['on','off']));
   program.option('--safe-mode', 'Ignore non-managed customizations and run with built-in features');
@@ -3378,9 +2865,6 @@ async function run(): Promise<CommanderCommand> {
   // Worktree flags
   program.option('-w, --worktree [name]', 'Create a new git worktree for this session (optionally specify a name)');
   program.option('--tmux', 'Create a tmux session for the worktree (requires --worktree). Uses iTerm2 native panes when available; use --tmux=classic for traditional tmux.');
-  if (canUserConfigureAdvisor()) {
-    program.addOption(new Option('--advisor <model>', 'Enable the server-side advisor tool with the specified model (alias or full ID).').hideHelp());
-  }
   if (process.env.USER_TYPE === 'ant') {
     program.addOption(new Option('--delegate-permissions', '[ANT-ONLY] Alias for --permission-mode auto.').implies({
       permissionMode: 'auto'
@@ -3429,14 +2913,6 @@ async function run(): Promise<CommanderCommand> {
   // Enable SDK URL for all builds but hide from help
   program.addOption(new Option('--sdk-url <url>', 'Use remote WebSocket endpoint for SDK I/O streaming (only with -p and stream-json format)').hideHelp());
 
-  // Enable teleport/remote flags for all builds but keep them undocumented until GA
-  program.addOption(new Option('--teleport [session]', 'Resume a teleport session, optionally specify session ID'));
-  program.addOption(new Option('--remote [description]', 'Create a remote session with the given description').hideHelp());
-  if (feature('BRIDGE_MODE')) {
-    program.addOption(new Option('--remote-control [name]', 'Start an interactive session with Remote Control enabled (optionally named)').argParser(value => value || true));
-    program.addOption(new Option('--remote-control-session-name-prefix <prefix>', 'Prefix for auto-generated Remote Control session names'));
-    program.addOption(new Option('--rc [name]', 'Alias for --remote-control').argParser(value => value || true).hideHelp());
-  }
   if (feature('HARD_FAIL')) {
     program.addOption(new Option('--hard-fail', 'Crash on logError calls instead of silently logging').hideHelp());
   }
@@ -3462,7 +2938,7 @@ async function run(): Promise<CommanderCommand> {
   // claude mcp
 
   const mcp = program.command('mcp').description('Configure and manage MCP servers').configureHelp(createSortedHelpConfig()).enablePositionalOptions();
-  mcp.command('serve').description(`Start the Claude Code MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
+  mcp.command('serve').description(`Start the 摇摇车 MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
     debug,
     verbose
   }: {
@@ -3520,12 +2996,10 @@ async function run(): Promise<CommanderCommand> {
     } = await import('./cli/handlers/mcp.js');
     await mcpAddJsonHandler(name, json, options);
   });
-  mcp.command('add-from-claude-desktop').description('Import MCP servers from Claude Desktop (Mac and WSL only)').option('-s, --scope <scope>', 'Configuration scope (local, user, or project)', 'local').action(async (options: {
-    scope?: string;
+  mcp.command('add-from-claude-desktop').description('从本机 Claude Desktop 配置迁移 MCP 服务（仅文本输出）').option('-s, --scope <scope>', '配置范围', 'local').option('--dry-run', '预览导入内容').option('--yes', '显式确认批量导入').action(async (options: {
+    scope?: string; dryRun?: boolean; yes?: boolean;
   }) => {
-    const {
-      mcpAddFromDesktopHandler
-    } = await import('./cli/handlers/mcp.js');
+    const { mcpAddFromDesktopHandler } = await import('./cli/handlers/mcp.js');
     await mcpAddFromDesktopHandler(options);
   });
   mcp.command('reset-project-choices').description('Reset all approved and rejected project-scoped (.mcp.json) servers within this project').action(async () => {
@@ -3535,6 +3009,113 @@ async function run(): Promise<CommanderCommand> {
     await mcpResetChoicesHandler();
   });
 
+  const modelsCommand = program.command('models').description('查询已连接服务商的实际模型目录');
+  modelsCommand.command('list').description('查看内置模型及本地已发现模型')
+    .option('--json', '输出含来源和账号限制的完整模型目录')
+    .action(async (options: {json?: boolean}) => {
+      const { getRegisteredModelInventory } = await import('./services/api/multimodel/catalog.js');
+      const entries = getRegisteredModelInventory();
+      if (options.json) process.stdout.write(`${JSON.stringify(entries, null, 2)}\n`);
+      else for (const model of entries) process.stdout.write(`${model.id}\n`);
+    });
+  modelsCommand.command('profile <model>').description('查看该模型已验证的上下文、输出和工具能力').action(async (model: string) => {
+    const { getIndependentProfile } = await import('./services/api/multimodel/profiles.js');
+    const { getSavedCapabilityReport } = await import('./services/api/multimodel/capabilityProbe.js');
+    process.stdout.write(`${JSON.stringify({
+      model, profile: getIndependentProfile(model) ?? null,
+      effectiveLimits: await (async () => {
+        const { getContextWindowForModel, getModelMaxOutputTokens } = await import('./utils/context.js');
+        return { contextWindow: getContextWindowForModel(model), output: getModelMaxOutputTokens(model) };
+      })(),
+      lastProbe: getSavedCapabilityReport(model) ?? null,
+    }, null, 2)}\n`);
+  });
+  modelsCommand.command('limits <model>').description('明确指定模型真实上下文和最大输出 Token')
+    .requiredOption('--context <tokens>', '上下文窗口 Token 数')
+    .requiredOption('--output <tokens>', '最大输出 Token 数')
+    .action(async (model: string, options: { context: string; output: string }) => {
+      const { updateIndependentProfile } = await import('./services/api/multimodel/profiles.js');
+      const contextWindow = Number(options.context);
+      const maxOutputTokens = Number(options.output);
+      if (!Number.isSafeInteger(contextWindow) || !Number.isSafeInteger(maxOutputTokens)) {
+        throw new Error('上下文和输出限制必须是整数');
+      }
+      const result = await updateIndependentProfile(model, {
+        contextWindow, maxOutputTokens, source: 'manual',
+      });
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    });
+  modelsCommand.command('price <model>').description('设置模型每百万 Token 的美元费率（输入和输出）')
+    .requiredOption('--input <usd>', '输入每百万 Token 费用（美元）')
+    .requiredOption('--output <usd>', '输出每百万 Token 费用（美元）')
+    .action(async (model: string, options: {input:string;output:string}) => {
+      const { configureIndependentPricing } = await import('./services/api/multimodel/pricing.js');
+      await configureIndependentPricing(model,{input:Number(options.input),output:Number(options.output)});
+      process.stdout.write(`已保存 ${model} 的本地费率\n`);
+    });
+  modelsCommand.command('verify <model>').description('真实调用模型验证流式输出和工具能力（将产生少量 API 用量）').action(async (model: string) => {
+    const { verifyIndependentModel } = await import('./services/api/multimodel/capabilityProbe.js');
+    const result = await verifyIndependentModel(model);
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (!result.toolRoundTrip) process.exitCode = 1;
+  });
+  modelsCommand.command('refresh [provider]').description('刷新指定服务商，默认仅查询已配置的账号')
+    .action(async (provider?: string) => {
+      const { listSupportedProviders, refreshProviderModels, scanConfiguredModelProviders } =
+        await import('./services/api/multimodel/catalog.js');
+      const names = listSupportedProviders();
+      if (provider && !names.includes(provider as typeof names[number])) {
+        throw new Error(`未知服务商：${provider}。支持：${names.join(', ')}`);
+      }
+      if (provider) {
+        const models = await refreshProviderModels(provider as typeof names[number]);
+        process.stdout.write(`${provider}: 已查询 ${models.length} 个模型\n`);
+      } else {
+        const results = await scanConfiguredModelProviders();
+        process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
+        if (results.some(result => result.error)) process.exitCode = 1;
+      }
+    });
+  modelsCommand.command('scan-configured').description('查询全部已配置模型并展示上下文、输出上限及参数来源')
+    .option('--offline', '只显示本地模型档案与文档预置参数，不连接 API')
+    .action(async (options: { offline?: boolean }) => {
+      const { scanConfiguredModelProviders, getConfiguredModelSnapshots } =
+        await import('./services/api/multimodel/catalog.js');
+      if (!options.offline) {
+        const results = await scanConfiguredModelProviders();
+        process.stdout.write(`${JSON.stringify({ providers: results }, null, 2)}\n`);
+        if (results.some(result => result.error)) process.exitCode = 1;
+      }
+      process.stdout.write(`${JSON.stringify({ models: getConfiguredModelSnapshots() }, null, 2)}\n`);
+    });
+  modelsCommand.command('presets').description('查看内置的模型上下文与输出预置值，以及原始资料链接')
+    .action(async () => {
+      const { getAvailableModelPresets } = await import('./services/api/multimodel/catalog.js');
+      process.stdout.write(`${JSON.stringify(getAvailableModelPresets(), null, 2)}\n`);
+    });
+  const localSettings = program.command('local-settings').description('在本机保存和恢复设置历史');
+  localSettings.command('snapshot').description('保存当前设置快照').action(async () => {
+    const { snapshotLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
+    const item = await snapshotLocalSettings();
+    process.stdout.write(`设置快照已保存：${item.id}\n`);
+  });
+  localSettings.command('list').description('列出本机设置快照').action(async () => {
+    const { listLocalSettingsSnapshots } = await import('./services/localRuntime/settingsSnapshots.js');
+    for (const item of await listLocalSettingsSnapshots()) {
+      process.stdout.write(`${item.id}  ${item.timestamp}  ${item.size} bytes\n`);
+    }
+  });
+  localSettings.command('restore <snapshot-id>').description('校验后恢复指定本机设置快照').action(async (id: string) => {
+    const { restoreLocalSettings } = await import('./services/localRuntime/settingsSnapshots.js');
+    await restoreLocalSettings(id);
+    process.stdout.write(`已恢复设置快照：${id}\n`);
+  });
+  program.command('local-tasks').description('查看本机任务履历').option('--json', '使用 JSON 输出').action(async (options: { json?: boolean }) => {
+    const { readLocalTasks } = await import('./services/localRuntime/taskJournal.js');
+    const tasks = await readLocalTasks();
+    if (options.json) process.stdout.write(`${JSON.stringify(tasks, null, 2)}\n`);
+    else for (const task of tasks) process.stdout.write(`${task.id}  ${task.status}  ${task.type}  ${task.description ?? ''}\n`);
+  });
   // claude auth
 
   const auth = program.command('auth').description('Manage authentication').configureHelp(createSortedHelpConfig());
@@ -3558,6 +3139,90 @@ async function run(): Promise<CommanderCommand> {
       console: useConsole,
       claudeai
     });
+  });
+  const providerKeys = auth.command('api-key').description('管理模型服务商的本地 API Key');
+  providerKeys.command('set <provider>').description('从安全输入或环境变量保存密钥')
+    .option('--from-env <name>', '从指定环境变量读取密钥')
+    .action(async (provider: string, options: { fromEnv?: string }) => {
+      const { validateApiKeyProvider, setProviderApiKey } = await import('./services/auth/apiKeyVault.js');
+      const checkedProvider = validateApiKeyProvider(provider);
+      let key: string;
+      if (options.fromEnv) {
+        key = process.env[options.fromEnv] ?? '';
+      } else {
+        if (process.stdin.isTTY) {
+          throw new Error('终端交互输入请先设置环境变量，再使用 --from-env；或从标准输入管道提供密钥');
+        }
+        let text = '';
+        for await (const chunk of process.stdin) {
+          text += chunk.toString();
+          if (text.length > 8192) throw new Error('API Key 输入过长');
+        }
+        key = text.trimEnd();
+      }
+      await setProviderApiKey(checkedProvider, key);
+      process.stdout.write(`已保存 ${provider} 的本机 API Key；正在查询服务商模型参数…\n`);
+      const { refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
+      try {
+        const models = await refreshProviderModels(checkedProvider);
+        process.stdout.write(`已查询 ${models.length} 个模型并保存服务端公布的能力参数\n`);
+      } catch (error) {
+        throw new Error(`API Key 已保存，模型能力查询失败：${error instanceof Error ? error.message : String(error)}；请检查端点并执行 models refresh ${checkedProvider}`);
+      }
+    });
+  providerKeys.command('list').description('列出已配置服务商（不显示密钥）').action(async () => {
+    const { listProviderApiKeyAccounts } = await import('./services/auth/apiKeyVault.js');
+    for (const provider of listProviderApiKeyAccounts()) process.stdout.write(`${provider}\n`);
+  });
+  providerKeys.command('delete <provider>').description('删除该服务商的本机 API Key')
+    .action(async (provider: string) => {
+      const { validateApiKeyProvider, deleteProviderApiKey } = await import('./services/auth/apiKeyVault.js');
+      const checkedProvider = validateApiKeyProvider(provider);
+      await deleteProviderApiKey(checkedProvider);
+      process.stdout.write(`已删除 ${provider} 的本机 API Key\n`);
+    });
+  auth.command('chatgpt-login').description('通过官方浏览器授权连接 ChatGPT 账号')
+    .option('--new', '注册新的 ChatGPT 账号或工作区')
+    .option('--account <clientId>', '重新授权已注册的 ChatGPT 账号')
+    .option('--resume-pending', '恢复中断的动态客户端注册')
+    .option('--enable-plan', '对已注册的 ChatGPT 账号显式请求套餐推理授权')
+    .action(async (options: { new?: boolean; account?: string; resumePending?: boolean; enablePlan?: boolean }) => {
+      const { loginWithChatGPT } = await import('./services/auth/chatgptOAuth.js');
+      const identity = await loginWithChatGPT({
+        addAccount: options.new, clientId: options.account, resumePending: options.resumePending,
+        enablePlan: options.enablePlan,
+      });
+      process.stdout.write(`ChatGPT 已登录：${identity.email ?? identity.subject}\n`);
+      if (!identity.planEnabled) {
+        process.stdout.write('当前账号尚未授权套餐推理；可以重新授权或使用 OpenAI API Key。\n');
+      } else {
+        const { refreshProviderModels } = await import('./services/api/multimodel/catalog.js');
+        try {
+          const models = await refreshProviderModels('chatgpt');
+          process.stdout.write(`已保存 ${models.length} 个当前账号模型的服务端能力参数\n`);
+        } catch (error) {
+          throw new Error(`ChatGPT 已授权，模型能力查询失败：${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    });
+  auth.command('chatgpt-accounts').description('列出已注册的 ChatGPT 账号和工作区').action(async () => {
+    const { listChatGPTAccounts } = await import('./services/auth/chatgptOAuth.js');
+    process.stdout.write(`${JSON.stringify(await listChatGPTAccounts(), null, 2)}\n`);
+  });
+  auth.command('chatgpt-switch <clientId>').description('切换到已注册的 ChatGPT 账号')
+    .action(async (clientId: string) => {
+      const { selectChatGPTAccount } = await import('./services/auth/chatgptOAuth.js');
+      await selectChatGPTAccount(clientId);
+      process.stdout.write('ChatGPT 活动账号已切换。\n');
+    });
+  auth.command('chatgpt-status').description('查看 ChatGPT 授权状态').action(async () => {
+    const { chatGPTStatus } = await import('./services/auth/chatgptOAuth.js');
+    process.stdout.write(`${JSON.stringify(await chatGPTStatus(), null, 2)}\n`);
+  });
+  auth.command('chatgpt-logout').description('撤销 ChatGPT 授权').action(async () => {
+    const { logoutChatGPT } = await import('./services/auth/chatgptOAuth.js');
+    await logoutChatGPT();
+    process.stdout.write('ChatGPT 已退出\n');
   });
   auth.command('status').description('Show authentication status').option('--json', 'Output as JSON (default)').option('--text', 'Output as human-readable text').action(async (opts: {
     json?: boolean;
@@ -3586,28 +3251,14 @@ async function run(): Promise<CommanderCommand> {
 
   // Plugin validate command
   const registerPurge = (parent: CommanderCommand, hidden = false) => {
-    parent.command('purge [path]', { hidden }).description('Remove local Claude Code state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
+    parent.command('purge [path]', { hidden }).description('Remove local 摇摇车 state for a project').option('--dry-run', 'List what would be deleted without deleting anything').option('-y, --yes', 'Skip confirmation prompt').option('-i, --interactive', 'Prompt for each item before deleting').option('--all', 'Purge state for every project (mutually exclusive with [path])').action(async (path: string | undefined, options: { dryRun?: boolean; yes?: boolean; interactive?: boolean; all?: boolean }) => {
       const { purgeProjectHandler } = await import('./cli/handlers/purge.js');
       await purgeProjectHandler(path, options);
     });
   };
   registerPurge(program);
   registerPurge(program.command('project', { hidden: true }));
-  program.command('gateway')
-    .description('Run the enterprise auth/telemetry gateway')
-    .option('--config <path>', 'Path to gateway YAML config')
-    .action(async (options: { config?: string }) => {
-      try {
-        const { runEnterpriseGateway317 } = await import('./cli/gateway/gatewayServer317.ts');
-        await runEnterpriseGateway317(options.config);
-      } catch (error) {
-        process.stderr.write(
-          `claude gateway: ${error instanceof Error ? error.message : String(error)}\n`,
-        );
-        process.exitCode = 1;
-      }
-    });
-  const pluginCmd = program.command('plugin').alias('plugins').description('Manage Claude Code plugins').configureHelp(createSortedHelpConfig());
+  const pluginCmd = program.command('plugin').alias('plugins').description('Manage 摇摇车 plugins').configureHelp(createSortedHelpConfig());
   const pluginEvalCmd = pluginCmd.command('eval [target]')
     .description('Run eval cases against a plugin and report scored results')
     .option('--eval-dir <dir>', 'Directory within plugin that holds evaluation cases')
@@ -3695,7 +3346,7 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Marketplace subcommands
-  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage Claude Code marketplaces').configureHelp(createSortedHelpConfig());
+  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage 摇摇车 marketplaces').configureHelp(createSortedHelpConfig());
   marketplaceCmd.command('add <source>').description('Add a marketplace from a URL, path, or GitHub repo').addOption(coworkOption()).option('--claudeai', 'Add the marketplace of this name that claude.ai hosts for you, by its listed name or its local name (see: claude plugin marketplace list)').option('--sparse <paths...>', 'Limit checkout to specific directories via git sparse-checkout (for monorepos). Example: --sparse .claude-plugin plugins').option('--scope <scope>', 'Where to declare the marketplace: user (default), project, or local').option('--json', 'Print one machine-readable result line as the last line on stdout (same exit codes)').action(async (source: string, options: {
     cowork?: boolean;
     claudeai?: boolean;
@@ -3735,21 +3386,6 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Plugin install command
-  program.command('ultrareview [target]')
-    .usage('[target] [options]')
-    .description('Run a cloud-hosted multi-agent code review of the current branch (or a PR number / base branch) and print the findings')
-    .option('--json', 'Print the raw bugs.json payload instead of formatted findings')
-    .option('--no-post', 'Do not post the findings to the PR (the default; accepted for parity with the /ultrareview and /code-review ultra flags)')
-    .option('--post', 'Post the finished review findings to the PR as you (PR targets only; one plain comment, not a review)')
-    .option('--timeout <minutes>', 'Maximum minutes to wait for the review to finish (default: 45)')
-    .option('--trust-workspace', 'Trust the current folder for this run only, without asking (for scripts and CI)')
-    .action(async (target: string | undefined, options: {
-      json?: boolean; post?: boolean; timeout?: string; trustWorkspace?: boolean
-    }) => {
-      const { ultrareviewCliHandler } = await import('./cli/handlers/ultrareview.js')
-      await ultrareviewCliHandler(target, options)
-    })
-
   pluginCmd.command('install <plugin>').alias('i').description('Install a plugin from available marketplaces (use plugin@marketplace for specific marketplace)').option('-s, --scope <scope>', 'Installation scope: user, project, or local', 'user').option('--json', 'Print one machine-readable result line on stdout').option('--marketplace <source>', 'Install from a marketplace URL, repository, or path, adding it first if needed').option('--config <key=value>', 'Set a userConfig field; repeatable', (value: string, values: string[]) => [...values, value], []).option('--registry <url>', 'Use an alternate npm registry for npm-sourced plugins')
     .option('-y, --yes', 'Explicitly authorize the current marketplace-declared install command')
     .addOption(new Option('--accept-command <sha256>', 'Authorize exactly the displayed command hash for the current marketplace revision').conflicts('yes'))
@@ -3883,16 +3519,7 @@ async function run(): Promise<CommanderCommand> {
   });
   // END ANT-ONLY
 
-  // Setup token command
-  program.command('setup-token').description('Set up a long-lived authentication token (requires Claude subscription)').action(async () => {
-    const [{
-      setupTokenHandler
-    }, {
-      createRoot
-    }] = await Promise.all([import('./cli/handlers/util.js'), import('./ink.js')]);
-    const root = await createRoot(getBaseRenderOptions(false));
-    await setupTokenHandler(root);
-  });
+  // 旧 Claude 订阅长期 Token 入口已停用；请使用模型管理中的本地凭证配置。
 
   // Official 2.1.310 background agent CLI. The entrypoint fast path handles
   // commands without starting the interactive model. Register here as well so
@@ -3953,38 +3580,24 @@ async function run(): Promise<CommanderCommand> {
     }
   }
 
-  // Remote Control command — connect local environment to claude.ai/code.
-  // The actual command is intercepted by the fast-path in cli.tsx before
-  // Commander.js runs, so this registration exists only for help output.
-  // Always hidden: isBridgeEnabled() at this point (before enableConfigs)
-  // would throw inside isClaudeAISubscriber → getGlobalConfig and return
-  // false via the try/catch — but not before paying ~65ms of side effects
-  // (25ms settings Zod parse + 40ms sync `security` keychain subprocess).
-  // The dynamic visibility never worked; the command was always hidden.
-  if (feature('BRIDGE_MODE')) {
-    program.command('remote-control', {
-      hidden: true
-    }).alias('rc').description('Connect your local environment for remote-control sessions via claude.ai/code').action(async () => {
-      // Unreachable — cli.tsx fast-path handles this command before main.tsx loads.
-      // If somehow reached, delegate to bridgeMain.
-      const {
-        bridgeMain
-      } = await import('./bridge/bridgeMain.js');
-      await bridgeMain(process.argv.slice(3));
-    });
-  }
-  // Doctor command - check installation health
-  program.command('doctor').description('Check the health of your Claude Code auto-updater. Note: The workspace trust dialog is skipped and stdio servers from .mcp.json are spawned for health checks. Only use this command in directories you trust.').action(async () => {
-    const [{
-      doctorHandler
-    }, {
-      createRoot
-    }] = await Promise.all([import('./cli/handlers/util.js'), import('./ink.js')]);
-    const root = await createRoot(getBaseRenderOptions(false));
-    await doctorHandler(root);
+  // Non-graphical CLI diagnostics; desktop renders the same underlying checks.
+  program.command('doctor').description('检查本地安装、搜索工具、配置及更新状态').option('--json', '输出完整 JSON 诊断信息').action(async (options: { json?: boolean }) => {
+    const { getDoctorDiagnostic } = await import('./utils/doctorDiagnostic.js');
+    const diagnostic = await getDoctorDiagnostic();
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify(diagnostic, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write('摇摇车系统诊断\n');
+    process.stdout.write(`版本：${diagnostic.version}\n`);
+    process.stdout.write(`安装方式：${diagnostic.installationType}\n`);
+    process.stdout.write(`路径：${diagnostic.installationPath}\n`);
+    process.stdout.write(`搜索工具：${diagnostic.ripgrepStatus.working ? '正常' : '异常'}\n`);
+    for (const warning of diagnostic.warnings) process.stdout.write(`问题：${warning.issue}\n建议：${warning.fix}\n`);
+    process.stdout.write('完整信息：yaoyaoche doctor --json\n');
   });
 
-  // claude update
+  // yaoyaoche update
   //
   // For SemVer-compliant versioning with build metadata (X.X.X+SHA):
   // - We perform exact string comparison (including SHA) to detect any change
@@ -3997,8 +3610,8 @@ async function run(): Promise<CommanderCommand> {
     await update();
   });
 
-  // claude install
-  program.command('install [target]').description('Install Claude Code native build. Use [target] to specify version (stable, latest, or specific version)').option('--force', 'Force installation even if already installed').action(async (target: string | undefined, options: {
+  // yaoyaoche install
+  program.command('install [target]').description('安装 摇摇车 原生版本，可指定 stable、latest 或具体版本号').option('--force', 'Force installation even if already installed').action(async (target: string | undefined, options: {
     force?: boolean;
   }) => {
     const {
@@ -4012,13 +3625,13 @@ async function run(): Promise<CommanderCommand> {
   // Keep the explicit exit and options from the real release. Treating import
   // as a chat prompt incorrectly starts a model query and loses --dry-run.
   program.command('import [source]')
-    .description('Import config from another AI coding agent into Claude Code')
+    .description('Import config from another AI coding agent into 摇摇车')
     .option('--dry-run', 'Show what would be imported without writing anything')
     .option('--yes', 'Skip the interactive picker. On headless surfaces, pass --yes=<digest> from the `/import` preview.')
     .action(async () => {
       const { getFeatureValue_CACHED_MAY_BE_STALE } = await import('./services/analytics/growthbook.js');
       if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_import', false)) {
-        process.stderr.write('`claude import` is not yet available in this build. Run `claude` and use /mcp or edit ~/.claude/settings.json directly.\n');
+        process.stderr.write('`yaoyaoche import` is not yet available in this build. Run `yaoyaoche` and use /mcp or edit ~/.yaoyaoche/settings.json directly.\n');
         process.exitCode = 1;
         return;
       }

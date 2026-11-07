@@ -25,7 +25,7 @@ import type {
   SdkPluginConfig,
   ThinkingConfig,
 } from './coreTypes.js'
-import type { SDKHookCallbackMatcher, SDKHookCallbackRequest } from './controlTypes.js'
+import type { SDKHookCallbackMatcher, SDKHookCallbackRequest, SDKHostControlRequest, SDKControlElicitationResponse } from './controlTypes.js'
 
 /** Exactly the Zod object shape accepted by the SDK tool() factory. */
 export type AnyZodRawShape = Record<string, z.ZodType>
@@ -58,15 +58,64 @@ export type McpServerConfig =
   | McpServerConfigForProcessTransport
   | McpSdkServerConfigWithInstance
 
+export type SDKPermissionContext = {
+  signal: AbortSignal
+  suggestions?: PermissionUpdate[]
+  toolUseID?: string
+  requestId?: string
+  blockedPath?: string
+  mcpServer?: { name: string; source: string }
+  decisionReason?: string
+  decisionReasonType?: string
+  decisionReasonCode?: string
+  serverPolicyAskOnly?: boolean
+  title?: string
+  displayName?: string
+  description?: string
+  defaultToNo?: boolean
+  suppressAlwaysAllowRule?: boolean
+  agentID?: string
+  plugin?: string
+  requiresUserInteraction?: boolean
+  serverPrompt?: string
+  computerFolder?: { path: string; computer_name: string }
+  matchedAskRule?: { source: string; toolName: string; ruleContent?: unknown }
+}
+
 export type CanUseTool = (
   toolName: string,
   input: Record<string, unknown>,
-  options: {
-    signal: AbortSignal
-    suggestions?: PermissionUpdate[]
-    toolUseID?: string
-  },
-) => Promise<PermissionResult>
+  options: SDKPermissionContext,
+) => Promise<PermissionResult | null>
+
+/** Official 2.1.317 public host callback entrypoints. */
+export type SDKOriginalElicitationHandler = (
+  request: { serverName: string; message: string; mode?: 'form'|'url'; url?: string;
+    elicitationId?: string; requestedSchema?: Record<string,unknown>;
+    title?: string; displayName?: string; description?: string },
+  options: { signal: AbortSignal; requestId: string },
+) => Promise<SDKControlElicitationResponse|null>
+
+export type SDKOAuthTokenProvider = (options: {
+  signal: AbortSignal
+  /** Original 2.1.317 accepts only four decline reasons. */
+  onDecline: (reason: string) => void
+  kind?: unknown
+}) => Promise<string|null|undefined>
+
+export type SDKHostAuthTokenProvider = (
+  options: { signal: AbortSignal },
+) => Promise<string|Record<string,unknown>|null|undefined>
+
+export type SDKOriginalUserDialogHandler = (
+  request: { dialogKind?: unknown; payload?: unknown; toolUseID?: string },
+  options: { signal: AbortSignal; requestId: string },
+) => Promise<Record<string,unknown>|null>
+
+export type HostControlRequestHandler = (
+  request: SDKHostControlRequest,
+  options: { signal: AbortSignal; requestId: string },
+) => Promise<Record<string, unknown> | null>
 
 export type HookCallback = (
   input: SDKHookCallbackRequest['input'],
@@ -107,6 +156,11 @@ export type Options = {
   allowDangerouslySkipPermissions?: boolean
   permissionPromptToolName?: string
   canUseTool?: CanUseTool
+  onControlRequest?: HostControlRequestHandler
+  onElicitation?: SDKOriginalElicitationHandler
+  onUserDialog?: SDKOriginalUserDialogHandler
+  getOAuthToken?: SDKOAuthTokenProvider
+  getHostAuthToken?: SDKHostAuthTokenProvider
   hooks?: HookCallbacks
   mcpServers?: Record<string, McpServerConfig>
   agents?: Record<string, AgentDefinition>
@@ -130,6 +184,10 @@ export type Options = {
   forkSession?: boolean
   resumeSessionAt?: string
   includePartialMessages?: boolean
+  /** Ask the CLI to emit next-turn prompt suggestions on successful turns. */
+  promptSuggestions?: boolean
+  /** Ask the CLI to emit background agent progress summaries. */
+  agentProgressSummaries?: boolean
   replayUserMessages?: boolean
   outputFormat?: { type: 'json_schema'; schema: Record<string, unknown> }
   additionalDirectories?: string[]
@@ -173,6 +231,7 @@ export interface InternalQuery extends Query {
 export type SDKSessionOptions = {
   sessionStore?: SessionStore
   loadTimeoutMs?: number
+  abortController?: AbortController
   model: string
   pathToClaudeCodeExecutable?: string
   executable?: 'node' | 'bun'
@@ -181,7 +240,16 @@ export type SDKSessionOptions = {
   allowedTools?: string[]
   disallowedTools?: string[]
   canUseTool?: CanUseTool
+  onControlRequest?: HostControlRequestHandler
+  onElicitation?: SDKOriginalElicitationHandler
+  onUserDialog?: SDKOriginalUserDialogHandler
+  getOAuthToken?: SDKOAuthTokenProvider
+  getHostAuthToken?: SDKHostAuthTokenProvider
   hooks?: HookCallbacks
+  /** Opt into the SDK prompt suggestion event stream. */
+  promptSuggestions?: boolean
+  /** Opt into native agent task progress summaries. */
+  agentProgressSummaries?: boolean
   permissionMode?: PermissionMode
   cwd?: string
   settingSources?: SettingSource[]

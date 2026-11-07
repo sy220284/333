@@ -1,0 +1,200 @@
+import { z } from 'zod/v4'
+import { PermissionResultSchema, SDKUserMessageSchema } from '../../entrypoints/sdk/coreSchemas.js'
+import type { SDKMessage } from '../../entrypoints/sdk/coreTypes.js'
+import type { HeadlessSessionSnapshot } from '../conversation/headlessSession.js'
+import type { PendingSdkPermission } from '../conversation/permissionBroker.js'
+import type { PendingHostControl } from '../conversation/hostControlBroker.js'
+import type { DesktopTask } from './taskProjection.js'
+
+export const DESKTOP_PROTOCOL_VERSION = 1
+const id = z.string().min(1).max(128)
+const sessionId = z.string().uuid()
+const taskId = z.string().min(1).max(256)
+const missionId = z.string().regex(/^mission_[a-f0-9]{16}$/)
+const jobId = z.string().regex(/^job_[a-f0-9]{16}$/)
+const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S) => {
+  // The envelope owns "id". Reusing it for a business ID silently overwrites
+  // the caller's value when createDesktopClient assigns a correlation ID.
+  if (Object.hasOwn(shape, 'id')) {
+    throw new Error(`Desktop request "${method}" conflicts with transport request ID`)
+  }
+  return z.object({ id, method: z.literal(method), ...shape }).strict()
+}
+
+/** The desktop wire protocol is a local, versioned envelope. SDK payloads
+ * stay in their canonical stream-json shapes. */
+export const DesktopRequestSchema = z.discriminatedUnion('method', [
+  request('hello', {}),
+  request('capabilities.list', {}),
+  request('capabilities.refresh', {}),
+  request('capabilities.skills.drafts', {}),
+  request('capabilities.skills.createDraft', {
+    slug: z.string().regex(/^[a-z][a-z0-9-]{2,63}$/),
+    description: z.string().trim().min(12).max(240),
+    instructions: z.string().trim().min(60).max(20000),
+  }),
+  request('capabilities.skills.publish', { draftId: z.string().uuid() }),
+  request('experience.list', { includeCandidates: z.boolean().optional() }),
+  request('experience.search', { query: z.string().trim().min(1).max(400) }),
+  request('experience.propose', { draft: z.unknown() }),
+  request('experience.evidence.preview', { experienceId: z.string().uuid() }),
+  request('experience.approve', { experienceId: z.string().uuid(), reviewer: z.string().trim().min(1).max(128),
+    reviewNote: z.string().trim().min(16).max(1500) }),
+  request('experience.retire', { experienceId: z.string().uuid(), reason: z.string().trim().min(8).max(1000) }),
+  request('models.list', { sessionId: sessionId.optional() }),
+  request('budget.project.get', {}),
+  request('budget.project.resolveUnknown', { unknownId: z.string().uuid(), costUsd: z.number().nonnegative().finite().max(100000) }),
+  request('budget.project.set', { limitUsd: z.number().positive().finite().max(100000).nullable() }),
+  request('smart.inspect', { model: z.string().min(1).max(300).optional() }),
+  request('smart.history', {}),
+  request('smart.execute', {
+    prompt: z.string().trim().min(1).max(6000),
+    model: z.string().min(1).max(300).optional(),
+    maxBudgetUsd: z.number().positive().finite().max(100000).optional(),
+    permissionMode: z.enum(['default','acceptEdits','plan','dontAsk']).optional(),
+    deferStart: z.boolean().optional(),
+  }),
+  request('smart.start', { sessionId }),
+  request('system.diagnostics', {}),
+  request('data.purge.preview', {}),
+  request('data.purge.apply', { token: z.string().uuid() }),
+  request('mcp.list', {}),
+  request('mcp.add', { name: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), scope: z.enum(['project', 'user', 'local']), config: z.union([
+    z.object({ type: z.literal('http'), url: z.string().url().max(2048), headers: z.record(z.string().max(120), z.string().max(8192)).optional(), headersHelper: z.string().min(1).max(1024).optional() }).strict(),
+    z.object({ type: z.literal('sse'), url: z.string().url().max(2048), headers: z.record(z.string().max(120), z.string().max(8192)).optional(), headersHelper: z.string().min(1).max(1024).optional() }).strict(),
+    z.object({ type: z.literal('stdio'), command: z.string().trim().min(1).max(1024), args: z.array(z.string().max(1000)).max(80), env: z.record(z.string().max(120), z.string().max(8192)).optional() }).strict()
+  ]) }),
+  request('mcp.remove', { name: z.string().min(1), scope: z.enum(['project','user','local']) }),
+  request('mcp.toggle', { name: z.string().min(1), enabled: z.boolean() }),
+  request('sessions.open', { model: z.string().min(1).optional() }),
+  request('sessions.resume', { sessionId }),
+  // Resume only on an explicit user action; an already active session is reused.
+  request('sessions.ensureOpen', { sessionId }),
+  request('sessions.list', { limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() }),
+  request('sessions.history', { sessionId, limit: z.number().int().min(1).max(500).optional(), offset: z.number().int().min(0).optional(), tail: z.boolean().optional() }),
+  request('sessions.close', { sessionId }),
+  request('sessions.status', { sessionId }),
+  request('sessions.send', { sessionId, message: z.union([z.string().min(1), SDKUserMessageSchema()]) }),
+  request('sessions.interrupt', { sessionId }),
+  request('sessions.setModel', { sessionId, model: z.string().min(1).max(300).nullable() }),
+  request('sessions.setPermissionMode', { sessionId, mode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk', 'auto']) }),
+  request('host.list', { sessionId }),
+  request('host.respond', { sessionId, requestId: id, response: z.record(z.string(), z.unknown()) }),
+  request('host.reject', { sessionId, requestId: id, reason: z.string().min(1).max(2000) }),
+  request('permissions.list', { sessionId }),
+  request('permissions.decide', { sessionId, permissionId: id, decision: PermissionResultSchema() }),
+  request('agents.overview', {}),
+  request('agents.activity', {}),
+  request('agents.members', { teamName: z.string().min(1).max(128) }),
+  request('agents.team.message', {
+    teamName: z.string().min(1).max(128),
+    to: z.string().min(1).max(128),
+    message: z.string().trim().min(1).max(6000),
+    messageId: z.string().uuid(),
+  }),
+  request('agents.team.inbox', {
+    teamName: z.string().min(1).max(128),
+    memberName: z.string().min(1).max(128),
+  }),
+  request('artifacts.list', {}),
+  request('artifacts.register', {
+    title:z.string().trim().min(4).max(200),
+    kind:z.enum(['video','image','audio','document','code','other']),
+    path:z.string().trim().min(1).max(2048),
+    missionId:z.string().regex(/^mission_[a-f0-9]{16}$/).optional(),
+    jobId:z.string().regex(/^job_[a-f0-9]{16}$/).optional(),
+  }),
+  request('artifacts.verify', { artifactId:z.string().uuid() }),
+  request('artifacts.approve', { artifactId:z.string().uuid(),
+    reviewNote:z.string().trim().min(16).max(1500) }),
+  request('supervisor.snapshot', {}),
+  request('agents.profiles.list', {}),
+  request('agents.profiles.create', {
+    agentId: z.string().uuid(),
+    name: z.string().trim().min(2).max(100),
+    description: z.string().trim().min(8).max(1000),
+    domains: z.array(z.string().trim().min(2).max(80)).min(1).max(20),
+    capabilityIds: z.array(z.string().trim().min(3).max(200)).max(100).optional(),
+  }),
+  request('agents.profiles.assign', {
+    agentId: z.string().uuid(),
+    role: z.string().trim().min(2).max(100),
+    purpose: z.string().trim().min(8).max(1000),
+    teamName: z.string().trim().min(1).max(128).optional(),
+    missionId: z.string().min(1).max(160).optional(),
+  }),
+  request('agents.profiles.bindSession', {
+    agentId: z.string().uuid(), roleId: z.string().uuid(), sessionId: z.string().uuid(),
+  }),
+  request('agents.profiles.release', { agentId: z.string().uuid(), roleId: z.string().uuid() }),
+  request('agents.profiles.status', { agentId: z.string().uuid(), status: z.enum(['available','paused','retired']) }),
+  request('handoffs.list', {}),
+  request('handoffs.create', {
+    requestId: z.string().uuid(),
+    teamName: z.string().min(1).max(128),
+    to: z.string().min(1).max(128),
+    summary: z.string().trim().min(5).max(200),
+    instruction: z.string().trim().min(12).max(6000),
+    taskId: z.string().min(1).max(200).optional(),
+    inputRefs: z.array(z.string().min(3).max(400)).max(30),
+  }),
+  request('handoffs.retry', { handoffId: z.string().uuid() }),
+  request('handoffs.approve', {
+    handoffId: z.string().uuid(), reviewSummary: z.string().trim().min(10).max(1200),
+  }),
+  request('agents.setMode', { mode: z.enum(['master', 'super']) }),
+  request('missions.list', {}),
+  request('missions.get', { missionId }),
+  request('missions.create', { objective: z.string().trim().min(1).max(4000) }),
+  request('missions.select', { missionId: missionId.nullable() }),
+  request('missions.updateStatus', { missionId, status: z.enum(['active', 'paused', 'completed']) }),
+  request('missions.checkpoint', { missionId, checkpoint: z.string().trim().min(1).max(6000) }),
+  request('missions.jobs.list', { missionId }),
+  request('missions.jobs.enqueue', {
+    missionId, title:z.string().trim().min(1).max(200),
+    instruction:z.string().trim().min(1).max(6000),
+    model:z.string().min(1).max(300).optional(),
+    agentProfileId:z.string().uuid().optional(),
+    roleId:z.string().uuid().optional(),
+    permissionMode:z.enum(['default','plan','dontAsk']).optional(),
+  }),
+  request('missions.jobs.start', { missionId, jobId }),
+  request('missions.jobs.evidence', { missionId, jobId }),
+  request('missions.jobs.previewIntegrate', { missionId, jobId }),
+  request('missions.jobs.integrate', {
+    missionId, jobId, targetHead: z.string().regex(/^[0-9a-f]{40,64}$/),
+    sourceHead: z.string().regex(/^[0-9a-f]{40,64}$/),
+  }),
+  request('missions.jobs.runBatch', { missionId, limit: z.number().int().min(1).max(3).optional() }),
+  request('missions.jobs.runQueue', { missionId }),
+  request('missions.jobs.haltQueue', { missionId }),
+  request('missions.jobs.queueStatus', { missionId }),
+  request('missions.jobs.approve', { missionId, jobId }),
+  request('missions.jobs.retry', { missionId, jobId }),
+  request('missions.jobs.recover', { missionId, jobId }),
+  request('missions.jobs.cancel', { missionId, jobId }),
+  request('tasks.list', { sessionId }),
+  request('tasks.stop', { sessionId, taskId }),
+  request('tasks.resume', { sessionId, taskId, prompt: z.string().min(1).optional() }),
+])
+
+export type DesktopRequest = z.infer<typeof DesktopRequestSchema>
+export type DesktopReply =
+  | { id: string; ok: true; result: unknown }
+  | { id: string | null; ok: false; error: { code: string; message: string } }
+
+export type DesktopEvent =
+  | { event: 'session.state'; sessionId: string; state: HeadlessSessionSnapshot }
+  | { event: 'smart.finished'; sessionId: string; status: 'completed'|'failed'|'interrupted'; costUsd?: number }
+  | { event: 'session.message'; sessionId: string; turnId: string; message: SDKMessage }
+  | { event: 'session.error'; sessionId: string; turnId?: string; error: string }
+  | { event: 'host.request'; sessionId: string; request: PendingHostControl }
+  | { event: 'host.resolved'; sessionId: string; requestId: string }
+  | { event: 'permission.request'; sessionId: string; permission: PendingSdkPermission }
+  | { event: 'permission.resolved'; sessionId: string; permissionId: string }
+  | { event: 'agent.progress'; sessionId: string; turnId: string; task?: DesktopTask; message: SDKMessage }
+  | { event: 'task.updated'; sessionId: string; task: DesktopTask }
+  | { event: 'mission.job.updated'; missionId: string; job: import('../agentCenter/missionJobs.js').MissionJob }
+  | { event: 'mission.activity'; missionId: string; jobId: string; sessionId: string; task: DesktopTask }
+  | { event: 'mission.queue.state'; missionId: string; active: boolean; message?: string }
+  | { event: 'task.persistence.error'; sessionId: string; error: string }

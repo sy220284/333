@@ -95,7 +95,7 @@ export function ensureFastPathSettingsLoaded317(): Promise<RequiredVersionPolicy
       ])
       config.enableConfigs()
       managedEnv.applySafeConfigEnvironmentVariables()
-      // Policy source has precedence remote > MDM > managed-file > HKCU.
+      // Policy source has precedence MDM > managed-file > HKCU.
       // Project/local settings cannot lower the organization's version gate.
       return settings.getSettingsForSource('policySettings')
     })().catch(error => {

@@ -13,7 +13,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../services/analytics/index.js'
-import { getVoiceKeyterms } from '../services/voiceKeyterms.js'
+import { normalizeLanguageForSTT } from '../services/voiceLanguage.js'
 import {
   connectVoiceStream,
   type FinalizeSource,
@@ -25,113 +25,8 @@ import { toError } from '../utils/errors.js'
 import { getSystemLocaleLanguage } from '../utils/intl.js'
 import { logError } from '../utils/log.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
-import { sleep } from '../utils/sleep.js'
 
 // ─── Language normalization ─────────────────────────────────────────────
-
-const DEFAULT_STT_LANGUAGE = 'en'
-
-// Maps language names (English and native) to BCP-47 codes supported by
-// the voice_stream Deepgram backend.  Keys must be lowercase.
-//
-// This list must be a SUBSET of the server-side supported_language_codes
-// allowlist (GrowthBook: speech_to_text_voice_stream_config).
-// If the CLI sends a code the server rejects, the WebSocket closes with
-// 1008 "Unsupported language" and voice breaks.  Unsupported languages
-// fall back to DEFAULT_STT_LANGUAGE so recording still works.
-const LANGUAGE_NAME_TO_CODE: Record<string, string> = {
-  english: 'en',
-  spanish: 'es',
-  español: 'es',
-  espanol: 'es',
-  french: 'fr',
-  français: 'fr',
-  francais: 'fr',
-  japanese: 'ja',
-  日本語: 'ja',
-  german: 'de',
-  deutsch: 'de',
-  portuguese: 'pt',
-  português: 'pt',
-  portugues: 'pt',
-  italian: 'it',
-  italiano: 'it',
-  korean: 'ko',
-  한국어: 'ko',
-  hindi: 'hi',
-  हिन्दी: 'hi',
-  हिंदी: 'hi',
-  indonesian: 'id',
-  'bahasa indonesia': 'id',
-  bahasa: 'id',
-  russian: 'ru',
-  русский: 'ru',
-  polish: 'pl',
-  polski: 'pl',
-  turkish: 'tr',
-  türkçe: 'tr',
-  turkce: 'tr',
-  dutch: 'nl',
-  nederlands: 'nl',
-  ukrainian: 'uk',
-  українська: 'uk',
-  greek: 'el',
-  ελληνικά: 'el',
-  czech: 'cs',
-  čeština: 'cs',
-  cestina: 'cs',
-  danish: 'da',
-  dansk: 'da',
-  swedish: 'sv',
-  svenska: 'sv',
-  norwegian: 'no',
-  norsk: 'no',
-}
-
-// Subset of the GrowthBook speech_to_text_voice_stream_config allowlist.
-// Sending a code not in the server allowlist closes the connection.
-const SUPPORTED_LANGUAGE_CODES = new Set([
-  'en',
-  'es',
-  'fr',
-  'ja',
-  'de',
-  'pt',
-  'it',
-  'ko',
-  'hi',
-  'id',
-  'ru',
-  'pl',
-  'tr',
-  'nl',
-  'uk',
-  'el',
-  'cs',
-  'da',
-  'sv',
-  'no',
-])
-
-// Normalize a language preference string (from settings.language) to a
-// BCP-47 code supported by the voice_stream endpoint.  Returns the
-// default language if the input cannot be resolved.  When the input is
-// non-empty but unsupported, fellBackFrom is set to the original input so
-// callers can surface a warning.
-export function normalizeLanguageForSTT(language: string | undefined): {
-  code: string
-  fellBackFrom?: string
-} {
-  if (!language) return { code: DEFAULT_STT_LANGUAGE }
-  const lower = language.toLowerCase().trim()
-  if (!lower) return { code: DEFAULT_STT_LANGUAGE }
-  if (SUPPORTED_LANGUAGE_CODES.has(lower)) return { code: lower }
-  const fromName = LANGUAGE_NAME_TO_CODE[lower]
-  if (fromName) return { code: fromName }
-  const base = lower.split('-')[0]
-  if (base && SUPPORTED_LANGUAGE_CODES.has(base)) return { code: base }
-  return { code: DEFAULT_STT_LANGUAGE, fellBackFrom: language }
-}
 
 // Lazy-loaded voice module. We defer importing voice.ts (and its native
 // audio-capture-napi dependency) until voice input is actually activated.
@@ -235,16 +130,6 @@ export function useVoice({
   // slow-connecting WS from an abandoned session from overwriting
   // connectionRef mid-way through the next session.
   const sessionGenRef = useRef(0)
-  // True if the early-error retry fired during this session.
-  // Tracked for the tengu_voice_recording_completed analytics event.
-  const retryUsedRef = useRef(false)
-  // Full audio captured this session, kept for silent-drop replay. ~1% of
-  // sessions get a sticky-broken CE pod that accepts audio but returns zero
-  // transcripts (anthropics/anthropic#287008 session-sticky variant); when
-  // finalize() resolves via no_data_timeout with hadAudioSignal=true, we
-  // replay the buffer on a fresh WS once. Bounded: 32KB/s × ~60s max ≈ 2MB.
-  const fullAudioRef = useRef<Buffer[]>([])
-  const silentDropRetriedRef = useRef(false)
   // Bumped when the early-error retry is scheduled. Captured per
   // attemptConnect — onError swallows stale-gen events (conn 1's
   // trailing close-error) but surfaces current-gen ones (conn 2's
@@ -311,7 +196,6 @@ export function useVoice({
     }
     accumulatedRef.current = ''
     audioLevelsRef.current = []
-    fullAudioRef.current = []
     setVoiceState(prev => {
       if (prev.voiceInterimTranscript === '' && !prev.voiceAudioLevels.length)
         return prev
@@ -344,7 +228,6 @@ export function useVoice({
     // reproducing the silent-drop false-positive this ref exists to prevent.
     const recordingDurationMs = Date.now() - recordingStartRef.current
     const hadAudioSignal = hasAudioSignalRef.current
-    const retried = retryUsedRef.current
     const focusFlushedChars = focusFlushedCharsRef.current
     // wsConnected distinguishes "backend received audio but dropped it" (the
     // bug backend PR #287008 fixes) from "WS handshake never completed" —
@@ -368,96 +251,11 @@ export function useVoice({
         : Promise.resolve(undefined)
 
     void finalizePromise
-      .then(async finalizeSource => {
+      .then(() => {
         if (isStale()) return
-        // Silent-drop replay: when the server accepted audio (wsConnected),
-        // the mic captured real signal (hadAudioSignal), but finalize timed
-        // out with zero transcript — the ~1% session-sticky CE-pod bug.
-        // Replay the buffered audio on a fresh connection once. A 250ms
-        // backoff clears the same-pod rapid-reconnect race (same gap as the
-        // early-error retry path below).
-        if (
-          finalizeSource === 'no_data_timeout' &&
-          hadAudioSignal &&
-          wsConnected &&
-          !focusTriggered &&
-          focusFlushedChars === 0 &&
-          accumulatedRef.current.trim() === '' &&
-          !silentDropRetriedRef.current &&
-          fullAudioRef.current.length > 0
-        ) {
-          silentDropRetriedRef.current = true
-          logForDebugging(
-            `[voice] Silent-drop detected (no_data_timeout, ${String(fullAudioRef.current.length)} chunks); replaying on fresh connection`,
-          )
-          logEvent('tengu_voice_silent_drop_replay', {
-            recordingDurationMs,
-            chunkCount: fullAudioRef.current.length,
-          })
-          if (connectionRef.current) {
-            connectionRef.current.close()
-            connectionRef.current = null
-          }
-          const replayBuffer = fullAudioRef.current
-          await sleep(250)
-          if (isStale()) return
-          const stt = normalizeLanguageForSTT(getInitialSettings().language)
-          const keyterms = await getVoiceKeyterms()
-          if (isStale()) return
-          await new Promise<void>(resolve => {
-            void connectVoiceStream(
-              {
-                onTranscript: (t, isFinal) => {
-                  if (isStale()) return
-                  if (isFinal && t.trim()) {
-                    if (accumulatedRef.current) accumulatedRef.current += ' '
-                    accumulatedRef.current += t.trim()
-                  }
-                },
-                onError: () => resolve(),
-                onClose: () => {},
-                onReady: conn => {
-                  if (isStale()) {
-                    conn.close()
-                    resolve()
-                    return
-                  }
-                  connectionRef.current = conn
-                  const SLICE = 32_000
-                  let slice: Buffer[] = []
-                  let bytes = 0
-                  for (const c of replayBuffer) {
-                    if (bytes > 0 && bytes + c.length > SLICE) {
-                      conn.send(Buffer.concat(slice))
-                      slice = []
-                      bytes = 0
-                    }
-                    slice.push(c)
-                    bytes += c.length
-                  }
-                  if (slice.length) conn.send(Buffer.concat(slice))
-                  void conn.finalize().then(() => {
-                    conn.close()
-                    resolve()
-                  })
-                },
-              },
-              { language: stt.code, keyterms },
-            ).then(
-              c => {
-                if (!c) resolve()
-              },
-              () => resolve(),
-            )
-          })
-          if (isStale()) return
-        }
-        fullAudioRef.current = []
 
         const text = accumulatedRef.current.trim()
-        logForDebugging(
-          `[voice] Final transcript assembled (${String(text.length)} chars): "${text.slice(0, 200)}"`,
-        )
+        logForDebugging(`[voice] Final transcript assembled (${String(text.length)} chars)`)
 
         // Tracks silent-drop rate: transcriptChars=0 + hadAudioSignal=true
         // + recordingDurationMs>2000 = the bug backend PR #287008 fixes.
@@ -472,8 +270,6 @@ export function useVoice({
           transcriptChars: text.length + focusFlushedChars,
           recordingDurationMs,
           hadAudioSignal,
-          retried,
-          silentDropRetried: silentDropRetriedRef.current,
           wsConnected,
           focusTriggered,
         })
@@ -496,12 +292,12 @@ export function useVoice({
             // WS never connected → audio never reached backend. Not a silent
             // drop; a connection failure (slow OAuth refresh, network, etc).
             onErrorRef.current?.(
-              'Voice connection failed. Check your network and try again.',
+              '本地语音识别未启动，请检查 Whisper 配置与录音权限。',
             )
           } else if (!hadAudioSignal) {
             // Distinguish silent mic (capture issue) from speech not recognized.
             onErrorRef.current?.(
-              'No audio detected from microphone. Check that the correct input device is selected and that Claude Code has microphone access.',
+              '麦克风没有收到音频，请检查输入设备和系统录音权限。',
             )
           } else {
             onErrorRef.current?.('No speech detected.')
@@ -650,9 +446,6 @@ export function useVoice({
     accumulatedRef.current = ''
     seenRepeatRef.current = false
     hasAudioSignalRef.current = false
-    retryUsedRef.current = false
-    silentDropRetriedRef.current = false
-    fullAudioRef.current = []
     focusFlushedCharsRef.current = 0
     everConnectedRef.current = false
     const myGen = ++sessionGenRef.current
@@ -693,14 +486,7 @@ export function useVoice({
     audioLevelsRef.current = []
     const started = await voiceModule.startRecording(
       (chunk: Buffer) => {
-        // Copy for fullAudioRef replay buffer. send() in voiceStreamSTT
-        // copies again defensively — acceptable overhead at audio rates.
-        // Skip buffering in focus mode — replay is gated on !focusTriggered
-        // so the buffer is dead weight (up to ~20MB for a 10min session).
         const owned = Buffer.from(chunk)
-        if (!focusTriggeredRef.current) {
-          fullAudioRef.current.push(owned)
-        }
         if (connectionRef.current) {
           connectionRef.current.send(owned)
         } else {
@@ -758,33 +544,23 @@ export function useVoice({
         getSystemLocaleLanguage() as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
 
-    // Retry once if the connection errors before delivering any transcript.
-    // The conversation-engine proxy can reject rapid reconnects (~1/N_pods
-    // same-pod collision) or CE's Deepgram upstream can fail during its own
-    // teardown window (anthropics/anthropic#287008 surfaces this as
-    // TranscriptError instead of silent-drop). A 250ms backoff clears both.
-    // Audio captured during the retry window routes to audioBuffer (via the
-    // connectionRef.current null check in the recording callback above) and
-    // is flushed by the second onReady.
-    let sawTranscript = false
+    // 本地转写在录音结束后执行一次，不进行云端连接重试。
 
     // Connect WebSocket in parallel with audio recording.
-    // Gather keyterms first (async but fast — no model calls), then connect.
     // Bail from callbacks if a newer session has started. Prevents a
     // slow-connecting zombie WS (e.g. user released, pressed again, first
     // WS still handshaking) from firing onReady/onError into the new
     // session and corrupting its connectionRef / triggering a bogus retry.
     const isStale = () => sessionGenRef.current !== myGen
 
-    const attemptConnect = (keyterms: string[]): void => {
+    const attemptConnect = (): void => {
       const myAttemptGen = attemptGenRef.current
       void connectVoiceStream(
         {
           onTranscript: (text: string, isFinal: boolean) => {
             if (isStale()) return
-            sawTranscript = true
             logForDebugging(
-              `[voice] onTranscript: isFinal=${String(isFinal)} text="${text}"`,
+              `[voice] onTranscript: isFinal=${String(isFinal)} length=${text.length}`,
             )
             if (isFinal && text.trim()) {
               if (focusTriggeredRef.current) {
@@ -792,7 +568,7 @@ export function useVoice({
                 // keep recording. This gives continuous transcription while
                 // the terminal is focused.
                 logForDebugging(
-                  `[voice] Focus mode: flushing final transcript immediately: "${text.trim()}"`,
+                  `[voice] Focus mode: flushing final transcript, length=${text.trim().length}`,
                 )
                 onTranscriptRef.current(text.trim())
                 focusFlushedCharsRef.current += text.trim().length
@@ -810,7 +586,7 @@ export function useVoice({
                 }
                 accumulatedRef.current += text.trim()
                 logForDebugging(
-                  `[voice] Accumulated final transcript: "${accumulatedRef.current}"`,
+                  `[voice] Accumulated final transcript length=${accumulatedRef.current.length}`,
                 )
                 // Clear interim since final supersedes it
                 setVoiceState(prev => {
@@ -838,7 +614,7 @@ export function useVoice({
               })
             }
           },
-          onError: (error: string, opts?: { fatal?: boolean }) => {
+          onError: (error: string) => {
             if (isStale()) {
               logForDebugging(
                 `[voice] ignoring onError from stale session: ${error}`,
@@ -855,46 +631,12 @@ export function useVoice({
               )
               return
             }
-            // Early-failure retry: server error before any transcript =
-            // likely a transient upstream race (CE rejection, Deepgram
-            // not ready). Clear connectionRef so audio re-buffers, back
-            // off, reconnect. Skip if the user has already released the
-            // key (state left 'recording') — no point retrying a session
-            // they've ended. Fatal errors (Cloudflare bot challenge, auth
-            // rejection) are the same failure on every retry attempt, so
-            // fall through to surface the message.
-            if (
-              !opts?.fatal &&
-              !sawTranscript &&
-              stateRef.current === 'recording'
-            ) {
-              if (!retryUsedRef.current) {
-                retryUsedRef.current = true
-                logForDebugging(
-                  `[voice] early voice_stream error (pre-transcript), retrying once: ${error}`,
-                )
-                logEvent('tengu_voice_stream_early_retry', {})
-                connectionRef.current = null
-                attemptGenRef.current++
-                setTimeout(
-                  (stateRef, attemptConnect, keyterms) => {
-                    if (stateRef.current === 'recording') {
-                      attemptConnect(keyterms)
-                    }
-                  },
-                  250,
-                  stateRef,
-                  attemptConnect,
-                  keyterms,
-                )
-                return
-              }
-            }
-            // Surfacing — bump gen so this conn's trailing close-error
+            // 本地引擎错误直接呈现，避免重复转写同一段录音。
+            // 更新代次，忽略随后到达的过期回调。
             // (ws fires error then close 1006) is swallowed above.
             attemptGenRef.current++
             logError(new Error(`[voice] voice_stream error: ${error}`))
-            onErrorRef.current?.(`Voice stream error: ${error}`)
+            onErrorRef.current?.(`本地语音识别失败：${error}`)
             // Clear the audio buffer on error to avoid memory leaks
             audioBuffer.length = 0
             focusTriggeredRef.current = false
@@ -974,10 +716,7 @@ export function useVoice({
             }
           },
         },
-        {
-          language: stt.code,
-          keyterms,
-        },
+        { language: stt.code },
       ).then(conn => {
         if (isStale()) {
           conn?.close()
@@ -985,10 +724,10 @@ export function useVoice({
         }
         if (!conn) {
           logForDebugging(
-            '[voice] Failed to connect to voice_stream (no OAuth token?)',
+            '[voice] 本地语音引擎未配置或无法启动',
           )
           onErrorRef.current?.(
-            'Voice mode requires a Claude.ai account. Please run /login to sign in.',
+            '请检查 YAOYAOCHE_WHISPER_CLI 与 YAOYAOCHE_WHISPER_MODEL 的配置。',
           )
           // Clear the audio buffer on failure
           audioBuffer.length = 0
@@ -1007,7 +746,7 @@ export function useVoice({
       })
     }
 
-    void getVoiceKeyterms().then(attemptConnect)
+    attemptConnect()
   }
 
   // ── Hold-to-talk handler ────────────────────────────────────────────

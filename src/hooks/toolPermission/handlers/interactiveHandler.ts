@@ -4,7 +4,6 @@ import { randomUUID } from 'crypto'
 import { logForDebugging } from 'src/utils/debug.js'
 import { getAllowedChannels } from '../../../bootstrap/state.js'
 import type { BridgePermissionCallbacks } from '../../../bridge/bridgePermissionCallbacks.js'
-import { getTerminalFocused } from '../../../ink/terminal-focus-state.js'
 import {
   CHANNEL_PERMISSION_REQUEST_METHOD,
   type ChannelPermissionRequestParams,
@@ -38,6 +37,7 @@ type InteractivePermissionParams = {
   awaitAutomatedChecksBeforeDialog: boolean | undefined
   bridgeCallbacks?: BridgePermissionCallbacks
   channelCallbacks?: ChannelPermissionCallbacks
+  isPromptFocused?: () => boolean
 }
 
 /**
@@ -506,7 +506,7 @@ function handleInteractivePermission(
               ctx.removeFromQueue()
             }
           }
-          const checkmarkMs = getTerminalFocused() ? 3000 : 1000
+          const checkmarkMs = params.isPromptFocused?.() ? 3000 : 1000
           checkmarkTransitionTimer = setTimeout(() => {
             checkmarkTransitionTimer = undefined
             if (checkmarkAbortHandler) {

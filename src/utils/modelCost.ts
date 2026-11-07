@@ -3,6 +3,8 @@ import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 
 import { logEvent } from 'src/services/analytics/index.js'
 import { setHasUnknownModelCost } from '../bootstrap/state.js'
 import { MODEL_CATALOG } from './model/modelCatalog.js'
+import { resolveIndependentModel } from '../services/api/multimodel/registry.js'
+import { readIndependentPricing } from '../services/api/multimodel/pricing.js'
 import { isFastModeEnabled } from './fastMode.js'
 import {
   getCanonicalName,
@@ -141,6 +143,23 @@ function tokensToUSDCost(modelCosts: ModelCosts, usage: Usage): number {
 }
 
 export function getModelCosts(model: string, usage: Usage): ModelCosts {
+  if (resolveIndependentModel(model)) {
+    const pricing = readIndependentPricing()[model]
+    if (!pricing) {
+      // Never use Anthropic prices to estimate another vendor's bill.
+      setHasUnknownModelCost()
+      return {
+        inputTokens: 0, outputTokens: 0, promptCacheWriteTokens: 0,
+        promptCacheReadTokens: 0, webSearchRequests: 0,
+      }
+    }
+    return {
+      inputTokens: pricing.input, outputTokens: pricing.output,
+      promptCacheWriteTokens: pricing.cacheWrite ?? pricing.input,
+      promptCacheReadTokens: pricing.cacheRead ?? pricing.input,
+      webSearchRequests: 0,
+    }
+  }
   const shortName = getCanonicalName(model)
 
   if (usage.speed === 'fast') {

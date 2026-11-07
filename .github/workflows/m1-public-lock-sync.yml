@@ -1,58 +1,35 @@
-name: 333 冻结依赖整组更新与锁一致性
+name: 333 冻结依赖锁与发行基准一致性
 on:
   workflow_call:
+  push:
+    branches: [main]
+    paths:
+      - 'build/install-public-deps.mjs'
+      - 'build/public-dependencies.lock.json'
+      - 'build/check-upgrade-protection.mjs'
+      - 'package.json'
+      - 'docs/upgrade/pr13-upgrade-protection-baseline.json'
+      - 'tools/dev/toolchain.lock.json'
+      - '.github/workflows/m1-public-lock-sync.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: main-ci-m1-public-lock-sync-${{ github.event.pull_request.number || github.ref }}
+  group: 333-release-lock-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   sync:
-
+    name: 冻结依赖和升级保护只读校验
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
+      - name: 读取权威工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-      - name: 从唯一源码版本清单生成候选锁
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs'
-          import vm from 'node:vm'
-          const src=fs.readFileSync('build/install-public-deps.mjs','utf8')
-          const parts=src.match(/const versions = (\{[\s\S]*?\n\});\nconst overrides = (\{[^\n]+\});/)
-          if(!parts)throw new Error('Cannot recover authoritative dependency manifest')
-          const dependencies=JSON.parse(parts[1])
-          const overrides=vm.runInNewContext('('+parts[2]+')')
-          fs.mkdirSync('.rebuild/public',{recursive:true})
-          fs.writeFileSync('.rebuild/public/package.json',JSON.stringify({
-            name:'release-rebuild-dependencies',version:'2.1.88',private:true,
-            dependencies,overrides
-          },null,2)+'\n')
-          NODE
-          npm install --prefix .rebuild/public --package-lock-only --ignore-scripts --no-audit --no-fund --legacy-peer-deps
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs'
-          import assert from 'node:assert/strict'
-          const current=JSON.parse(fs.readFileSync('.rebuild/public/package.json','utf8'))
-          const lock=JSON.parse(fs.readFileSync('.rebuild/public/package-lock.json','utf8'))
-          assert.deepEqual(lock.packages[''].dependencies,current.dependencies)
-          fs.copyFileSync('.rebuild/public/package-lock.json','build/public-dependencies.lock.json')
-          console.log('Locked packages:',Object.keys(lock.packages).length)
-          NODE
-      - name: 核查冻结依赖锁，无回写副作用
-        run: git diff --exit-code -- build/public-dependencies.lock.json
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: m1-public-dependencies-lock
-          path: |
-            .rebuild/public/package-lock.json
-            .rebuild/public/package.json
-          if-no-files-found: warn
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 锁定依赖、发行版本与历史基准校验
+        run: node tools/dev/toolchain.mjs check
+      - name: 负向防回退与工具链清单回归
+        run: node --test tests/upgrade-protection.test.mjs tests/toolchain-manifest.test.mjs

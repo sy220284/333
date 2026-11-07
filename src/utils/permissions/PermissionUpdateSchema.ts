@@ -12,11 +12,7 @@ import type {
   PermissionUpdateDestination,
 } from '../../types/permissions.js'
 import { lazySchema } from '../lazySchema.js'
-import { externalPermissionModeSchema } from './PermissionMode.js'
-import {
-  permissionBehaviorSchema,
-  permissionRuleValueSchema,
-} from './PermissionRule.js'
+import { PermissionUpdateSchema } from '../../entrypoints/sdk/coreSchemas.js'
 
 // Re-export for backwards compatibility
 export type { PermissionUpdate, PermissionUpdateDestination }
@@ -39,40 +35,6 @@ export const permissionUpdateDestinationSchema = lazySchema(() =>
   ]),
 )
 
-export const permissionUpdateSchema = lazySchema(() =>
-  z.discriminatedUnion('type', [
-    z.object({
-      type: z.literal('addRules'),
-      rules: z.array(permissionRuleValueSchema()),
-      behavior: permissionBehaviorSchema(),
-      destination: permissionUpdateDestinationSchema(),
-    }),
-    z.object({
-      type: z.literal('replaceRules'),
-      rules: z.array(permissionRuleValueSchema()),
-      behavior: permissionBehaviorSchema(),
-      destination: permissionUpdateDestinationSchema(),
-    }),
-    z.object({
-      type: z.literal('removeRules'),
-      rules: z.array(permissionRuleValueSchema()),
-      behavior: permissionBehaviorSchema(),
-      destination: permissionUpdateDestinationSchema(),
-    }),
-    z.object({
-      type: z.literal('setMode'),
-      mode: externalPermissionModeSchema(),
-      destination: permissionUpdateDestinationSchema(),
-    }),
-    z.object({
-      type: z.literal('addDirectories'),
-      directories: z.array(z.string()),
-      destination: permissionUpdateDestinationSchema(),
-    }),
-    z.object({
-      type: z.literal('removeDirectories'),
-      directories: z.array(z.string()),
-      destination: permissionUpdateDestinationSchema(),
-    }),
-  ]),
-)
+// Share the SDK's versioned runtime parser; the legacy parallel schema
+// excluded 'auto' and split hook/remote permission types from actual SDK events.
+export const permissionUpdateSchema = PermissionUpdateSchema

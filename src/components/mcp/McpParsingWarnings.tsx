@@ -153,10 +153,7 @@ export function McpParsingWarnings() {
   }
   let t3;
   if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
-    t3 = [t0, t1, t2, {
-      scope: "enterprise",
-      config: getMcpConfigsByScope("enterprise")
-    }];
+    t3 = [t0, t1, t2];
     $[3] = t3;
   } else {
     t3 = $[3];

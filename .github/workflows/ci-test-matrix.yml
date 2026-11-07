@@ -1,0 +1,209 @@
+name: 333 全量测试矩阵与门禁契约
+on:
+  workflow_call:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inventory:
+    name: 测试清单与门禁覆盖校验
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - name: 测试清单防漏检回归
+        run: node --test tests/ci-test-discovery.test.mjs
+      - name: 固定校验和验证全部 GitHub Actions 语法
+        shell: bash
+        run: |
+          set -euo pipefail
+          source tools/dev/toolchain-versions.env
+          curl --fail --location --silent --show-error --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            -o "${RUNNER_TEMP}/actionlint.tar.gz"
+          printf '%s  %s\n' "${ACTIONLINT_LINUX_X64_SHA256}" "${RUNNER_TEMP}/actionlint.tar.gz" | sha256sum --check
+          mkdir -p "${RUNNER_TEMP}/actionlint-bin"
+          tar -xzf "${RUNNER_TEMP}/actionlint.tar.gz" -C "${RUNNER_TEMP}/actionlint-bin" actionlint
+          "${RUNNER_TEMP}/actionlint-bin/actionlint" .github/workflows/*.yml
+      - name: 生成补充测试完整分片清单
+        run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=0 --list
+      - name: 校验门禁配置与退役功能引用
+        run: node build/ci-gate-audit.mjs
+  build:
+    name: 一次构建，供全部测试分片复用
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 恢复冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - name: 一次完成源码构建与发行打包
+        run: |
+          bun build/rebuild.mjs
+          node build/compile-standalone.mjs
+          node build/package-release.mjs
+      - name: 原样封装发行文件的执行权限与符号链接
+        run: |
+          test -f dist/cli.js
+          test -x dist/yaoyaoche
+          tar -czf "${RUNNER_TEMP}/ci-distribution.tar.gz" -C dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: ${{ runner.temp }}/ci-distribution.tar.gz
+          compression-level: 0
+          retention-days: 5
+          if-no-files-found: error
+  core:
+    name: 核心测试 (${{ matrix.suite }})
+    needs: [inventory, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [node, bun]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装测试依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: ${{ runner.temp }}/333-distribution
+      - name: 恢复共享发行文件及可执行权限
+        run: |
+          mkdir -p dist
+          tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
+          test -x dist/yaoyaoche
+      - name: 运行核心测试
+        run: npm run test:${{ matrix.suite }}
+  supplemental:
+    name: 补充测试 (${{ matrix.shard }}/6)
+    needs: [inventory, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 安装测试依赖与固定 AST 解析器
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+          npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
+          npm install --prefix "${RUNNER_TEMP}/333-parser" --no-save --ignore-scripts --no-package-lock --no-audit --no-fund "typescript@${TOOLCHAIN_AST_TYPESCRIPT_VERSION}"
+          echo "TS_COMPILER_PATH=${RUNNER_TEMP}/333-parser/node_modules/typescript/lib/typescript.js" >> "${GITHUB_ENV}"
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: ${{ runner.temp }}/333-distribution
+      - name: 恢复共享发行文件及可执行权限
+        run: |
+          mkdir -p dist
+          tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
+          test -x dist/yaoyaoche
+      - name: 并行执行补充测试，失败保留原始退出码
+        run: node build/run-unregistered-tests.mjs --ci-supplemental --shard-count=6 --shard-index=${{ matrix.shard }} --exclude-oracle
+  oracle:
+    name: 官方 2.1.317 二进制真实差分测试
+    needs: [inventory, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: 读取统一工具链版本
+        run: node tools/dev/toolchain.mjs gha-env >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.TOOLCHAIN_NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.TOOLCHAIN_BUN_VERSION }}
+      - name: 恢复项目冻结依赖
+        run: |
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-shared-distribution
+          path: ${{ runner.temp }}/333-distribution
+      - name: 恢复共享发行文件及可执行权限
+        run: |
+          mkdir -p dist
+          tar -xzf "${RUNNER_TEMP}/333-distribution/ci-distribution.tar.gz" -C dist
+          test -x dist/yaoyaoche
+      - name: 官方 x64 原版获取与 SHA256 校验
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .rebuild/oracle
+          curl --fail --location --silent --show-error --http1.1 --retry-all-errors --retry 5 --retry-delay 2 \
+            "https://downloads.claude.ai/claude-code-releases/2.1.317/linux-x64/claude" \
+            -o .rebuild/oracle/claude
+          echo "eb224419e344575faa4a1f39b290b649425a10cd5ee2ef1d003480cd9ae57eb0  .rebuild/oracle/claude" | sha256sum --check
+          chmod 700 .rebuild/oracle/claude
+          echo "CLAUDE_TARGET_X64=${GITHUB_WORKSPACE}/.rebuild/oracle/claude" >> "${GITHUB_ENV}"
+          echo "CLAUDE_REFERENCE_BIN=${GITHUB_WORKSPACE}/.rebuild/oracle/claude" >> "${GITHUB_ENV}"
+      - name: 官方对照不得跳过，逐项执行并保留失败结果
+        run: node build/run-unregistered-tests.mjs --ci-oracle
+  complete:
+    name: 全量测试合并门禁
+    if: ${{ !cancelled() }}
+    needs: [inventory, build, core, supplemental, oracle]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 确保全部并行测试均成功
+        env:
+          INVENTORY: ${{ needs.inventory.result }}
+          BUILD: ${{ needs.build.result }}
+          CORE: ${{ needs.core.result }}
+          SUPPLEMENTAL: ${{ needs.supplemental.result }}
+          ORACLE: ${{ needs.oracle.result }}
+        run: |
+          for result in "${INVENTORY}" "${BUILD}" "${CORE}" "${SUPPLEMENTAL}" "${ORACLE}"; do
+            if [[ "${result}" != success ]]; then
+              echo "::error::测试门禁未成功：${result}"
+              exit 1
+            fi
+          done

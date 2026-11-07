@@ -1,0 +1,79 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { test } from 'node:test'
+
+const root = new URL('../', import.meta.url)
+const source = path => readFileSync(new URL(path, root), 'utf8')
+
+test('桌面安全网关完整放行工作项队列与人工审核方法', () => {
+  const main = source('electron/main.ts')
+  const protocol = source('../src/services/desktop/protocol.ts')
+  assert.ok(main.includes("'agents.members'"), '桌面IPC缺少真实团队成员查询')
+  assert.ok(protocol.includes("request('agents.members'"), '协议缺少团队成员查询')
+  assert.ok(main.includes("'agents.activity'"), '桌面IPC缺少跨模式活动查询')
+  assert.ok(protocol.includes("request('agents.activity'"), '协议缺少跨模式活动查询')
+  for (const action of ['message', 'inbox']) {
+    assert.ok(main.includes(`'agents.team.${action}'`), `Electron IPC 未开放团队 ${action}`)
+    assert.ok(protocol.includes(`request('agents.team.${action}'`), `团队 ${action} 缺少协议定义`)
+  }
+  for (const action of [
+    'list', 'enqueue', 'start', 'evidence', 'previewIntegrate', 'integrate', 'runBatch', 'runQueue', 'haltQueue', 'queueStatus', 'approve', 'retry', 'recover', 'cancel',
+  ]) {
+    assert.ok(main.includes(`'missions.jobs.${action}'`), `Electron IPC 未开放 ${action}`)
+    assert.ok(protocol.includes(`request('missions.jobs.${action}'`), `后端协议缺少 ${action}`)
+  }
+})
+
+test('桌面长期任务工作台提供真实执行入口与安全状态动作', () => {
+  const app = source('src/App.tsx')
+  assert.match(app, /missions\.jobs\.list/)
+  assert.match(app, /missions\.jobs\.enqueue/)
+  assert.match(app, /missions\.jobs\.runBatch/)
+  assert.match(app, /missions\.jobs\.runQueue/)
+  assert.match(app, /missions\.jobs\.haltQueue/)
+  assert.match(app, /missionQueueActive/)
+  assert.match(app, /missions\.jobs\.start/)
+  assert.match(app, /missions\.jobs\.approve/)
+  assert.match(app, /missions\.jobs\.retry/)
+  assert.match(app, /missions\.jobs\.recover/)
+  assert.match(app, /sessions\.interrupt/)
+  assert.match(app, /selectedMissionRef\.current/)
+  assert.match(app, /agents\.members/)
+  assert.match(app, /agents\.activity/)
+  assert.match(app, /跨模式执行总览/)
+  assert.match(app, /window\.confirm/)
+  assert.doesNotMatch(app, /job\.status==='running'&&<button onClick=\{\(\)=>void jobAction\('missions\.jobs\.cancel'/)
+})
+
+test('多个SDK会话共享审批收件箱，但结果只回到发起请求的原会话', () => {
+  const app = source('src/App.tsx')
+  assert.match(app, /globalInbox=.*permission\.request/)
+  assert.match(app, /sessionId:pending\.sessionId,permissionId:id/)
+  assert.match(app, /sessionId:pending\.sessionId,requestId:id/)
+  assert.match(app, /item\.sessionId!==event\.sessionId/)
+  assert.match(app, /会话 \{p\.sessionId\.slice\(0,8\)\}/)
+  assert.doesNotMatch(app, /if\(!sessionId\)return\s+await operation\('权限审批'/)
+})
+
+test('工作项历史只读展示，发送时显式恢复 SDK 会话', () => {
+  const app = source('src/App.tsx')
+  const gateway = source('../src/services/desktop/gateway.ts')
+  assert.match(app, /setHistoryOnly\(true\)/)
+  assert.match(app, /if\(historyOnly\)/)
+  assert.match(app, /sessions\.ensureOpen/)
+  assert.match(gateway, /case 'sessions\.ensureOpen'/)
+})
+
+test('长期任务视图显示正确的检查点、执行次数、终态和异常恢复说明', () => {
+  const app = source('src/App.tsx')
+  const css = source('src/theme/yaoyao-layout.css')
+  assert.match(app, /selected\.checkpoint/)
+  assert.match(app, /执行次数：\{job\.attempt\}/)
+  assert.match(app, /状态|待审核/)
+  const button = source('src/components/ui/Button.tsx')
+  assert.match(app, /<Card key=\{job\.id\}[^>]+data-updated=\{updatedJobId===job\.id\|\|undefined\}[^>]+className="yy-job-card min-w-0"/)
+  assert.match(css, /\.yy-job-card\[data-updated=true\]::after/)
+  assert.doesNotMatch(css, /\.job-card/)
+  assert.match(button, /focus-visible:ring-2/)
+  assert.match(css, /prefers-reduced-motion/)
+})

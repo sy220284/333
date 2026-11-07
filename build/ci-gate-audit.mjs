@@ -1,61 +1,160 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync } from 'node:fs'
-import { CHECKS } from './ci-impact.mjs'
-const workflow = name => readFileSync(new URL('../.github/workflows/' + name, import.meta.url),'utf8')
-const files = readdirSync(new URL('../.github/workflows/', import.meta.url)).filter(x=>x.endsWith('.yml'))
-const errors=[]
-const dispatch = workflow('ci-on-demand.yml')
-const names=Object.keys(CHECKS)
-
-for (const name of names) {
-  if (!files.includes(name+'.yml')) {errors.push('专项工作流缺失：'+name);continue}
-  const source=workflow(name+'.yml')
-  if (!/^ {2}workflow_call:\s*$/m.test(source))
-    errors.push('专项未提供 workflow_call 入口：'+name)
-  if (/^ {2}pull_request:\s*$/m.test(source))
-    errors.push('专项绕过总入口重复响应 PR：'+name)
-  if (!dispatch.includes('uses: ./.github/workflows/'+name+'.yml'))
-    errors.push('统一调度遗漏专项：'+name)
-  if (!dispatch.includes('needs.plan.outputs.'+name.replaceAll('-','_')))
-    errors.push('调度缺少此专项路由条件：'+name)
-  if (!new RegExp('^  group: main-ci-'+name+'-', 'm').test(source))
-    errors.push('专项独立并发组缺失：'+name)
-  if (!/^  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$/m.test(source))
-    errors.push('专项缺少 PR 过期运行取消设置：'+name)
-  if (/^  push:\s*$/m.test(source)) {
-    const lines=source.split(/\r?\n/)
-    const i=lines.findIndex(x=>/^ {2}push:\s*$/.test(x))
-    let j=i+1
-    while(j<lines.length&&(/^ {4}/.test(lines[j])||!lines[j].trim()))j++
-    if(!/^ {4}branches:/m.test(lines.slice(i+1,j).join('\n')))
-      errors.push('专项 push 触发没有指定分支：'+name)
+/**
+ * PR gate invariants, checked before any expensive build.
+ * A retired test or an inert last-commit filter must not claim CI success.
+ */
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
+const base = new URL('../', import.meta.url)
+const root = file => new URL(file, base)
+const directory = root('.github/workflows/')
+const yaml = name => readFileSync(root(`.github/workflows/${name}`), 'utf8')
+const errors = []
+const required = [
+  'ci-test-matrix.yml',
+  'rebuild.yml',
+  'independent-models.yml',
+  'independent-product-cleanup.yml',
+  'dev-quality.yml',
+  'codeql.yml',
+  'governance-security-probe.yml',
+  'personal-retirement-boundary.yml',
+]
+for (const name of required) {
+  if (!existsSync(root(`.github/workflows/${name}`))) {
+    errors.push(`缺失核心工作流：${name}`)
+    continue
+  }
+  if (!/^ {2}workflow_call:/m.test(yaml(name))) errors.push(`未纳入统一调用入口：${name}`)
+}
+const workflows = readdirSync(directory).filter(name => name.endsWith('.yml'))
+for (const name of workflows) {
+  const content = yaml(name)
+  if (/upgrade\/2\.1\.310-m1-evidence/.test(content) && name !== 'rebuild.yml') {
+    errors.push(`旧升级分支依赖：${name}`)
   }
 }
-for (const file of files) {
-  if (file==='ci-on-demand.yml') continue
-  if (/^ {2}pull_request:\s*$/m.test(workflow(file)))
-    errors.push('主线上另有自动 PR 工作流绕过总入口：'+file)
+// Keep only the latest PR checks running. Dependency-lock verification is
+// read-only and follows the same cancellation contract as other PR gates.
+for (const name of workflows) {
+  const source = yaml(name)
+  if (!/^ {2}workflow_call:/m.test(source)) continue
+  if (name === 'desktop-communication.yml') {
+    // Old SHA manual reruns must stay in a separate lane from latest PR checks.
+    if (!/group: reusable-desktop-communication-.*github\.run_attempt == 1.*github\.run_id/.test(source) ||
+        !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}/.test(source))
+      errors.push('桌面发行版验收缺少旧提交回跑隔离')
+  } else if (!/^ {2}cancel-in-progress: (true|\$\{\{ github\.event_name == 'pull_request' \}\})$/m.test(source)) {
+    errors.push(`PR 检查没有取消过期运行：${name}`)
+  }
+  if (/^ {2}group:.*(?:github\.sha|pull_request\.head\.sha)/m.test(source)) {
+    errors.push(`并发分组仍绑定提交 SHA：${name}`)
+  }
 }
-if (!/ready_for_review/.test(dispatch)||!/converted_to_draft/.test(dispatch)||
-    !/synchronize/.test(dispatch))
-  errors.push('PR Draft / Ready 状态变更事件未覆盖')
-if (!/node build\/ci-impact\.mjs/.test(dispatch)||
-    !/node build\/ci-gate-audit\.mjs/.test(dispatch)||
-    !/node --test tests\/ci-routing\.test\.mjs/.test(dispatch))
-  errors.push('基础审计与按需计算没有真实执行')
-if (!/needs:\s*\[plan, basic,/.test(dispatch)||
-    !/if: \$\{\{ !cancelled\(\) \}\}/.test(dispatch))
-  errors.push('统一汇总门禁缺少基础、专项失败收敛或取消逻辑')
-const lock=workflow('m1-public-lock-sync.yml')
-if (/contents:\s*write/.test(lock)||/git\s+push/.test(lock)||
-    !/git diff --exit-code -- build\/public-dependencies\.lock\.json/.test(lock))
-  errors.push('PR 依赖锁一致性门禁必须只读且真实检查差异')
-const upgrade=workflow('latest-stable-upgrade.yml')
-if (/^ {2}pull_request:/m.test(upgrade)) errors.push('依赖自动升级仍在 PR 执行')
 
-if (errors.length){
-  for(const e of errors) console.error('[ci-gate] '+e)
-  process.exitCode=1
-}else{
-  console.log('[ci-gate] 统一入口、'+names.length+' 个专项、'+files.length+' 条工作流及只读锁验收通过')
+// Only the dispatcher starts checks on PR events. Reusable workflows retain
+// their original main-branch push and explicit manual entrypoints.
+const dispatcher = yaml('ci-on-demand.yml')
+if (!/^ {2}pull_request:/m.test(dispatcher) ||
+    !/ready_for_review/.test(dispatcher) ||
+    !/converted_to_draft/.test(dispatcher) ||
+    !/synchronize/.test(dispatcher))
+  errors.push('缺少 Draft / 待审转换和继续提交的完整调度')
+if (!/group: ci-on-demand-.*github\.run_attempt == 1.*github\.run_id/.test(dispatcher) ||
+    !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}/.test(dispatcher))
+  errors.push('统一调度缺少最新版PR取消与旧SHA重新运行隔离')
+if (!/node build\/ci-impact\.mjs/.test(dispatcher) ||
+    !/needs: \[plan, basic,/.test(dispatcher))
+  errors.push('统一调度缺少累计改动识别或稳定汇总门禁')
+for (const name of workflows) {
+  if (name === 'ci-on-demand.yml' || name === 'latest-stable-upgrade.yml') continue
+  const source = yaml(name)
+  if (/^ {2}pull_request:/m.test(source))
+    errors.push(`专项工作流仍绕过统一调度直接响应 PR：${name}`)
+  if (!/^ {2}workflow_call:/m.test(source))
+    errors.push(`专项工作流缺少可复用入口：${name}`)
+  if (!dispatcher.includes(`./.github/workflows/${name}`))
+    errors.push(`专项工作流未接入全量调度：${name}`)
+  if (/^ {2}group: \$\{\{ github\.workflow \}\}/m.test(source))
+    errors.push(`可复用检查并发组未隔离：${name}`)
+}
+
+// A generic push trigger would bypass the router on the PR branch.
+for (const name of workflows) {
+  const lines = yaml(name).split(/\r?\n/)
+  const index = lines.findIndex(line => /^ {2}push:\s*$/.test(line))
+  if (index < 0) continue
+  let end = index + 1
+  while (end < lines.length && (/^ {4}/.test(lines[end]) || !lines[end].trim())) end++
+  const pushBlock = lines.slice(index + 1, end).join('\n')
+  if (!/^ {4}branches:/m.test(pushBlock))
+    errors.push(`工作流的任意分支 push 入口绕过 PR 调度：${name}`)
+}
+
+for (const name of ['sdk-stream-parity.yml','m1-spinner-parity.yml']) {
+  if (yaml(name).includes('git diff-tree --root')) errors.push(`仅最后提交判断造成空跑：${name}`)
+  if (yaml(name).includes('/2.1.310/')) errors.push(`旧版对照基准：${name}`)
+}
+for (const name of ['m4-send-to-project-317.yml']) {
+  if (workflows.includes(name)) errors.push(`已删除功能工作流残留：${name}`)
+}
+if (yaml('rebuild.yml').includes('m6-ultrareview-runtime-config-317.test.mjs')) {
+  errors.push('已删除云审查门禁仍在全量构建中')
+}
+
+for (const name of workflows) {
+  const source = yaml(name)
+  if (/ref:\s*\$\{\{\s*github\.event\.pull_request\.number\s*\|\|/.test(source))
+    errors.push(`checkout 误用 PR 编号作为分支名：${name}`)
+}
+const securityProbe = yaml('governance-security-probe.yml')
+if (/npm run (?:verify|test:all)/.test(securityProbe))
+  errors.push('高风险依赖门禁重复执行缺少独立环境的全量测试')
+if (!securityProbe.includes('tests/m1-prometheus-security-317.test.mjs') ||
+    !securityProbe.includes('tests/m1-telemetry-policy.test.mjs'))
+  errors.push('高风险依赖门禁缺失安全接口与隐私策略专项测试')
+const lockGate = yaml('m1-public-lock-sync.yml')
+if (/contents:\s*write/.test(lockGate) || /git\s+push\s+origin/.test(lockGate))
+  errors.push('依赖锁门禁不得在审查时自动改写 PR：m1-public-lock-sync.yml')
+if (!/node tools\/dev\/toolchain\.mjs check/.test(lockGate))
+  errors.push('依赖锁缺失实际基准校验：m1-public-lock-sync.yml')
+// Enterprise gateway is intentionally removed from the personal product.
+if (workflows.includes('m6-gateway-providers-317.yml'))
+  errors.push('已退役企业网关专项仍存在')
+if (existsSync(root('src/cli/gateway/')))
+  errors.push('企业网关源码目录仍存在，请完成全量清退')
+const retiredGatewayTests = readdirSync(root('tests/')).filter(name => /^m6-gateway-.*\.test\.mjs$/.test(name))
+if (retiredGatewayTests.length)
+  errors.push(`企业网关测试已无对应业务入口：${retiredGatewayTests.join(',')}`)
+
+if (workflows.includes('m6-self-hosted-runner-317.yml'))
+  errors.push('已退役原厂 Runner 专项仍存在')
+if (existsSync(root('src/cli/selfHostedRunner/')))
+  errors.push('原厂 Runner 源码仍存在')
+for (const path of [
+  'src/services/policyLimits/',
+  'src/services/remoteManagedSettings/',
+  'src/services/api/adminRequests.ts',
+  'src/skills/bundled/scheduleRemoteAgents.ts',
+  'src/tools/RemoteTriggerTool/',
+]) {
+  if (existsSync(root(path))) errors.push(`企业云端服务遗留：${path}`)
+}
+if (!existsSync(root('tests/enterprise-retirement-boundary.test.mjs')))
+  errors.push('缺少企业退役与个人能力保护回归测试')
+const matrix = yaml('ci-test-matrix.yml')
+if (!/needs:\s*\[inventory, build, core, supplemental, oracle\]/.test(matrix) ||
+    !/if:\s*\$\{\{ !cancelled\(\) \}\}/.test(matrix) ||
+    !/\[\[ "\$\{result\}" != success \]\]/.test(matrix)) {
+  errors.push('全量测试缺少失败汇总门禁：ci-test-matrix.yml')
+}
+if (/^ {4}paths(?:-ignore)?:/m.test(matrix.split(/^ {2}workflow_call:/m)[1]?.split(/^ {2}(?:push|workflow_dispatch):/m)[0] ?? ''))
+  errors.push('全量测试门禁不得过滤 PR 路径：ci-test-matrix.yml')
+if (existsSync(root('tests/m6-ultrareview-cli-native-parity-317.test.mjs')))
+  errors.push('已退役 Ultrareview CLI 原生对照测试仍存在')
+
+if (errors.length) {
+  for (const error of errors) console.error(`[ci-gate] ${error}`)
+  process.exitCode = 1
+} else {
+  console.log(`[ci-gate] 现行门禁、旧分支清理及真实对照检查通过，共 ${workflows.length} 条工作流`)
 }

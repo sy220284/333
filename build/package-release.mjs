@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, cpSync, copyFileSync, chmodSync, readdirSync, readFileSync, statSync, lstatSync, writeFileSync, rmSync, renameSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { createReleasePackageManifest } from './release-package-manifest.mjs';
 import { verifyOfficialEmbeddedAssets317 } from './verify-official-embedded-assets.mjs';
 import { packageOfficialEmbeddedAssets317 } from './package-official-317-assets.mjs';
 verifyOfficialEmbeddedAssets317();
@@ -10,8 +11,12 @@ const releaseVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8
 if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) throw Error('Invalid release version in package.json');
 const dist = join(root, 'dist');
 if (!existsSync(join(dist, 'cli.js'))) throw Error('First build the CLI from src/ with bun build/rebuild.mjs');
-const nativeName = process.platform === 'win32' ? 'claude.exe' : 'claude';
+const nativeName = process.platform === 'win32' ? 'yaoyaoche.exe' : 'yaoyaoche';
 const executable = join(dist, nativeName);
+const desktopNativeName = process.platform === 'win32' ? 'desktopHost.exe' : 'desktopHost';
+const desktopExecutable = join(dist, desktopNativeName);
+if (!existsSync(desktopExecutable) || !statSync(desktopExecutable).isFile() || !statSync(desktopExecutable).size)
+  throw Error('Missing desktop host: run node build/compile-standalone.mjs before packaging');
 if (!existsSync(executable) || !statSync(executable).isFile() || !statSync(executable).size)
   throw Error('Missing native executable: run node build/compile-standalone.mjs before packaging');
 if (!existsSync(join(root, 'build/public-dependencies.lock.json'))) throw Error('Missing the verified public dependency lockfile');
@@ -19,7 +24,7 @@ mkdirSync(dist,{recursive:true});
 // A release is a closed set of files: reject stale executables, old chunks and
 // unrelated build outputs before changing the previous package.
 const expectedRoot = new Set([
-  'cli.js', 'cli.js.map', nativeName, 'vendor', 'LICENSE.md',
+  'cli.js', 'cli.js.map', 'desktopHost.js', 'desktopHost.js.map', nativeName, desktopNativeName, 'vendor', 'SOURCE_NOTICES.md',
   'package.json', 'launcher.cjs', 'README.md', 'integrity.json', 'official-317',
 ]);
 for (const entry of readdirSync(dist, { withFileTypes: true })) {
@@ -110,22 +115,14 @@ try {
     renameSync(vendorBackup, vendorOutput);
 }
 packageOfficialEmbeddedAssets317(root, dist);
-copyFileSync(join(root,'LICENSE.md'),join(dist,'LICENSE.md'));
-const pkg = {
-  name: `claude-code-${releaseVersion}-source-rebuild`,
-  version: `${releaseVersion}-rebuild.1`,
-  private: true,
-  description: `Independent reconstruction targeting Claude Code ${releaseVersion} from extracted sources`,
-  type: 'module',
-  bin: { claude: './launcher.cjs' },
-  engines: { node: '>=18' }
-};
+copyFileSync(join(root,'SOURCE_NOTICES.md'),join(dist,'SOURCE_NOTICES.md'));
+const pkg = createReleasePackageManifest(releaseVersion, desktopNativeName);
 writeFileSync(join(dist,'package.json'), `${JSON.stringify(pkg,null,2)}\n`);
 // The launcher is maintained as executable source so lifecycle tests exercise
 // the exact artifact that ships (including SIGINT/SIGTERM propagation).
 copyFileSync(join(root, 'build/release-launcher.cjs'), join(dist, 'launcher.cjs'));
 if(process.platform!=='win32')chmodSync(join(dist,'launcher.cjs'),0o755);
-writeFileSync(join(dist,'README.md'), `# Claude Code ${releaseVersion} — Independently Rebuilt CLI
+writeFileSync(join(dist,'README.md'), `# 摇摇车 ${releaseVersion} — Independently Rebuilt CLI
 
 This directory contains a CLI compiled from the extracted \`src/\` code using Bun.
 The original \`cli.js\` in the repository root is NOT packaged or used as a fallback.
@@ -133,15 +130,15 @@ The original \`cli.js\` in the repository root is NOT packaged or used as a fall
 The packaged native executable embeds its own runtime. No global Bun installation
 is required. On Linux/macOS use:
 \`\`\`sh
-./claude --version
-./claude --help
+./yaoyaoche --version
+./yaoyaoche --help
 \`\`\`
-On Windows run \`claude.exe --version\`. With Node, the portable
+On Windows run \`yaoyaoche.exe --version\`. For local desktop IPC run\n\`./desktopHost\` (Windows: \`desktopHost.exe\`) via JSON Lines stdin/stdout.\nWith Node, the portable
 \`launcher.cjs\` forwards signals to the local compiled executable.
 
 The \`official-317/\` directory contains 101 SHA-verified original embedded resources,\nwith their relative skill-script paths preserved and a pinned manifest.\nThe \`vendor/\` directory contains the platform-specific native resources and
 is included in the integrity manifest.
-This package preserves the original project's proprietary license notice.
+Third-party source origins and rights notices are recorded in SOURCE_NOTICES.md.
 `);
 const files=[];
 function walk(dir) {

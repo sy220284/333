@@ -24,7 +24,7 @@ test('CLI and interactive reconnection consult the same gate before reconnecting
   const guardedReconnect = client.slice(client.indexOf('export async function reconnectMcpServerImpl('))
   assert.ok(guardedReconnect.indexOf('getMcpReconnectBlockReason') < guardedReconnect.indexOf('clearKeychainCache()'))
   assert.match(guardedReconnect, /type: 'disabled'/)
-  assert.match(guardedReconnect, /blocked by enterprise managed policy/)
+  assert.match(guardedReconnect, /blocked by local security policy/)
   assert.match(ui, /const closeBlock = getMcpReconnectBlockReason/)
   assert.match(ui, /const retryBlock = getMcpReconnectBlockReason/)
 })

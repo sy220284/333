@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { type ReactNode, useEffect } from 'react'
+import type { ReactNode } from 'react'
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { stringWidth } from '../../ink/stringWidth.js'
@@ -15,18 +15,8 @@ import {
 } from '../../utils/logoV2Utils.js'
 import { renderModelSetting } from '../../utils/model/model.js'
 import { OffscreenFreeze } from '../OffscreenFreeze.js'
-import { AnimatedClawd } from './AnimatedClawd.js'
-import { Clawd } from './Clawd.js'
-import {
-  GuestPassesUpsell,
-  incrementGuestPassesSeenCount,
-  useShowGuestPassesUpsell,
-} from './GuestPassesUpsell.js'
-import {
-  incrementOverageCreditUpsellSeenCount,
-  OverageCreditUpsell,
-  useShowOverageCreditUpsell,
-} from './OverageCreditUpsell.js'
+import { AnimatedBrandMark } from './AnimatedBrandMark.js'
+import { BrandMark } from './BrandMark.js'
 
 export function CondensedLogo(): ReactNode {
   const { columns } = useTerminalSize()
@@ -38,30 +28,15 @@ export function CondensedLogo(): ReactNode {
 
   // Prefer AppState.agent (set from --agent CLI flag) over settings
   const agentName = agent ?? agentNameFromSettings
-  const showGuestPassesUpsell = useShowGuestPassesUpsell()
-  const showOverageCreditUpsell = useShowOverageCreditUpsell()
-
-  useEffect(() => {
-    if (showGuestPassesUpsell) {
-      incrementGuestPassesSeenCount()
-    }
-  }, [showGuestPassesUpsell])
-
-  useEffect(() => {
-    if (showOverageCreditUpsell && !showGuestPassesUpsell) {
-      incrementOverageCreditUpsellSeenCount()
-    }
-  }, [showOverageCreditUpsell, showGuestPassesUpsell])
-
   // Calculate available width for text content
-  // Account for: condensed clawd width (11 chars) + gap (2) + padding (2) = 15 chars
-  const textWidth = Math.max(columns - 15, 20)
+  // Account for: 摇摇车 brand mark width (13 chars) + gap (2) + padding (2) = 19 chars
+  const textWidth = Math.max(columns - 19, 20)
 
-  // Truncate version to fit within available width, accounting for "Claude Code v" prefix
-  const versionPrefix = 'Claude Code v'
+  // Truncate version to fit within available width, accounting for "摇摇车 v" prefix
+  const versionPrefix = '摇摇车 v'
   const truncatedVersion = truncate(
     version,
-    Math.max(textWidth - versionPrefix.length, 6),
+    Math.max(textWidth - stringWidth(versionPrefix), 6),
   )
 
   const effortSuffix = getEffortSuffix(model, effortValue)
@@ -87,12 +62,12 @@ export function CondensedLogo(): ReactNode {
   return (
     <OffscreenFreeze>
       <Box flexDirection="row" gap={2} alignItems="center">
-      {isFullscreenEnvEnabled() ? <AnimatedClawd /> : <Clawd />}
+      {isFullscreenEnvEnabled() ? <AnimatedBrandMark /> : <BrandMark />}
 
       {/* Info */}
       <Box flexDirection="column">
         <Text>
-          <Text bold>Claude Code</Text>{' '}
+          <Text bold>摇摇车</Text>{' '}
           <Text dimColor>v{truncatedVersion}</Text>
         </Text>
         {shouldSplit ? (
@@ -108,10 +83,7 @@ export function CondensedLogo(): ReactNode {
         <Text dimColor>
           {agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}
         </Text>
-        {showGuestPassesUpsell && <GuestPassesUpsell />}
-        {!showGuestPassesUpsell && showOverageCreditUpsell && (
-          <OverageCreditUpsell maxWidth={textWidth} twoLine />
-        )}
+
       </Box>
       </Box>
     </OffscreenFreeze>

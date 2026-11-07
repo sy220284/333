@@ -130,6 +130,13 @@ export function interpretCommandResult(
   isError: boolean
   message?: string
 } {
+  // Missing operands also return 1 in no-index mode. Recognize a rendered
+  // patch only, and leave compound commands to the existing semantics.
+  if (exitCode === 1 && !stderr.trim() && stdout.startsWith('diff --git ') &&
+      !/^(?:error|fatal):/m.test(stdout) && /^git[ \t]+diff[ \t]+--no-index(?:[ \t]|$)/.test(command.trim()) &&
+      !/[;|&\r\n]/.test(command)) {
+    return { isError: false, message: 'Files differ' }
+  }
   const semantic = getCommandSemantic(command)
   const result = semantic(exitCode, stdout, stderr)
 

@@ -49,7 +49,7 @@ import * as lockfile from '../lockfile.js'
 import { logError } from '../log.js'
 import { gt, gte } from '../semver.js'
 import {
-  filterClaudeAliases,
+  filterYaoyaocheAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -109,7 +109,7 @@ export function getPlatform(): string {
 }
 
 export function getBinaryName(platform: string): string {
-  return platform.startsWith('win32') ? 'claude.exe' : 'claude'
+  return platform.startsWith('win32') ? 'yaoyaoche.exe' : 'yaoyaoche'
 }
 
 function getBaseDirectories() {
@@ -118,13 +118,13 @@ function getBaseDirectories() {
 
   return {
     // Data directories (permanent storage)
-    versions: join(getXDGDataHome(), 'claude', 'versions'),
+    versions: join(getXDGDataHome(), 'yaoyaoche', 'versions'),
 
     // Cache directories (can be deleted)
-    staging: join(getXDGCacheHome(), 'claude', 'staging'),
+    staging: join(getXDGCacheHome(), 'yaoyaoche', 'staging'),
 
     // State directories
-    locks: join(getXDGStateHome(), 'claude', 'locks'),
+    locks: join(getXDGStateHome(), 'yaoyaoche', 'locks'),
 
     // User bin
     executable: join(getUserBinDir(), executableName),
@@ -465,7 +465,7 @@ async function performVersionUpdate(
     logForDebugging(`Version ${version} already installed, updating symlink`)
   }
 
-  // Create direct symlink from ~/.local/bin/claude to the version binary
+  // Create direct symlink from ~/.local/bin/yaoyaoche to the version binary
   await removeDirectoryIfEmpty(executablePath)
   await updateSymlink(executablePath, installPath)
 
@@ -845,7 +845,7 @@ export async function checkInstall(
     })
   }
 
-  // Check if claude executable exists and is valid.
+  // Check if 摇摇车 executable exists and is valid.
   // On non-Windows, call readlink directly and route errno — ENOENT means
   // the executable is missing, EINVAL means it exists but isn't a symlink.
   // This avoids an access()→readlink() TOCTOU where deletion between the
@@ -1498,7 +1498,7 @@ export async function cleanupShellAliases(): Promise<SetupMessage[]> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filterClaudeAliases(lines)
+      const { filtered, hadAlias } = filterYaoyaocheAliases(lines)
 
       if (hadAlias) {
         await writeFileLines(configFile, filtered)
@@ -1558,9 +1558,9 @@ async function manualRemoveNpmPackage(
 
     if (getPlatform().startsWith('win32')) {
       // Windows - only remove executables, not the package directory
-      const binCmd = join(globalPrefix, 'claude.cmd')
-      const binPs1 = join(globalPrefix, 'claude.ps1')
-      const binExe = join(globalPrefix, 'claude')
+      const binCmd = join(globalPrefix, 'yaoyaoche.cmd')
+      const binPs1 = join(globalPrefix, 'yaoyaoche.ps1')
+      const binExe = join(globalPrefix, 'yaoyaoche')
 
       if (await tryRemove(binCmd, 'bin script')) {
         manuallyRemoved = true
@@ -1575,7 +1575,7 @@ async function manualRemoveNpmPackage(
       }
     } else {
       // Unix/Mac - only remove symlink, not the package directory
-      const binSymlink = join(globalPrefix, 'bin', 'claude')
+      const binSymlink = join(globalPrefix, 'bin', 'yaoyaoche')
 
       if (await tryRemove(binSymlink, 'bin symlink')) {
         manuallyRemoved = true
@@ -1662,46 +1662,20 @@ export async function cleanupNpmInstallations(): Promise<{
   const warnings: string[] = []
   let removed = 0
 
-  // Always attempt to remove @anthropic-ai/claude-code
-  const codePackageResult = await attemptNpmUninstall(
-    '@anthropic-ai/claude-code',
-  )
-  if (codePackageResult.success) {
-    removed++
-    if (codePackageResult.warning) {
-      warnings.push(codePackageResult.warning)
-    }
-  } else if (codePackageResult.error) {
-    errors.push(codePackageResult.error)
+  // Native migration may remove an earlier 摇摇车 npm installation only.
+  // Claude Code, other providers, and ~/.claude/local are independent software.
+  // Never remove their files or packages while installing 摇摇车.
+  const ownPackage = '@yaoyaoche/agent-cli'
+  if (MACRO.PACKAGE_URL !== ownPackage) {
+    errors.push('安装包身份与 摇摇车 不一致，已跳过 npm 清理，避免卸载其他软件')
+    return { removed, errors, warnings }
   }
-
-  // Also attempt to remove MACRO.PACKAGE_URL if it's defined and different
-  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code') {
-    const macroPackageResult = await attemptNpmUninstall(MACRO.PACKAGE_URL)
-    if (macroPackageResult.success) {
-      removed++
-      if (macroPackageResult.warning) {
-        warnings.push(macroPackageResult.warning)
-      }
-    } else if (macroPackageResult.error) {
-      errors.push(macroPackageResult.error)
-    }
-  }
-
-  // Check for local installation at ~/.claude/local
-  const localInstallDir = join(homedir(), '.claude', 'local')
-
-  try {
-    await rm(localInstallDir, { recursive: true })
+  const result = await attemptNpmUninstall(ownPackage)
+  if (result.success) {
     removed++
-    logForDebugging(`Removed local installation at ${localInstallDir}`)
-  } catch (error) {
-    if (!isENOENT(error)) {
-      errors.push(`Failed to remove ${localInstallDir}: ${error}`)
-      logForDebugging(`Failed to remove local installation: ${error}`, {
-        level: 'error',
-      })
-    }
+    if (result.warning) warnings.push(result.warning)
+  } else if (result.error) {
+    errors.push(result.error)
   }
 
   return { removed, errors, warnings }

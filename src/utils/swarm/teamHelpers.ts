@@ -1,8 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { mkdir, readFile, rm, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { closeSync, ftruncateSync, openSync, readFileSync, writeSync } from 'node:fs'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { z } from 'zod/v4'
 import { getSessionCreatedTeams } from '../../bootstrap/state.js'
+import { findMissionByAssignmentId, finishMissionAssignment } from '../agentMissions.js'
 import { logForDebugging } from '../debug.js'
 import { getTeamsDir } from '../envUtils.js'
 import { errorMessage, getErrnoCode } from '../errors.js'
@@ -15,6 +16,7 @@ import { getTasksDir, notifyTasksUpdated } from '../tasks.js'
 import { getAgentName, getTeamName, isTeammate } from '../teammate.js'
 import { type BackendType, isPaneBackend } from './backends/types.js'
 import { TEAM_LEAD_NAME } from './constants.js'
+import { withTeamLifecycleLock } from './teamLifecycleLock.js'
 
 export const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -67,6 +69,7 @@ export type TeamFile = {
   createdAt: number
   leadAgentId: string
   leadSessionId?: string // Actual session UUID of the leader (for discovery)
+  projectDir?: string // Original project even when leader runs inside isolated worktree
   hiddenPaneIds?: string[] // Pane IDs that are currently hidden from the UI
   teamAllowedPaths?: TeamAllowedPath[] // Paths all teammates can edit without asking
   members: Array<{
@@ -164,9 +167,23 @@ export async function readTeamFileAsync(
  */
 // sync IO: called from sync context
 function writeTeamFile(teamName: string, teamFile: TeamFile): void {
-  const teamDir = getTeamDir(teamName)
-  mkdirSync(teamDir, { recursive: true })
-  writeFileSync(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2))
+  // All synchronous roster updates must target the existing team instance.
+  // Opening r+ never creates a deleted team's directory or config file.
+  const handle = openSync(getTeamFilePath(teamName), 'r+')
+  try {
+    const current = jsonParse(readFileSync(handle, 'utf-8')) as TeamFile
+    if (current.createdAt !== teamFile.createdAt) {
+      throw new Error(`Team ${teamName} was replaced during member update`)
+    }
+    const payload = jsonStringify(teamFile, null, 2)
+    const bytes = writeSync(handle, payload, 0, 'utf8')
+    if (bytes !== Buffer.byteLength(payload)) {
+      throw new Error(`Incomplete roster update for team ${teamName}`)
+    }
+    ftruncateSync(handle, bytes)
+  } finally {
+    closeSync(handle)
+  }
 }
 
 /**
@@ -175,10 +192,23 @@ function writeTeamFile(teamName: string, teamFile: TeamFile): void {
 export async function writeTeamFileAsync(
   teamName: string,
   teamFile: TeamFile,
+  create = false,
 ): Promise<void> {
-  const teamDir = getTeamDir(teamName)
-  await mkdir(teamDir, { recursive: true })
-  await writeFile(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2))
+  await withTeamLifecycleLock(teamName, async () => {
+    const path = getTeamFilePath(teamName)
+    if (create) {
+      await mkdir(getTeamDir(teamName), { recursive: true })
+      await writeFile(path, jsonStringify(teamFile, null, 2), { flag: 'wx' })
+      return
+    }
+    // Only the initial TeamCreate may create a new config. A late teammate
+    // update cannot resurrect a removed team or overwrite its replacement.
+    const previous = JSON.parse(await readFile(path, 'utf-8')) as TeamFile
+    if (previous.createdAt !== teamFile.createdAt) {
+      throw new Error(`Team ${teamName} was replaced during member update`)
+    }
+    await writeFile(path, jsonStringify(teamFile, null, 2), 'utf-8')
+  })
 }
 
 /**
@@ -187,7 +217,7 @@ export async function writeTeamFileAsync(
  */
 export function removeTeammateFromTeamFile(
   teamName: string,
-  identifier: { agentId?: string; name?: string },
+  identifier: { agentId?: string; name?: string; onlyIfJoinedBefore?: number },
 ): boolean {
   const identifierStr = identifier.agentId || identifier.name
   if (!identifierStr) {
@@ -207,9 +237,16 @@ export function removeTeammateFromTeamFile(
 
   const originalLength = teamFile.members.length
   teamFile.members = teamFile.members.filter(m => {
-    if (identifier.agentId && m.agentId === identifier.agentId) return false
-    if (identifier.name && m.name === identifier.name) return false
-    return true
+    // The agentId is the identity; a new teammate can reuse the same name.
+    const matches = identifier.agentId
+      ? m.agentId === identifier.agentId
+      : m.name === identifier.name
+    if (!matches) return true
+    if (
+      identifier.onlyIfJoinedBefore !== undefined &&
+      m.joinedAt >= identifier.onlyIfJoinedBefore
+    ) return true
+    return false
   })
 
   if (teamFile.members.length === originalLength) {
@@ -456,32 +493,26 @@ export async function setMemberActive(
   memberName: string,
   isActive: boolean,
 ): Promise<void> {
-  const teamFile = await readTeamFileAsync(teamName)
-  if (!teamFile) {
+  await withTeamLifecycleLock(teamName, async () => {
+    const teamFile = await readTeamFileAsync(teamName)
+    if (!teamFile) {
+      logForDebugging(`[TeammateTool] Team ${teamName} no longer exists; active state not written`)
+      return
+    }
+    const member = teamFile.members.find(m => m.name === memberName)
+    if (!member) {
+      logForDebugging(`[TeammateTool] Member ${memberName} no longer exists in team ${teamName}`)
+      return
+    }
+    if (member.isActive === isActive) return
+    member.isActive = isActive
+    // This write is already inside the shared lifecycle lock, so use the
+    // existing path directly without mkdir and without taking a nested lock.
+    await writeFile(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2), 'utf-8')
     logForDebugging(
-      `[TeammateTool] Cannot set member active: team ${teamName} not found`,
+      `[TeammateTool] Set member ${memberName} in team ${teamName} to ${isActive ? 'active' : 'idle'}`,
     )
-    return
-  }
-
-  const member = teamFile.members.find(m => m.name === memberName)
-  if (!member) {
-    logForDebugging(
-      `[TeammateTool] Cannot set member active: member ${memberName} not found in team ${teamName}`,
-    )
-    return
-  }
-
-  // Only write if the value is actually changing
-  if (member.isActive === isActive) {
-    return
-  }
-
-  member.isActive = isActive
-  await writeTeamFileAsync(teamName, teamFile)
-  logForDebugging(
-    `[TeammateTool] Set member ${memberName} in team ${teamName} to ${isActive ? 'active' : 'idle'}`,
-  )
+  })
 }
 
 /**
@@ -585,7 +616,21 @@ export async function cleanupSessionTeams(): Promise<void> {
   // (TeamDeleteTool's path doesn't need this — by then teammates have
   // gracefully exited and useInboxPoller has already closed their panes.)
   await Promise.allSettled(teams.map(name => killOrphanedTeammatePanes(name)))
-  await Promise.allSettled(teams.map(name => cleanupTeamDirectories(name)))
+  const outcomes = await Promise.allSettled(teams.map(async name => {
+    // Capture the owner before cleanup removes the team file. The team mission
+    // remains durable, but its now-terminated execution must be marked killed.
+    const projectDir = readTeamFile(name)?.members.find(m => m.name === TEAM_LEAD_NAME)?.cwd
+    await cleanupTeamDirectories(name)
+    if (projectDir) {
+      const missionId = await findMissionByAssignmentId(`team:${name}`, undefined, projectDir)
+      if (missionId) await finishMissionAssignment(missionId, `team:${name}`, 'killed')
+    }
+  }))
+  for (let index = 0; index < outcomes.length; index++) {
+    const outcome = outcomes[index]
+    if (outcome.status === 'rejected')
+      logForDebugging(`cleanupSessionTeams: failed to finalize ${teams[index]}: ${String(outcome.reason)}`)
+  }
   sessionCreatedTeams.clear()
 }
 
@@ -639,45 +684,53 @@ async function killOrphanedTeammatePanes(teamName: string): Promise<void> {
  * Called when a swarm session is terminated.
  */
 export async function cleanupTeamDirectories(teamName: string): Promise<void> {
-  const sanitizedName = sanitizeName(teamName)
+  return withTeamLifecycleLock(teamName, async () => {
 
-  // Read team file to get worktree paths BEFORE deleting the team directory
-  const teamFile = readTeamFile(teamName)
-  const worktreePaths: string[] = []
-  if (teamFile) {
-    for (const member of teamFile.members) {
-      if (member.worktreePath) {
-        worktreePaths.push(member.worktreePath)
+    const sanitizedName = sanitizeName(teamName)
+
+    // Read team file to get worktree paths BEFORE deleting the team directory
+    const teamFile = readTeamFile(teamName)
+    const worktreePaths: string[] = []
+    if (teamFile) {
+      for (const member of teamFile.members) {
+        if (member.worktreePath) {
+          worktreePaths.push(member.worktreePath)
+        }
       }
     }
-  }
 
-  // Clean up worktrees first
-  for (const worktreePath of worktreePaths) {
-    await destroyWorktree(worktreePath)
-  }
+    // Clean up worktrees first
+    for (const worktreePath of worktreePaths) {
+      await destroyWorktree(worktreePath)
+    }
 
-  // Clean up team directory (~/.claude/teams/{team-name}/)
-  const teamDir = getTeamDir(teamName)
-  try {
-    await rm(teamDir, { recursive: true, force: true })
-    logForDebugging(`[TeammateTool] Cleaned up team directory: ${teamDir}`)
-  } catch (error) {
-    logForDebugging(
-      `[TeammateTool] Failed to clean up team directory ${teamDir}: ${errorMessage(error)}`,
-    )
-  }
+    const failures: Error[] = []
+    // Delete the team config first: any subsequent message/update sees it as
+    // retired. Both removals are attempted; failure is never reported as success.
+    const teamDir = getTeamDir(teamName)
+    try {
+      await rm(teamDir, { recursive: true, force: true })
+      logForDebugging(`[TeammateTool] Cleaned up team directory: ${teamDir}`)
+    } catch (error) {
+      failures.push(new Error(`Cannot delete team directory: ${teamDir}`, { cause: error }))
+      logForDebugging(
+        `[TeammateTool] Failed to clean up team directory ${teamDir}: ${errorMessage(error)}`,
+      )
+    }
 
-  // Clean up tasks directory (~/.claude/tasks/{taskListId}/)
-  // The leader and teammates all store tasks under the sanitized team name.
-  const tasksDir = getTasksDir(sanitizedName)
-  try {
-    await rm(tasksDir, { recursive: true, force: true })
-    logForDebugging(`[TeammateTool] Cleaned up tasks directory: ${tasksDir}`)
-    notifyTasksUpdated()
-  } catch (error) {
-    logForDebugging(
-      `[TeammateTool] Failed to clean up tasks directory ${tasksDir}: ${errorMessage(error)}`,
-    )
-  }
+    const tasksDir = getTasksDir(sanitizedName)
+    try {
+      await rm(tasksDir, { recursive: true, force: true })
+      logForDebugging(`[TeammateTool] Cleaned up tasks directory: ${tasksDir}`)
+      notifyTasksUpdated()
+    } catch (error) {
+      failures.push(new Error(`Cannot delete task directory: ${tasksDir}`, { cause: error }))
+      logForDebugging(
+        `[TeammateTool] Failed to clean up tasks directory ${tasksDir}: ${errorMessage(error)}`,
+      )
+    }
+    if (failures.length) {
+      throw new AggregateError(failures, `Team ${teamName} cleanup incomplete`)
+    }
+  })
 }

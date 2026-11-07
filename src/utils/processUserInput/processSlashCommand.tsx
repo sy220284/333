@@ -517,7 +517,8 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
     model,
     effort,
     resultText,
-    ...(returnedCommand.type === 'local' && resultText !== undefined
+    ...(resultText !== undefined && (returnedCommand.type === 'local' ||
+      (returnedCommand.type === 'local-jsx' && context.options.isNonInteractiveSession))
       ? { localCommand: returnedCommand.name }
       : {}),
     nextInput,
@@ -552,7 +553,7 @@ async function getMessagesForSlashCommand(commandName: string, args: string, set
     switch (command.type) {
       case 'local-jsx':
         {
-          return new Promise<SlashCommandResult>(resolve => {
+          return new Promise<SlashCommandResult>((resolve, reject) => {
             let doneWasCalled = false;
             const onDone = (result?: string, options?: {
               display?: CommandResultDisplay;
@@ -604,6 +605,8 @@ async function getMessagesForSlashCommand(commandName: string, args: string, set
                 }), ...metaMessages],
                 shouldQuery: options?.shouldQuery ?? false,
                 command,
+                // Headless SDK results must include the actual local command output.
+                resultText: context.options.isNonInteractiveSession ? result : undefined,
                 nextInput: options?.nextInput,
                 submitNextInput: options?.submitNextInput
               });
@@ -612,13 +615,9 @@ async function getMessagesForSlashCommand(commandName: string, args: string, set
               ...context,
               canUseTool
             }, args)).then(jsx => {
-              if (jsx == null) return;
+              if (jsx == null || doneWasCalled) return;
               if (context.options.isNonInteractiveSession) {
-                void resolve({
-                  messages: [],
-                  shouldQuery: false,
-                  command
-                });
+                void reject(new Error(`/${command.name} requires an interactive terminal for these arguments`));
                 return;
               }
               // Guard: if onDone fired during mod.call() (early-exit path
@@ -643,6 +642,10 @@ async function getMessagesForSlashCommand(commandName: string, args: string, set
               logError(e);
               if (doneWasCalled) return;
               doneWasCalled = true;
+              if (context.options.isNonInteractiveSession) {
+                void reject(e);
+                return;
+              }
               setToolJSX({
                 jsx: null,
                 shouldHidePromptInput: false,

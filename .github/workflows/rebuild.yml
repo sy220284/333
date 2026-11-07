@@ -1,14 +1,12 @@
 name: 源码独立重建验证
 on:
   push:
-    branches: [main, rebuild/bun-from-src, upgrade/2.1.310-m1-evidence]
+    branches: [main, rebuild/bun-from-src]
   workflow_call:
   workflow_dispatch:
 concurrency:
-  # On the active M1 upgrade branch, preserve the running three-platform
-  # rebuild and coalesce pending revisions; otherwise rapid commits prevent
-  # any complete same-SHA acceptance. Other branches keep normal cancellation.
-  group: main-ci-rebuild-${{ github.event.pull_request.number || github.ref }}
+  # 保留正在执行的完整验收，合并后续提交的待执行检查。
+  group: reusable-rebuild-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -124,40 +122,8 @@ jobs:
         run: node --test tests/m1-source-runtime-vendor-317.test.mjs
       - name: 317插件测试执行器：真实子进程、Hooks沙箱和退出码
         run: node --test tests/m3-plugin-test-runner-317.test.mjs
-      - name: 317企业网关真实鉴权、Bun服务和SSE上游验证
-        run: bun test tests/m6-gateway-runtime-317.test.mjs
-      - name: 317网关OAuth设备授权、OIDC批准、Token刷新撤销实测
-        run: bun test tests/m6-gateway-device-317.test.mjs
-      - name: 317网关JSONB身份字段读取及Token安全校验
-        run: node --test tests/m6-gateway-jsonb-317.test.mjs
       - name: 317模型请求Beta路径、版本、API Key/OAuth原生协议
         run: node --test tests/m2-native-api-wire-317.test.mjs
-      - name: 317企业网关真实Postgres事务及OAuth存储验证
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          docker run --rm -d --name gateway-postgres-317 \
-            -e POSTGRES_PASSWORD=gateway-test-only \
-            -p 127.0.0.1:55432:5432 postgres:16
-          trap 'docker rm -f gateway-postgres-317 >/dev/null 2>&1 || true' EXIT
-          # postgres:16 uses a temporary UNIX-socket-only server during initdb.
-          # Wait for the final TCP listener and a real authenticated SQL query.
-          ready=0
-          for i in $(seq 1 40); do
-            if docker exec gateway-postgres-317 pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres >/dev/null 2>&1; then
-              ready=1
-              break
-            fi
-            sleep 1
-          done
-          if [ "$ready" -ne 1 ]; then
-            docker logs gateway-postgres-317
-            echo 'PostgreSQL TCP service did not become ready' >&2
-            exit 1
-          fi
-          docker exec -e PGPASSWORD=gateway-test-only gateway-postgres-317 psql -h 127.0.0.1 -U postgres -d postgres -Atqc 'SELECT 1' | grep -qx '1'
-          GATEWAY_TEST_POSTGRES_URL='postgres://postgres:gateway-test-only@127.0.0.1:55432/postgres' \
-            bun test tests/m6-gateway-postgres-317.test.mjs
       - name: 317插件评测Windows工作区清理与结果保存
         run: node --test tests/m3-plugin-eval-cleanup-317.test.mjs
       - name: 317插件评测CLI真实模型SSE及双臂报告闭环
@@ -167,7 +133,7 @@ jobs:
           set -euo pipefail
           test -f dist/cli.js
           expected_version=$(node -p "require('./package.json').version")
-          test "$(bun dist/cli.js --version)" = "$expected_version (Claude Code)"
+          test "$(bun dist/cli.js --version)" = "$expected_version (摇摇车)"
           bun dist/cli.js --help | grep -F -- '--print'
       - name: 取得已锁定SHA的原版2.1.317 Linux x64执行参考
         if: runner.os == 'Linux'
@@ -189,7 +155,8 @@ jobs:
           set -euo pipefail
           for args in "gateway --help" "plugin eval --help" "plugin test --help"; do
             echo "::group::原版 claude $args"
-            ./.rebuild/oracle/claude $args
+            read -r -a arg_parts <<< "$args"
+            ./.rebuild/oracle/claude "${arg_parts[@]}"
             echo "::endgroup::"
           done
       - name: 按官方317原版x64同步并实测Linux原生模块
@@ -304,8 +271,6 @@ jobs:
         run: node --test tests/m3-plugin-test-options-317.test.mjs
       - name: 317插件测试VM计时器与异步错误追踪
         run: node --test tests/m3-plugin-test-timers-317.test.mjs
-      - name: 企业网关托管设置匹配与ETag原版协议
-        run: node --test tests/m6-gateway-managed-settings-317.test.mjs
       - name: 317模型目录、读取边界和嵌套会话
         id: acceptance_008
         continue-on-error: true
@@ -391,15 +356,6 @@ jobs:
         continue-on-error: true
         if: runner.os == 'Linux'
         run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m3-plugin-details-native-parity-317.test.mjs
-      - name: 317远程审查结果协议与分段事件解析
-        id: acceptance_043
-        continue-on-error: true
-        run: node --test tests/m6-ultrareview-protocol-317.test.mjs
-      - name: 317独立ultrareview官方x64启动与信任差分
-        if: runner.os == 'Linux'
-        continue-on-error: true
-        id: acceptance_042
-        run: CLAUDE_TARGET_X64="$PWD/.rebuild/oracle/claude" node --test tests/m6-ultrareview-cli-native-parity-317.test.mjs
       - name: 317插件来源命令授权：SHA256及市场修订版本
         id: acceptance_048
         continue-on-error: true
@@ -413,14 +369,10 @@ jobs:
         id: acceptance_046
         continue-on-error: true
         run: node --test tests/m1-account-email-disclosure-317.test.mjs
-      - name: 317无共同Git历史审查：原生快照构建与调用链验证
+      - name: 317无共同 Git 历史审查：验证通用 GitHub 差异审查和调用链
         id: acceptance_047
         continue-on-error: true
-        run: node --test tests/m6-ultrareview-unrelated-history-317.test.mjs
-      - name: 317云端审查启动配置与远端轮询一致性
-        id: acceptance_045
-        continue-on-error: true
-        run: node --test tests/m6-ultrareview-runtime-config-317.test.mjs
+        run: node --test --test-name-pattern='无共同 Git 历史' tests/github-generic-review.test.mjs
       - name: 与原版 CLI 参数和命令差分验收
         id: acceptance_025
         continue-on-error: true
@@ -673,20 +625,8 @@ jobs:
             echo "::error::验收失败：对照官方 x64 验证 Claude API 版本迁移命令和资源"
             failures=$((failures+1))
           fi
-          if [ "${{ steps.acceptance_042.outcome }}" = failure ]; then
-            echo "::error::验收失败：317独立ultrareview官方x64启动与信任差分"
-            failures=$((failures+1))
-          fi
-          if [ "${{ steps.acceptance_043.outcome }}" = failure ]; then
-            echo "::error::验收失败：317远程审查结果协议与分段事件解析"
-            failures=$((failures+1))
-          fi
           if [ "${{ steps.acceptance_044.outcome }}" = failure ]; then
             echo "::error::验收失败：317插件安装事务与原版x64状态不一致"
-            failures=$((failures+1))
-          fi
-          if [ "${{ steps.acceptance_045.outcome }}" = failure ]; then
-            echo "::error::验收失败：317云端审查配置或任务轮询时限不一致"
             failures=$((failures+1))
           fi
           if [ "${{ steps.acceptance_046.outcome }}" = failure ]; then

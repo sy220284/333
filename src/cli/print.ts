@@ -2,11 +2,6 @@
 import { feature } from 'bun:bundle'
 import { readFile, stat } from 'fs/promises'
 import { dirname } from 'path'
-import {
-  downloadUserSettings,
-  redownloadUserSettings,
-} from 'src/services/settingsSync/index.js'
-import { waitForRemoteManagedSettingsToLoad } from 'src/services/remoteManagedSettings/index.js'
 import { StructuredIO } from 'src/cli/structuredIO.js'
 import { RemoteIO } from 'src/cli/remoteIO.js'
 import {
@@ -30,7 +25,6 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/grow
 import { logForDebugging } from 'src/utils/debug.js'
 import {
   logForDiagnosticsNoPII,
-  withDiagnosticsTiming,
 } from 'src/utils/diagLogs.js'
 import { toolMatchesName, type Tool, type Tools } from 'src/Tool.js'
 import {
@@ -136,7 +130,6 @@ import { cwd } from 'process'
 import { getCwd } from 'src/utils/cwd.js'
 import omit from 'lodash-es/omit.js'
 import reject from 'lodash-es/reject.js'
-import { isPolicyAllowed } from 'src/services/policyLimits/index.js'
 import type { ReplBridgeHandle } from 'src/bridge/replBridge.js'
 import { getRemoteSessionUrl } from 'src/constants/product.js'
 import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil.js'
@@ -199,6 +192,7 @@ import { AwsAuthStatusManager } from 'src/utils/awsAuthStatusManager.js'
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 import {
   registerHookCallbacks,
+  replaceSdkHookCallbacks,
   setInitJsonSchema,
   getInitJsonSchema,
   setSdkAgentProgressSummariesEnabled,
@@ -251,10 +245,6 @@ import {
 import { setupVscodeSdkMcp } from 'src/services/mcp/vscodeSdkMcp.js'
 import { getAllMcpConfigs } from 'src/services/mcp/config.js'
 import {
-  isQualifiedForGrove,
-  checkGroveForNonInteractive,
-} from 'src/services/api/grove.js'
-import {
   toInternalMessages,
   toSDKRateLimitInfo,
 } from 'src/utils/messages/mappers.js'
@@ -287,7 +277,6 @@ import {
   setMainThreadAgentType,
   switchSession,
   isSessionPersistenceDisabled,
-  getIsRemoteMode,
   getFlagSettingsInline,
   setFlagSettingsInline,
   getMainThreadAgentType,
@@ -509,18 +498,6 @@ export async function runHeadless(
     process.exit(0)
   }
 
-  // Fire user settings download now so it overlaps with the MCP/tool setup
-  // below. Managed settings already started in main.tsx preAction; this gives
-  // user settings a similar head start. The cached promise is joined in
-  // installPluginsAndApplyMcpInBackground before plugin install reads
-  // enabledPlugins.
-  if (
-    feature('DOWNLOAD_USER_SETTINGS') &&
-    (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) || getIsRemoteMode())
-  ) {
-    void downloadUserSettings()
-  }
-
   // In headless mode there is no React tree, so the useSettingsChange hook
   // never runs. Subscribe directly so that settings changes (including
   // managed-settings / policy updates) are fully applied.
@@ -561,11 +538,6 @@ export async function runHeadless(
   headlessProfilerStartTurn()
   headlessProfilerCheckpoint('runHeadless_entry')
 
-  // Check Grove requirements for non-interactive consumer subscribers
-  if (await isQualifiedForGrove()) {
-    await checkGroveForNonInteractive()
-  }
-  headlessProfilerCheckpoint('after_grove_check')
 
   // Initialize GrowthBook so feature flags take effect in headless mode.
   // Without this, the disk cache is empty and all flags fall back to defaults.
@@ -1666,12 +1638,6 @@ function runHeadlessStreaming(
           headers: connection.config.headers,
           oauth: connection.config.oauth,
         }
-      } else if (connection.config.type === 'claudeai-proxy') {
-        config = {
-          type: 'claudeai-proxy' as const,
-          url: connection.config.url,
-          id: connection.config.id,
-        }
       } else if (isMcpStdioServerConfig(connection.config)) {
         config = {
           type: 'stdio' as const,
@@ -1730,21 +1696,6 @@ function runHeadlessStreaming(
   // NOTE: Nested function required - needs closure access to applyMcpServerChanges and updateSdkMcp
   async function installPluginsAndApplyMcpInBackground(): Promise<void> {
     try {
-      // Join point for user settings (fired at runHeadless entry) and managed
-      // settings (fired in main.tsx preAction). downloadUserSettings() caches
-      // its promise so this awaits the same in-flight request.
-      await Promise.all([
-        feature('DOWNLOAD_USER_SETTINGS') &&
-        (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) || getIsRemoteMode())
-          ? withDiagnosticsTiming('headless_user_settings_download', () =>
-              downloadUserSettings(),
-            )
-          : Promise.resolve(),
-        withDiagnosticsTiming('headless_managed_settings_wait', () =>
-          waitForRemoteManagedSettingsToLoad(),
-        ),
-      ])
-
       const pluginsInstalled = await installPluginsForHeadless()
 
       if (pluginsInstalled) {
@@ -3099,18 +3050,6 @@ function runHeadlessStreaming(
           }
         } else if (message.request.subtype === 'reload_plugins') {
           try {
-            if (
-              feature('DOWNLOAD_USER_SETTINGS') &&
-              (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) || getIsRemoteMode())
-            ) {
-              // Re-pull user settings so enabledPlugins pushed from the
-              // user's local CLI take effect before the cache sweep.
-              const applied = await redownloadUserSettings()
-              if (applied) {
-                settingsChangeDetector.notifyChange('userSettings')
-              }
-            }
-
             const r = await refreshActivePlugins(setAppState)
 
             const sdkAgents = currentAgents.filter(
@@ -4368,6 +4307,11 @@ export function getCanUseToolFn(
   }
 }
 
+const sdkHookRegistrations = new WeakMap<StructuredIO, {
+  hooks: Partial<Record<HookEvent, HookCallbackMatcher[]>>
+  callbackIds: Set<string>
+}>()
+
 async function handleInitializeRequest(
   request: SDKControlInitializeRequest,
   requestId: string,
@@ -4387,20 +4331,13 @@ async function handleInitializeRequest(
   agents: AgentDefinition[],
   getAppState: () => AppState,
 ): Promise<void> {
-  if (initialized) {
-    output.enqueue({
-      type: 'control_response',
-      response: {
-        subtype: 'error',
-        error: 'Already initialized',
-        request_id: requestId,
-        pending_permission_requests:
-          structuredIO.getPendingPermissionRequests(),
-      },
-    })
-    return
+  // 2.1.317 accepts a second initialize without re-applying session setup.
+  // The host may refresh hook callbacks, ask for native progress summaries
+  // and recover pending requests after reconnecting to the same CLI stream.
+  if (initialized && request.promptSuggestions === true) {
+    options.promptSuggestions = true
   }
-
+  if (!initialized) {
   // Apply systemPrompt/appendSystemPrompt from stdin to avoid ARG_MAX limits
   if (request.systemPrompt !== undefined) {
     options.systemPrompt = request.systemPrompt
@@ -4461,6 +4398,7 @@ async function handleInitializeRequest(
     }
   }
 
+  }
   const settings = getInitialSettings()
   const outputStyle = settings?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME
   const availableOutputStyles = await getAllOutputStyles(getCwd())
@@ -4480,9 +4418,20 @@ async function handleInitializeRequest(
         }
       })
     }
-    registerHookCallbacks(hooks)
+    const previous = sdkHookRegistrations.get(structuredIO)
+    if (initialized) {
+      structuredIO.retireSdkHookCallbackRequests(previous?.callbackIds ?? new Set())
+      replaceSdkHookCallbacks(previous?.hooks ?? {}, hooks)
+    } else {
+      registerHookCallbacks(hooks)
+    }
+    sdkHookRegistrations.set(structuredIO, {
+      hooks,
+      callbackIds: new Set(Object.values(request.hooks).flatMap(matchers =>
+        matchers.flatMap(matcher => matcher.hookCallbackIds))),
+    })
   }
-  if (request.jsonSchema) {
+  if (!initialized && request.jsonSchema) {
     setInitJsonSchema(request.jsonSchema)
   }
   const initResponse: SDKControlInitializeResponse = {
@@ -4514,6 +4463,10 @@ async function handleInitializeRequest(
       apiProvider: getAPIProvider(),
     },
     pid: process.pid,
+    // Match the native 2.1.317 SDK safety handshake: a caller relying on
+    // onFailure: 'block' must know the CLI can enforce that policy.
+    hook_on_failure_supported: true,
+    ...(request.hooks !== undefined && { hooks_applied: true }),
   }
 
   if (isFastModeEnabled() && isFastModeAvailable()) {
@@ -4530,6 +4483,12 @@ async function handleInitializeRequest(
       subtype: 'success',
       request_id: requestId,
       response: initResponse,
+      // The 2.1.317 CLI reports all outstanding prompts on *every*
+      // initialize, including the first connection to a running worker.
+      // Omitting these on initial attach can strand already parked approvals.
+      pending_permission_requests: structuredIO.getPendingPermissionRequests(),
+      pending_user_dialog_requests: structuredIO.getPendingUserDialogRequests(),
+      pending_elicitation_requests: structuredIO.getPendingElicitationRequests(),
     },
   })
 
@@ -4636,19 +4595,23 @@ function handleSetPermissionMode(
 
   // Check if trying to switch to auto mode without the classifier gate
   if (
-    feature('TRANSCRIPT_CLASSIFIER') &&
     request.mode === 'auto' &&
-    !isAutoModeGateEnabled()
+    (!feature('TRANSCRIPT_CLASSIFIER') || !isAutoModeGateEnabled())
   ) {
-    const reason = getAutoModeUnavailableReason()
+    // Never enter auto unless the actual classifier is compiled in and
+    // the selected model, current settings and live gate all permit it.
+    const reason = feature('TRANSCRIPT_CLASSIFIER')
+      ? getAutoModeUnavailableReason() : undefined
     output.enqueue({
       type: 'control_response',
       response: {
         subtype: 'error',
         request_id: requestId,
-        error: reason
-          ? `Cannot set permission mode to auto: ${getAutoModeUnavailableNotification(reason)}`
-          : 'Cannot set permission mode to auto',
+        error: !feature('TRANSCRIPT_CLASSIFIER')
+          ? 'Cannot set permission mode to auto: 当前版本未启用自动权限分类器'
+          : reason
+            ? `Cannot set permission mode to auto: ${getAutoModeUnavailableNotification(reason)}`
+            : 'Cannot set permission mode to auto: 模型或当前设置不支持',
       },
     })
     return toolPermissionContext
@@ -5023,12 +4986,6 @@ async function loadInitialMessages(
   // Handle teleport in print mode
   if (options.teleport) {
     try {
-      if (!isPolicyAllowed('allow_remote_sessions')) {
-        throw new Error(
-          "Remote sessions are disabled by your organization's policy.",
-        )
-      }
-
       logEvent('tengu_teleport_print', {})
 
       if (typeof options.teleport !== 'string') {
@@ -5380,7 +5337,7 @@ export type McpSetServersResult = {
  * Handles mcp_set_servers requests by processing both SDK and process-based servers.
  * SDK servers run in the SDK process; process-based servers are spawned by the CLI.
  *
- * Applies enterprise allowedMcpServers/deniedMcpServers policy — same filter as
+ * Applies locally configured allowedMcpServers/deniedMcpServers policy — same filter as
  * --mcp-config (see filterMcpServersByPolicy call in main.tsx). Without this,
  * SDK V2 Query.setMcpServers() was a second policy bypass vector. Blocked servers
  * are reported in response.errors so the SDK consumer knows why they weren't added.
@@ -5391,7 +5348,7 @@ export async function handleMcpSetServers(
   dynamicState: DynamicMcpState,
   setAppState: (f: (prev: AppState) => AppState) => void,
 ): Promise<McpSetServersResult> {
-  // Enforce enterprise MCP policy on process-based servers (stdio/http/sse).
+  // Enforce locally configured MCP allow/deny policy on process-based servers (stdio/http/sse).
   // Mirrors the --mcp-config filter in main.tsx — both user-controlled injection
   // paths must have the same gate. type:'sdk' servers are exempt (SDK-managed,
   // CLI never spawns/connects for them — see filterMcpServersByPolicy jsdoc).
@@ -5400,7 +5357,7 @@ export async function handleMcpSetServers(
   const policyErrors: Record<string, string> = {}
   for (const name of blocked) {
     policyErrors[name] =
-      'Blocked by enterprise policy (allowedMcpServers/deniedMcpServers)'
+      'Blocked by local MCP allow/deny policy'
   }
 
   // Separate SDK servers from process-based servers
