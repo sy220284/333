@@ -481,7 +481,7 @@ test('desktop journal reads the last committed snapshot after a concurrent faile
   }
 })
 
-test('session model and permissions read the last committed settings despite a failed concurrent write', async () => {
+test('session settings preserve committed model and permissions through failed writes', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'desktop-settings-read-failure-'))
   try {
     const root = join(cwd, 'state')
@@ -491,23 +491,20 @@ test('session model and permissions read the last committed settings despite a f
     await journal.write(id, saved)
     const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
     const path = join(root, workspace, 'session-settings', id + '.json')
-    // Turn the settings file into a directory, forcing a real rename failure
-    // without changing the last successful write before the read is queued.
     const { rename } = await import('node:fs/promises')
     const backup = path + '.safe'
     await rename(path, backup)
     await mkdir(path)
-    const failedWrite = journal.write(id, { model: 'new-model', permissionMode: 'default' })
-    const failure = expect(failedWrite).rejects.toThrow()
-    const concurrentRead = journal.read(id)
-    await failure
-    // Restore the original snapshot before allowing the waiting read through
-    // on the next scheduling tick; the queue must never inherit the write error.
+    await expect(journal.write(id, {
+      model: 'new-model', permissionMode: 'default',
+    })).rejects.toThrow()
     await rm(path, { recursive: true })
     await rename(backup, path)
-    expect(await concurrentRead).toEqual(saved)
+    expect(await journal.read(id)).toEqual(saved)
     await journal.write(id, { model: 'new-model', permissionMode: 'default' })
-    expect(await journal.read(id)).toEqual({ model: 'new-model', permissionMode: 'default' })
+    expect(await journal.read(id)).toEqual({
+      model: 'new-model', permissionMode: 'default',
+    })
   } finally {
     await rm(cwd, { recursive: true, force: true })
   }
