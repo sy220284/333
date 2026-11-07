@@ -81,7 +81,7 @@ function StatusTag({text,tone='neutral'}:{text:string;tone?:'good'|'warn'|'neutr
   return <Badge size="sm" tone={tone==='good'?'success':tone==='warn'?'warning':tone==='danger'?'danger':'neutral'}><span className="inline-block h-1.5 w-1.5 rounded-full bg-current"/>{text}</Badge>
 }
 function Panel({children,className=''}:{children:ReactNode;className?:string}){
-  return <Card shadow="none" radius="lg" padding="lg" className={'panel '+className}>{children}</Card>
+  return <Card shadow="none" radius="lg" padding="lg" className={`panel ${className}`}>{children}</Card>
 }
 export function App(){
   const [view,setView]=useState<View>('dashboard')
@@ -658,20 +658,20 @@ export function App(){
             {sessions.length===0?<div className="px-3 py-3 text-xs text-[var(--color-text-tertiary)]">尚无本地会话</div>:sessions.slice(0,8).map(item=>{
               const id=String(item.sessionId||item.id||'');if(!id)return null;
               const label=String(item.summary||item.title||id.slice(0,8))
-              return <button key={id} type="button" title={label} aria-label={'恢复会话：'+label} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)} className={'yy-nav-link '+(id===sessionId&&view==='chat'?'yy-nav-active':'')}><MessageSquare size={15} className="shrink-0"/><span className="truncate">{label}</span>{id===sessionId&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]"/>}</button>
+              return <button key={id} type="button" title={label} aria-label={`恢复会话：${label}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)} className={`yy-nav-link ${id===sessionId&&view==='chat'?'yy-nav-active':''}`}><MessageSquare size={15} className="shrink-0"/><span className="truncate">{label}</span>{id===sessionId&&<span className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--color-brand)]"/>}</button>
             })}
           </div>
           <nav aria-label="主要导航" className="mt-4">
             {NAV_GROUPS.map(group=><section key={group.label} className="mb-4">
               <div className="px-3 pb-1.5 pt-3 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">{group.label}</div>
               <div className="space-y-0.5">{group.views.map(id=>{const item=NAV.find(entry=>entry.id===id);if(!item)return null;const Icon=item.icon;
-                return <button type="button" key={id} aria-current={view===id?'page':undefined} onClick={()=>setView(id)} className={'yy-nav-link '+(view===id?'yy-nav-active':'')}><Icon size={17} strokeWidth={1.7}/><span className="truncate">{item.label}</span>{id==='settings'&&permissions.length>0&&<Badge size="xs" tone="warning">{permissions.length}</Badge>}</button>
+                return <button type="button" key={id} aria-current={view===id?'page':undefined} onClick={()=>setView(id)} className={`yy-nav-link ${view===id?'yy-nav-active':''}`}><Icon size={17} strokeWidth={1.7}/><span className="truncate">{item.label}</span>{id==='settings'&&permissions.length>0&&<Badge size="xs" tone="warning">{permissions.length}</Badge>}</button>
               })}</div>
             </section>)}
           </nav>
         </div>
         <div className="shrink-0 border-t border-[var(--color-border)] px-5 py-4">
-          <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]"><span className={'h-2 w-2 rounded-full '+(connected?'bg-[var(--color-success)]':'bg-[var(--color-error)]')}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
+          <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]"><span className={`h-2 w-2 rounded-full ${connected?'bg-[var(--color-success)]':'bg-[var(--color-error)]'}`}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
           <div className="mt-1 text-[10px] leading-5 text-[var(--color-text-tertiary)]">执行记录保留在本机</div>
         </div>
       </aside>
@@ -679,13 +679,13 @@ export function App(){
     <main id="content-area" className="yy-content flex min-w-0 flex-1 flex-col overflow-hidden">
       <header className="yy-tabbar flex h-[55px] shrink-0 items-stretch justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4">
         <div role="tablist" aria-label="会话与工作区标签" className="yy-tab-strip flex min-w-0 flex-1 items-stretch gap-1 overflow-x-auto pt-2">
-          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" onClick={()=>void createSession()} className={'yy-tab '+(view==='chat'&&!sessionId?'yy-tab-active':'')}><Plus size={15}/><span>新会话</span></button>
+          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" onClick={()=>void createSession()} className={`yy-tab ${view==='chat'&&!sessionId?'yy-tab-active':''}`}><Plus size={15}/><span>新会话</span></button>
           {([...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),...sessions]).slice(0,7).map(item=>{
             const id=String(item.sessionId||item.id||'');if(!id)return null;
             const label=String(item.summary||item.title||id.slice(0,8)),active=view==='chat'&&sessionId===id;
-            return <button type="button" role="tab" key={id} aria-selected={active} aria-label={'标签页：会话 · '+label} title={label} className={'yy-tab '+(active?'yy-tab-active':'')} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span className="max-w-44 truncate">{label}</span>{active&&<span className="yy-tab-dot"/>}</button>
+            return <button type="button" role="tab" key={id} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`yy-tab ${active?'yy-tab-active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span className="max-w-44 truncate">{label}</span>{active&&<span className="yy-tab-dot"/>}</button>
           })}
-          {view!=='chat'&&(()=>{const item=NAV.find(e=>e.id===view);if(!item)return null;const Icon=item.icon;return <button type="button" role="tab" aria-selected="true" aria-label={'标签页：'+item.label} className="yy-tab yy-tab-active" onClick={()=>setView(view)}><Icon size={14}/><span>{item.label}</span><span className="yy-tab-dot"/></button>})()}
+          {view!=='chat'&&(()=>{const item=NAV.find(e=>e.id===view);if(!item)return null;const Icon=item.icon;return <button type="button" role="tab" aria-selected="true" aria-label={`标签页：${item.label}`} className="yy-tab yy-tab-active" onClick={()=>setView(view)}><Icon size={14}/><span>{item.label}</span><span className="yy-tab-dot"/></button>})()}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pb-1">
           <button type="button" aria-label="搜索操作" title="搜索操作 (Ctrl K)" className="yy-icon" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={17}/></button>
@@ -826,7 +826,7 @@ export function App(){
         {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={`runtime-indicator ${connected?'ok':'off'}`}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button type="button" className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map(event=><div className="activity-entry" key={event}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={`connection-light ${connected?'online':'offline'}`}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
 
       </div>
-      <footer className="yy-statusbar flex h-8 shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 text-[11px] text-[var(--color-text-tertiary)]"><span>{connected?'● 后端已连接':'○ 等待连接'}</span><span className="min-w-0 flex-1 truncate">{workspace||'未选择项目'}</span><span>{sessionId?'会话 '+sessionId.slice(0,8)+' · ':''}{statusName(sessionPhase)}</span></footer>
+      <footer className="yy-statusbar flex h-8 shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 text-[11px] text-[var(--color-text-tertiary)]"><span>{connected?'● 后端已连接':'○ 等待连接'}</span><span className="min-w-0 flex-1 truncate">{workspace||'未选择项目'}</span><span>{sessionId?`会话 ${sessionId.slice(0,8)} · `:''}{statusName(sessionPhase)}</span></footer>
     </main>
       {permissions.length>0&&<div className="modal-backdrop" role="presentation"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="工具权限审批"><div className="modal-heading"><div className="modal-icon"><ShieldCheck size={23}/></div><div><span className="eyebrow">PERMISSION REQUEST</span><h2>需要确认工具操作</h2></div></div><p className="muted">摇摇车希望执行以下操作。请检查内容后明确选择。</p><div className="approval-target"><strong>{permissions[0].toolName} · 会话 {permissions[0].sessionId.slice(0,8)}</strong><pre>{json(permissions[0].input)}</pre></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void decision(permissions[0].id,false)} disabled={Boolean(busy)}>拒绝</button><button type="button" className="primary-button" onClick={()=>void decision(permissions[0].id,true)} disabled={Boolean(busy)}>允许本次操作</button></div>{permissions.length>1&&<span className="modal-count">另有 {permissions.length-1} 项待审操作</span>}</div></div>}
       {permissions.length===0&&requested&&<div className="modal-backdrop"><div className="approval-modal" role="dialog" aria-modal="true" aria-label="主机交互请求"><div className="modal-heading"><div className="modal-icon"><LockKeyhole size={23}/></div><div><span className="eyebrow">HOST REQUEST</span><h2>{String(requestedDetails.title||'需要您的输入')}</h2></div></div><p className="muted">{String(requestedDetails.message||requestedDetails.description||'后台请求用户处理交互内容。')}</p>{requestedDetails.subtype==='elicitation'&&requestedDetails.mode==='url'?<>
