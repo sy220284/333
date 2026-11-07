@@ -17,6 +17,7 @@ import type { getSessionInfo, getSessionMessages, listSessions } from '../../ent
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
 import { createHeadlessConversationSession } from '../conversation/headlessSession.js'
 import { createDesktopTaskJournal, type DesktopTaskJournal } from './taskJournal.js'
+import { createSmartExecutionJournal, type SmartExecutionJournal } from './smartExecutionJournal.js'
 import { isAgentProgress, projectBackgroundTasks, projectTask, type DesktopTask } from './taskProjection.js'
 import { DESKTOP_PROTOCOL_VERSION, type DesktopEvent, type DesktopRequest } from './protocol.js'
 import { z } from 'zod/v4'
@@ -48,6 +49,7 @@ export type DesktopGatewayOptions = {
   /** Optional task-diary root for isolated local hosts and tests. */
   missionRoot?: string
   journal?: DesktopTaskJournal
+  smartJournal?: SmartExecutionJournal
   createSession?: SessionFactory
   history?: HistoryService
 }
@@ -75,6 +77,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     },
   }
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
+  const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
+  const smartActive = new Set<string>()
   const sessions = new Map<string, Entry>()
   const opening = new Set<string>()
   const ownerKey = randomUUID()
@@ -112,9 +116,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     if (!entry) throw new Error(`Desktop session is not open: ${sessionId}`)
     return entry
   }
-  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>): InternalOptions {
+  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>, smartPolicy?: Pick<InternalOptions, 'maxBudgetUsd' | 'permissionMode'>): InternalOptions {
     return {
       ...options.sessionOptions,
+      ...smartPolicy,
       ...(sessionEnv ? { env: { ...options.sessionOptions?.env, ...sessionEnv } } : {}),
       cwd,
       ...(selectedModel || model ? { model: selectedModel ?? model } : {}),
@@ -129,7 +134,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }))
   }
 
-  async function openSession(selectedModel?: string, resume?: string, sessionEnv?: Record<string, string | undefined>) {
+  async function openSession(selectedModel?: string, resume?: string, sessionEnv?: Record<string, string | undefined>, smartPolicy?: Pick<InternalOptions, 'maxBudgetUsd' | 'permissionMode'>) {
     if (closed) throw new Error('Desktop gateway is closed')
     if (resume) {
       if (sessions.has(resume) || opening.has(resume)) throw new Error(`Session is already open: ${resume}`)
@@ -149,7 +154,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
-      runtime = launch(sdkOptions(selectedModel, sessionEnv), resume)
+      runtime = launch(sdkOptions(selectedModel, sessionEnv, smartPolicy), resume)
       const info = await initializeModels(runtime)
       if (closed) throw new Error('Desktop gateway closed during session initialization')
       const id = runtime.sessionId
@@ -286,6 +291,52 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }
   }
 
+  async function inspectSmartModel(selectedModel?: string) {
+    const activeModel = selectedModel ?? model
+    if (!activeModel) return {
+      model: '默认模型', status: 'inherited' as const, checkedOffline: true,
+      message: '继承本机当前模型和已有权限，不会自动切换到其他服务商',
+    }
+    const { isRemovedIndependentModel, resolveIndependentModel } =
+      await import('../api/multimodel/registry.js')
+    if (isRemovedIndependentModel(activeModel)) throw new Error('该模型服务商已退出个人版支持范围')
+    const route = resolveIndependentModel(activeModel)
+    if (!route) return {
+      model: activeModel, status: 'native' as const, checkedOffline: true,
+      message: '沿用现有模型配置；实际可用性在执行时由服务商确认',
+    }
+    const { getConfiguredModelProviders, getConfiguredModelSnapshots } =
+      await import('../api/multimodel/catalog.js')
+    const { getSavedCapabilityReport } = await import('../api/multimodel/capabilityProbe.js')
+    const { readIndependentPricing } = await import('../api/multimodel/pricing.js')
+    const configured = getConfiguredModelProviders().includes(route.provider)
+    const snapshot = getConfiguredModelSnapshots().find(item => item.model === activeModel)
+    const probe = getSavedCapabilityReport(activeModel)
+    const hasPricing = readIndependentPricing()[activeModel] !== undefined
+    return {
+      model: activeModel, provider: route.provider,
+      status: configured ? 'configured' as const : 'missing-credential' as const,
+      checkedOffline: true, hasPricing,
+      contextWindow: snapshot?.contextWindow ?? null,
+      maxOutputTokens: snapshot?.maxOutputTokens ?? null,
+      outputSource: snapshot?.outputSource ?? 'unverified',
+      toolRoundTrip: probe?.toolRoundTrip ?? null,
+      probeTime: probe?.timestamp ?? null,
+      message: !configured ? '请先在模型管理中配置该服务商的凭证'
+        : '本地配置已就绪；在线工具能力测试可在需要时手动运行',
+    }
+  }
+
+  async function finishSmartExecution(
+    sessionId: string, status: 'completed' | 'failed' | 'interrupted', costUsd?: number,
+  ): Promise<void> {
+    if (!smartActive.has(sessionId)) return
+    await smartJournal.finish(sessionId, status, costUsd)
+    smartActive.delete(sessionId)
+    emit({ event: 'smart.finished', sessionId, status,
+      ...(costUsd === undefined ? {} : { costUsd }) })
+  }
+
   async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
     const entry = requireSession(sessionId)
     if (entry.closing || entry.consuming || entry.sending)
@@ -312,6 +363,16 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       try {
         for await (const sdkMessage of entry.runtime.stream()) {
           emit({ event: 'session.message', sessionId, turnId, message: sdkMessage })
+          if (sdkMessage.type === 'result' && smartActive.has(sessionId)) {
+            const interrupted = sdkMessage.terminal_reason === 'aborted_tools' ||
+              sdkMessage.terminal_reason === 'aborted_streaming'
+            const status = interrupted ? 'interrupted'
+              : (!sdkMessage.is_error && sdkMessage.subtype === 'success' ? 'completed' : 'failed')
+            const cost = Number(sdkMessage.total_cost_usd)
+            await finishSmartExecution(
+              sessionId, status, Number.isFinite(cost) && cost >= 0 ? cost : undefined,
+            )
+          }
           if (sdkMessage.type === 'result' && executingMissionJobs.has(sessionId)) {
             const success = !sdkMessage.is_error && sdkMessage.subtype === 'success'
             const summary = typeof sdkMessage.result === 'string' && sdkMessage.result.trim()
@@ -342,6 +403,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           error: error instanceof Error ? error.message : String(error),
         })
       } finally {
+        if (smartActive.has(sessionId)) {
+          try { await finishSmartExecution(sessionId, 'interrupted') }
+          catch (error) { emit({ event: 'session.error', sessionId, turnId,
+            error: '智能执行记录写入失败：' + String(error) }) }
+        }
         if (executingMissionJobs.has(sessionId)) {
           try {
             await settleExecutingJob(sessionId, 'interrupted', '执行流结束前未取得完整结果；请核对实际改动后手动重试')
@@ -398,8 +464,45 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs'],
+          capabilities: ['smart_execute', 'smart_inspect', 'smart_history', 'models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs'],
         }
+      case 'smart.inspect': return inspectSmartModel(request.model)
+      case 'smart.history': return (await smartJournal.list()).map(item =>
+        item.status === 'running' && !sessions.has(item.sessionId)
+          ? { ...item, status: 'interrupted' as const } : item)
+      case 'smart.execute': {
+        // One deliberate user action; no automatic workers, scheduled jobs,
+        // external probes, or undeclared cross-provider fallback.
+        const inspection = await inspectSmartModel(request.model)
+        if (inspection.status === 'missing-credential') throw new Error(inspection.message)
+        if (request.maxBudgetUsd !== undefined &&
+            'hasPricing' in inspection && !inspection.hasPricing) {
+          throw new Error('该模型未设置费率，无法可靠执行费用限制；请先设置模型价格')
+        }
+        const policy = {
+          ...(request.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: request.maxBudgetUsd }),
+          ...(request.permissionMode === undefined ? {} : { permissionMode: request.permissionMode }),
+        }
+        const opened = await openSession(request.model, undefined, undefined, policy)
+        try {
+          await smartJournal.start({
+            sessionId: opened.sessionId, status: 'running',
+            model: inspection.model,
+            permissionMode: request.permissionMode ?? options.sessionOptions?.permissionMode ?? 'default',
+            startedAt: new Date().toISOString(),
+            ...(request.maxBudgetUsd === undefined ? {} : { budgetUsd: request.maxBudgetUsd }),
+          })
+          smartActive.add(opened.sessionId)
+          const turn = await send(opened.sessionId, request.prompt)
+          return { sessionId: opened.sessionId, turnId: turn.turnId,
+            model: inspection.model, budgetUsd: request.maxBudgetUsd ?? null,
+            permissionMode: request.permissionMode ?? 'default' }
+        } catch (error) {
+          if (smartActive.has(opened.sessionId)) await finishSmartExecution(opened.sessionId, 'failed')
+          await closeSessionInternal(opened.sessionId)
+          throw error
+        }
+      }
       case 'models.list': return models(request.sessionId)
       case 'mcp.list': {
         const { getMcpConfigsByScope, isMcpServerDisabled } = await import('../mcp/config.js')
@@ -727,6 +830,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       const stale = [...entry.tasks.values()].map(task => task.status === 'running'
         ? { ...task, status: 'interrupted' as const } : task)
       if (stale.length) await journal.write(id, stale)
+      if (smartActive.has(id)) await finishSmartExecution(id, 'interrupted')
     } finally {
       for (const stop of entry.unsubscribe) stop()
       sessions.delete(id)
