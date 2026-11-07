@@ -1,5 +1,5 @@
 import { findMissionByAssignmentId } from '../../utils/agentMissions.js'
-import { promises as fsp } from 'fs'
+import { verifyResumedAgentWorktree } from './resumeWorktree.js'
 import { getSdkAgentProgressSummariesEnabled } from '../../bootstrap/state.js'
 import { getSystemPrompt } from '../../constants/prompts.js'
 import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js'
@@ -78,24 +78,9 @@ export async function resumeAgentBackground({
     resumedMessages,
     transcript.contentReplacements,
   )
-  // Best-effort: if the original worktree was removed externally, fall back
-  // to parent cwd rather than crashing on chdir later.
-  const resumedWorktreePath = meta?.worktreePath
-    ? await fsp.stat(meta.worktreePath).then(
-        s => (s.isDirectory() ? meta.worktreePath : undefined),
-        () => {
-          logForDebugging(
-            `Resumed worktree ${meta.worktreePath} no longer exists; falling back to parent cwd`,
-          )
-          return undefined
-        },
-      )
-    : undefined
-  if (resumedWorktreePath) {
-    // Bump mtime so stale-worktree cleanup doesn't delete a just-resumed worktree (#22355)
-    const now = new Date()
-    await fsp.utimes(resumedWorktreePath, now, now)
-  }
+  // Preserve the original isolation boundary, including after a process
+  // crash. If its worktree has gone, stop before any file/tool execution.
+  const resumedWorktreePath = await verifyResumedAgentWorktree(meta?.worktreePath)
 
   // Skip filterDeniedAgents re-gating — original spawn already passed permission checks
   let selectedAgent: AgentDefinition
