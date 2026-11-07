@@ -27,7 +27,6 @@ const retiredModules = {
     'daemon/workerRegistry.js', 'daemon/main.js', 'cli/bg.js',
     'environment-runner/main.js', 'self-hosted-runner/main.js',
   ],
-  'src/screens/REPL.tsx': ['ssh/createSSHSession.js', 'useSSHSession.js', 'WebBrowserPanel.js'],
   'src/utils/attachments.ts': ['sessionTranscript/sessionTranscript.js'],
 }
 
@@ -58,7 +57,8 @@ test('retired private launchers leave the reusable SDK and desktop headless chai
   assert.match(runtime, /control_request|stream-json/)
 })
 
-test('retired SSH UI implementation removed with its imports', () => {
+test('retired SSH UI and original REPL are physically absent', () => {
+  assert.equal(existsSync(resolve(root, 'src/screens/REPL.tsx')), false)
   assert.equal(existsSync(resolve(root, 'src/hooks/useSSHSession.ts')), false)
   assert.equal(existsSync(resolve(root, 'src/ssh/SSHSessionManager.ts')), false)
 })

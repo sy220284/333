@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
 test('交互式 CLI 已切换至新桌面，SDK 仍可无界面调用',()=>{
   const cli=read('src/entrypoints/cli.tsx')
@@ -20,4 +20,12 @@ test('GUI 启动传入工作区与会话，真实 SDK 恢复路径保留',()=>{
   assert.ok(main.includes('YAOYAO_INITIAL_SESSION_ID'))
   assert.ok(app.includes('if(info.startupSessionId)await resumeSession(info.startupSessionId)'))
   assert.ok(app.includes("('sessions.ensureOpen',{sessionId:id})"))
+})
+
+test('旧终端主界面源文件已删除，启动器不会导入 Ink 会话树',()=>{
+  assert.equal(existsSync(new URL('../src/screens/REPL.tsx',import.meta.url)),false)
+  const launcher=read('src/replLauncher.tsx')
+  assert.equal(launcher.includes("import('./screens/REPL.js')"),false)
+  assert.equal(launcher.includes("import('./components/App.js')"),false)
+  assert.ok(launcher.includes('launchDesktopFromCli'))
 })

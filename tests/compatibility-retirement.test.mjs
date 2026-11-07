@@ -74,9 +74,10 @@ test('no old model remapping or one-shot migration fields remain', () => {
   assert.equal(/^[ ]*env: \{ \[key: string\]: string \}/m.test(config), false)
 })
 
-test('REPL does not import or invoke removed model migration notifications', () => {
-  const repl = code('screens/REPL.tsx')
-  assert.doesNotMatch(repl, /useModelMigrationNotifications/)
+test('旧终端主界面已删除，新桌面不再依赖旧模型迁移通知',()=>{
+  assert.equal(existsSync(new URL('screens/REPL.tsx',root)),false)
+  const app=readFileSync(new URL('../desktop/src/App.tsx',import.meta.url),'utf8')
+  assert.doesNotMatch(app,/useModelMigrationNotifications/)
 })
 
 test('retired interface identifiers cannot re-enter the current source tree', () => {

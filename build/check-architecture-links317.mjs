@@ -26,7 +26,7 @@ const contracts = [
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/settings/settingsCache.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/settings/mdm/rawRead.ts'],
   ['M1', 'src/bootstrap/claimRebind317.ts', 'src/utils/sessionStorage.ts'],
-  ['M2', 'src/screens/REPL.tsx', 'src/query.ts'],
+  ['M2', 'src/services/conversation/headlessSession.ts', 'src/entrypoints/sdk/sessionRuntime317.ts'],
   ['M2', 'src/QueryEngine.ts', 'src/query.ts'],
   ['M3', 'src/query.ts', 'src/services/tools/StreamingToolExecutor.ts'],
   ['M3', 'src/services/tools/toolExecution.ts', 'src/services/mcp/client.ts'],
