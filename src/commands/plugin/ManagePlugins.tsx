@@ -2045,14 +2045,6 @@ export function ManagePlugins({
         isAuthenticated: undefined,
         config: client_4.config as McpHTTPServerConfig
       };
-    } else if (configType_0 === 'stdio' || configType_0 === undefined) {
-      server_3 = {
-        name: client_4.name,
-        client: client_4,
-        scope: scope_6,
-        transport: 'stdio',
-        config: client_4.config as McpStdioServerConfig,
-      }
     } else {
       return <Text color="error">不支持的 MCP 传输类型：{String(configType_0)}</Text>
     }
@@ -2105,14 +2097,6 @@ export function ManagePlugins({
         isAuthenticated: undefined,
         config: client_5.config as McpHTTPServerConfig
       };
-    } else if (configType_1 === 'stdio' || configType_1 === undefined) {
-      server_4 = {
-        name: client_5.name,
-        client: client_5,
-        scope: scope_7,
-        transport: 'stdio',
-        config: client_5.config as McpStdioServerConfig,
-      }
     } else {
       return <Text color="error">不支持的 MCP 传输类型：{String(configType_1)}</Text>
     }
