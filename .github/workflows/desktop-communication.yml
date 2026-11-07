@@ -94,6 +94,17 @@ jobs:
         run: |
           command -v xvfb-run
           node --test tests/deployed-electron-ui.test.mjs
+      - name: 保存已验收安装包和桌面实测截图
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yaoyaoche-linux-desktop-smoke
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            desktop/release/*.AppImage
+            desktop/release/*.deb
+            desktop/release/deployed-workbench-smoke.png
 
   desktop-workbench:
     name: Electron 工作台类型、行为与打包前构建
