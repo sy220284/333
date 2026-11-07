@@ -645,17 +645,41 @@ export function App(){
       </header>
       <div className="content-region">
         <main className="main-content" key={view}>
-          <div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='dashboard'||view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>
+          {view!=='dashboard'&&<div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>}
           {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
           {!connected&&<div className="offline-banner"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button type="button" className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
-          {view==='dashboard'&&<div className="dashboard-page">
-            <div className="welcome-gradient cc-welcome"><div className="cc-welcome-copy"><span className="eyebrow">LOCAL · CREATE · CONTINUE</span><h2>从这里，开始新的工作。</h2><p>选择项目，打开会话。代码、文件、模型和智能体在同一个工作区中协同推进。</p><div className="welcome-actions"><button type="button" onClick={()=>void createSession()} className="primary-button"><Plus size={16}/>开始新任务</button><button type="button" onClick={()=>setView('missions')} className="ghost-button">继续已有任务<ArrowRight size={16}/></button></div></div><div className="cc-welcome-graphic" aria-hidden="true"><span>摇</span><span>摇</span><span>车</span></div></div>
-            <div className="dashboard-stats"><Panel><div className="stat-icon blue"><MessageSquare/></div><span className="stat-label">历史会话</span><strong>{sessions.length}</strong></Panel><Panel><div className="stat-icon purple"><UsersRound/></div><span className="stat-label">协作模式</span><strong>{mode==='super'?'Super':'主子智能体'}</strong></Panel><Panel><div className="stat-icon mint"><ClipboardList/></div><span className="stat-label">长期任务</span><strong>{missions.length}</strong></Panel><Panel><div className="stat-icon amber"><Cpu/></div><span className="stat-label">可用模型</span><strong>{models.length}</strong></Panel></div>
-            <Section title="继续工作" action={<button type="button" className="text-button" onClick={()=>setView('history')}>全部会话<ArrowRight size={15}/></button>}>
-              {sessions.length===0?<Empty icon={MessageSquare} title="开始第一段对话" detail="选择模型并创建会话，AI 执行进度将同步到工作台。" action={<button type="button" className="secondary-button" onClick={()=>void createSession()}>创建会话</button>}/>:<div className="item-list">{sessions.slice(0,5).map((s,i)=><button type="button" key={String(s.sessionId||s.id||i)} className="list-row" onClick={()=>void resumeSession(String(s.sessionId||s.id||''))}><div className="row-icon"><MessageSquare size={18}/></div><div className="row-main"><strong>{String(s.summary||s.title||s.sessionId||'历史会话')}</strong><span>点击恢复会话</span></div><ChevronRight size={17}/></button>)}</div>}
-            </Section>
-            <div className="two-columns"><Section title="长期任务" action={<button type="button" className="text-button" onClick={()=>setView('missions')}>管理任务<ArrowRight size={15}/></button>}><Panel className="mini-panel">{missions.length?missions.slice(0,3).map(m=><button type="button" className="compact-row" key={missionId(m)} onClick={()=>{setSelectedMission(missionId(m));setView('missions')}}><ListChecks size={17}/><span>{m.objective||'未命名任务'}</span><StatusTag text={String(m.status||'active')}/></button>):<Empty icon={ClipboardList} title="暂时没有长期任务" detail="创建目标后可记录检查点并随时恢复。" />}</Panel></Section>
-            <Section title="快捷入口"><Panel className="quick-links">{[['智能体团队',UsersRound,'agents'],['文件与 Git',Folder,'files'],['模型选择',Cpu,'models'],['技能与连接',Boxes,'integrations']].map(([label,Icon,id])=>{const I=Icon as LucideIcon;return <button type="button" key={String(id)} onClick={()=>setView(id as View)}><I size={20}/><span>{String(label)}</span><ArrowRight size={15}/></button>})}</Panel></Section></div>
+          {view==='dashboard'&&<div className="cc-home-page">
+            <div className="cc-start-heading">
+              <div className="cc-start-symbol"><Sparkles size={27} strokeWidth={1.5}/></div>
+              <span className="eyebrow">WORKSPACE · {workspace.split(/[\\/]/).filter(Boolean).at(-1)||'本地项目'}</span>
+              <h2>今天，从哪里开始？</h2>
+              <p>以当前项目为上下文开始工作，任务与执行记录都保存在本机。</p>
+            </div>
+            <div className="cc-starter-surface">
+              <button type="button" className="cc-start-input" onClick={()=>void createSession()} disabled={Boolean(busy)}>
+                <MessageSquare size={19}/><span>打开新会话，输入今天的任务…</span><span className="cc-start-input-action"><Plus size={17}/></span>
+              </button>
+              <div className="cc-starter-foot"><span><Folder size={13}/>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'请选择项目'}</span><span><Bot size={13}/>{mode==='super'?'Super Agents':'主子智能体'}</span><span><Cpu size={13}/>{models.find(m=>m.value===selectedModel)?.displayName||'默认模型'}</span></div>
+            </div>
+            <div className="cc-start-quick">
+              {[
+                {label:'分析当前项目结构',detail:'查看模块组织与核心调用链',icon:Search,prompt:'请分析当前项目的架构、主要模块与调用关系'},
+                {label:'检查代码与测试',detail:'找出实际问题并核验',icon:ShieldCheck,prompt:'检查当前项目的主要问题，运行对应测试并给出修复建议'},
+                {label:'审查最近的改动',detail:'检查 Git 差异和潜在风险',icon:GitBranch,prompt:'审查当前工作区的 Git 改动，说明风险和改进点'},
+                {label:'规划协作任务',detail:'选择合适的智能体执行模式',icon:UsersRound,prompt:'根据当前项目需求制定可验证的智能体协作任务方案'}
+              ].map(item=>{const Icon=item.icon;return <button type="button" key={item.label} className="cc-quick-start" onClick={()=>toChat(item.prompt)}><Icon size={16}/><span><strong>{item.label}</strong><small>{item.detail}</small></span><ArrowRight size={15}/></button>})}
+            </div>
+            <div className="cc-home-followups">
+              <Section title="最近的会话" action={<button type="button" className="text-button" onClick={()=>setView('history')}>全部会话<ArrowRight size={15}/></button>}>
+                {sessions.length===0?<p className="cc-home-empty">当前工作区还没有历史会话。完成第一项任务后可从这里继续。</p>:<div className="cc-home-session-list">{sessions.slice(0,5).map(s=>{
+                  const id=String(s.sessionId||s.id||'')
+                  return id?<button type="button" key={id} className="cc-home-session" onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={16}/><span>{String(s.summary||s.title||id.slice(0,8))}</span><ChevronRight size={15}/></button>:null
+                })}</div>}
+              </Section>
+              <Section title="进行中的长期任务" action={<button type="button" className="text-button" onClick={()=>setView('missions')}>任务簿<ArrowRight size={15}/></button>}>
+                {missions.length===0?<p className="cc-home-empty">任务簿中暂无目标。可以从「长期任务」创建目标并记录执行结果。</p>:<div className="cc-home-session-list">{missions.slice(0,5).map(m=><button type="button" key={missionId(m)} className="cc-home-session" onClick={()=>{setSelectedMission(missionId(m));setView('missions')}}><ClipboardList size={16}/><span>{m.objective||'未命名任务'}</span><StatusTag text={String(m.status||'active')}/></button>)}</div>}
+              </Section>
+            </div>
           </div>}
           {view==='chat'&&<div className="chat-page">
             <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={historyOnly?'历史记录':statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" disabled={historyOnly} value={selectedModel} onChange={e=>{setSelectedModel(e.target.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:e.target.value}))}}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" disabled={historyOnly} value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&!historyOnly&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>

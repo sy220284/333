@@ -75,6 +75,20 @@ beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcp
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+  it('cc-haha 新首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:/打开新会话/})).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
+    expect(screen.getByRole('textbox',{name:'输入任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
+    await user.click(screen.getByRole('button',{name:'发送'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{
+      sessionId:SID,message:'请分析当前项目的架构、主要模块与调用关系'
+    }))
+  })
+
   it('六套主题可以切换并在重新打开时恢复',async()=>{
     const user=userEvent.setup()
     const view=render(<App/>)
