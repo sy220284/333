@@ -189,7 +189,7 @@ export async function writeTeamFileAsync(
  */
 export function removeTeammateFromTeamFile(
   teamName: string,
-  identifier: { agentId?: string; name?: string },
+  identifier: { agentId?: string; name?: string; onlyIfJoinedBefore?: number },
 ): boolean {
   const identifierStr = identifier.agentId || identifier.name
   if (!identifierStr) {
@@ -209,9 +209,16 @@ export function removeTeammateFromTeamFile(
 
   const originalLength = teamFile.members.length
   teamFile.members = teamFile.members.filter(m => {
-    if (identifier.agentId && m.agentId === identifier.agentId) return false
-    if (identifier.name && m.name === identifier.name) return false
-    return true
+    // The agentId is the identity; a new teammate can reuse the same name.
+    const matches = identifier.agentId
+      ? m.agentId === identifier.agentId
+      : m.name === identifier.name
+    if (!matches) return true
+    if (
+      identifier.onlyIfJoinedBefore !== undefined &&
+      m.joinedAt >= identifier.onlyIfJoinedBefore
+    ) return true
+    return false
   })
 
   if (teamFile.members.length === originalLength) {
