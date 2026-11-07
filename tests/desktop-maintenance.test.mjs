@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtemp, mkdir, writeFile, readFile, rm, stat } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, rm, stat, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -47,7 +47,7 @@ try {
 `
 
 test('桌面数据管理真实预览、令牌保护与文件清理，保留项目源码和凭证', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'yaoyao-maintenance-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'yaoyao-maintenance-')))
   const home = join(root, 'config')
   const project = join(root, 'workspace')
   const other = join(root, 'unrelated')
@@ -58,9 +58,8 @@ test('桌面数据管理真实预览、令牌保护与文件清理，保留项�
     await mkdir(other, { recursive: true })
     await mkdir(directory, { recursive: true })
     await writeFile(join(project, 'source.ts'), 'export const preserved = true\n')
-    await writeFile(join(directory, session + '.jsonl'), JSON.stringify({ cwd: project }) + '\n')
-    await writeFile(join(home, 'history.jsonl'), JSON.stringify({ project, display: 'remove' }) + '\n' +
-      JSON.stringify({ project: other, display: 'keep' }) + '\n')
+    await writeFile(join(directory, `${session}.jsonl`), `${JSON.stringify({ cwd: project })}\n`)
+    await writeFile(join(home, 'history.jsonl'), `${JSON.stringify({ project, display: 'remove' })}\n${JSON.stringify({ project: other, display: 'keep' })}\n`)
     await writeFile(join(home, '.yaoyaoche.json'), JSON.stringify({ projects: { [project]: { hasTrustDialogAccepted: true } } }))
     await writeFile(join(home, '.credentials.json'), '{"key":"preserve"}')
     const result = spawnSync('bun', ['-e', childScript], {
