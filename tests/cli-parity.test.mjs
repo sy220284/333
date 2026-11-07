@@ -67,7 +67,7 @@ assert.equal(official317.version, targetVersion);
 // These additions belong to the local product contract, and must be tested
 // explicitly rather than compared with the unmodified official flag set.
 const independentFlags = {
-  '--help': ['--proactive', '--strict-command'],
+  '--help': ['--proactive', '--strict-command', '--plugin-dir-no-mcp'],
 }
 const independentCommands = {
   '--help': ['local-settings', 'local-tasks', 'models'],
@@ -125,6 +125,16 @@ for (const [commandLine, expected] of Object.entries(official317.commands)) {
     verifyBaseAndExtensions(actual, expected, commandLine);
   });
 }
+
+test('333 SDK-only plugin opt-out retains native flags and reaches the plugin loader', () => {
+  const help = compiledHelp(['--help']);
+  assert.equal(sections(help).flags.includes('--plugin-dir-no-mcp'), true,
+    'The SDK plugin opt-out must be visible and accepted by the CLI');
+  const runtime = readFileSync(resolve(root, 'src/entrypoints/sdk/sessionRuntime317.ts'), 'utf8');
+  const main = readFileSync(resolve(root, 'src/main.tsx'), 'utf8');
+  assert.match(runtime, /plugin\.skipMcpDiscovery\s*\?\s*'--plugin-dir-no-mcp'/);
+  assert.match(main, /--plugin-dir-no-mcp <path>/);
+});
 
 test('317 hidden permission callback reaches the existing permission consumer', () => {
   const help = compiledHelp(['--help']);
