@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { closeSync, ftruncateSync, mkdirSync, openSync, readFileSync, writeFileSync, writeSync } from 'fs'
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { z } from 'zod/v4'
@@ -166,9 +166,23 @@ export async function readTeamFileAsync(
  */
 // sync IO: called from sync context
 function writeTeamFile(teamName: string, teamFile: TeamFile): void {
-  const teamDir = getTeamDir(teamName)
-  mkdirSync(teamDir, { recursive: true })
-  writeFileSync(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2))
+  // All synchronous roster updates must target the existing team instance.
+  // Opening r+ never creates a deleted team's directory or config file.
+  const handle = openSync(getTeamFilePath(teamName), 'r+')
+  try {
+    const current = jsonParse(readFileSync(handle, 'utf-8')) as TeamFile
+    if (current.createdAt !== teamFile.createdAt) {
+      throw new Error(`Team ${teamName} was replaced during member update`)
+    }
+    const payload = jsonStringify(teamFile, null, 2)
+    const bytes = writeSync(handle, payload, 0, 'utf8')
+    if (bytes !== Buffer.byteLength(payload)) {
+      throw new Error(`Incomplete roster update for team ${teamName}`)
+    }
+    ftruncateSync(handle, bytes)
+  } finally {
+    closeSync(handle)
+  }
 }
 
 /**
