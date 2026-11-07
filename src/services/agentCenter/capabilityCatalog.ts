@@ -6,10 +6,11 @@
  */
 import { resolve } from 'node:path'
 import { getCommands } from '../../commands.js'
+import { getToolsForDefaultPreset } from '../../tools.js'
 import { getMcpConfigsByScope, isMcpServerDisabled } from '../mcp/config.js'
 import { loadAllPluginsCacheOnly } from '../../utils/plugins/pluginLoader.js'
 
-export type CapabilityKind = 'skill' | 'workflow' | 'plugin' | 'mcp' | 'command'
+export type CapabilityKind = 'tool' | 'skill' | 'workflow' | 'plugin' | 'mcp' | 'command'
 export type CapabilityStatus = 'available' | 'configured' | 'disabled'
 export type CapabilityEntry = {
   id: string
@@ -41,6 +42,17 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
   const items: CapabilityEntry[] = []
   const warnings: string[] = []
   // A capability overview is observational: no installers, no remote refresh.
+  try {
+    for (const name of getToolsForDefaultPreset()) {
+      items.push({
+        id: 'tool:built-in:' + name, name, kind: 'tool',
+        source: 'built-in', scope: 'built-in', description: '可由模型调用的原生工具',
+        status: 'available',
+      })
+    }
+  } catch (error) {
+    warnings.push('内置工具发现失败：' + String(error))
+  }
   try {
     const commands = await getCommands(resolve(projectDir))
     for (const command of commands) {
