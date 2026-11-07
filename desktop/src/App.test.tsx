@@ -71,7 +71,12 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       if(failMcpRefresh)throw new Error('MCP 服务离线')
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
     case 'sessions.open':return {sessionId:SID,tasks:mockTasks}
-    case 'sessions.send':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8'}
+    case 'sessions.send':
+      if(String(args.message).includes('TeamCreate'))listener({
+        event:'session.message',sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',
+        message:{uuid:'message-fast-team',type:'assistant',message:{role:'assistant',content:[{type:'text',text:'已收到团队建队请求，等待工具确认'}]}}
+      })
+      return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8'}
     case 'sessions.setModel':if(failModelSelection)throw new Error('模型服务端拒绝切换');return {model:args.model}
     case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
     case 'credentials.set':return {saved:true}
@@ -407,6 +412,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     })))
     expect(call).toHaveBeenCalledWith('sessions.open',expect.any(Object))
     expect(screen.getByRole('textbox',{name:'输入任务'})).toBeInTheDocument()
+    expect(screen.getByText('已收到团队建队请求，等待工具确认')).toBeInTheDocument()
   })
 
   it('成员任务通过团队负责人会话原生发送，不误建独立会话',async()=>{

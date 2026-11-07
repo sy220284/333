@@ -401,11 +401,13 @@ export function App(){
       const started=leaderSessionId
         ? await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:leaderSessionId})
         : await invoke<{sessionId:string;tasks?:Task[]}>('sessions.open',selectedModel?{model:selectedModel}:{})
-      await invoke('sessions.send',{sessionId:started.sessionId,message:prompt})
+      // Reserve the visible SDK session before sending: an unusually fast
+      // tool/result stream can arrive before sessions.send resolves.
       setSessionId(started.sessionId);sessionRef.current=started.sessionId
       setSessionPhase('running');setHistoryOnly(false);setTasks(started.tasks??[])
       setMessages([{id:`local-team-${Date.now()}`,kind:'user',text:prompt,time:Date.now()}])
       setVisibleMessageCount(120);setFollowLatest(true);setView('chat')
+      await invoke('sessions.send',{sessionId:started.sessionId,message:prompt}
     })
   }
   async function requestTeamCreation(){
