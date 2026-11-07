@@ -33,9 +33,6 @@ const cronTools = feature('AGENT_TRIGGERS')
       require('./tools/ScheduleCronTool/CronListTool.js').CronListTool,
     ]
   : []
-const RemoteTriggerTool = feature('AGENT_TRIGGERS_REMOTE')
-  ? require('./tools/RemoteTriggerTool/RemoteTriggerTool.js').RemoteTriggerTool
-  : null
 import { MonitorTool } from './tools/MonitorTool/MonitorTool.js'
 const SendUserFileTool = feature('KAIROS')
   ? require('./tools/SendUserFileTool/SendUserFileTool.js').SendUserFileTool
@@ -216,7 +213,6 @@ export function getAllBaseTools(): Tools {
     MissionTool,
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,
-    ...(RemoteTriggerTool ? [RemoteTriggerTool] : []),
     MonitorTool,
     BriefTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),
