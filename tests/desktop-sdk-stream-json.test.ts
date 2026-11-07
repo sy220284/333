@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { createSessionRuntime317 } from '../src/entrypoints/sdk/sessionRuntime317.js'
+import { StructuredIO } from '../src/cli/structuredIO.js'
 import type { DesktopEvent } from '../src/services/desktop/protocol.js'
 import type { DesktopTask } from '../src/services/desktop/taskProjection.js'
 import type { DesktopGatewayOptions } from '../src/services/desktop/gateway.js'
@@ -218,6 +219,20 @@ test('SDK re-initialize re-delivers parked permission requests without a second 
     await runtime.closeAndWait()
     await rm(cwd, { recursive: true, force: true })
   }
+})
+
+test('reinitializing SDK hooks rejects retired callbacks rather than silently continuing', async () => {
+  const input = (async function* (): AsyncGenerator<string> {
+    yield ''
+  })()
+  const io = new StructuredIO(input)
+  const hook = io.createHookCallback('stale-hook-callback', 30, 'block')
+  const pending = hook.callback(
+    {} as Parameters<typeof hook.callback>[0], null, undefined,
+  )
+  expect(io.retireSdkHookCallbackRequests(new Set(['unrelated']))).toBe(0)
+  expect(io.retireSdkHookCallbackRequests(new Set(['stale-hook-callback']))).toBe(1)
+  await expect(pending).rejects.toThrow('retired by a newer initialize')
 })
 
 test('desktop host uses real SDK stream-json child for models, approval, progress, interrupt and resume', { timeout: 30000 }, async () => {
