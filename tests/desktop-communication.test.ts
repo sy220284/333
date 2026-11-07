@@ -266,7 +266,7 @@ test('SDK preset tools and hook events reach the spawned CLI process', async () 
     "    } }) + '\\n')",
     "  }",
     "})",
-  ].join('\\n')
+  ].join('\n')
   await writeFile(script, fixtureScript)
   const session = createSessionRuntime317({
     model: 'model-example',
