@@ -38,7 +38,13 @@ for (const name of workflows) {
 for (const name of workflows) {
   const source = yaml(name)
   if (!/^ {2}workflow_call:/m.test(source)) continue
-  if (!/^ {2}cancel-in-progress: (true|\$\{\{ github\.event_name == 'pull_request' \}\})$/m.test(source)) {
+  if (name === 'desktop-communication.yml') {
+    // Historical reruns must use a separate lane. Otherwise an old SHA's
+    // rerun cancels the newest packaged GUI acceptance run.
+    if (!/group: reusable-desktop-communication-.*github\.run_attempt == 1.*github\.run_id/.test(source) ||
+        !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}/.test(source))
+      errors.push('桌面发行版验收缺少旧提交回跑隔离')
+  } else if (!/^ {2}cancel-in-progress: (true|\$\{\{ github\.event_name == 'pull_request' \}\})$/m.test(source)) {
     errors.push(`PR 检查没有取消过期运行：${name}`)
   }
   if (/^ {2}group:.*(?:github\.sha|pull_request\.head\.sha)/m.test(source)) {
@@ -54,9 +60,9 @@ if (!/^ {2}pull_request:/m.test(dispatcher) ||
     !/converted_to_draft/.test(dispatcher) ||
     !/synchronize/.test(dispatcher))
   errors.push('缺少 Draft / 待审转换和继续提交的完整调度')
-if (!/ci-on-demand-/.test(dispatcher) ||
-    !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/.test(dispatcher))
-  errors.push('统一调度缺少同一 PR 的过期运行合并')
+if (!/group: ci-on-demand-.*github\.run_attempt == 1.*github\.run_id/.test(dispatcher) ||
+    !/cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' && github\.run_attempt == 1 \}\}/.test(dispatcher))
+  errors.push('统一调度缺少最新版PR取消与旧SHA重新运行隔离')
 if (!/node build\/ci-impact\.mjs/.test(dispatcher) ||
     !/needs: \[plan, basic,/.test(dispatcher))
   errors.push('统一调度缺少累计改动识别或稳定汇总门禁')
