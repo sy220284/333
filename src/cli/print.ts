@@ -2,7 +2,6 @@
 import { feature } from 'bun:bundle'
 import { readFile, stat } from 'fs/promises'
 import { dirname } from 'path'
-import { waitForRemoteManagedSettingsToLoad } from 'src/services/remoteManagedSettings/index.js'
 import { StructuredIO } from 'src/cli/structuredIO.js'
 import { RemoteIO } from 'src/cli/remoteIO.js'
 import {
@@ -26,7 +25,6 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/grow
 import { logForDebugging } from 'src/utils/debug.js'
 import {
   logForDiagnosticsNoPII,
-  withDiagnosticsTiming,
 } from 'src/utils/diagLogs.js'
 import { toolMatchesName, type Tool, type Tools } from 'src/Tool.js'
 import {
@@ -132,7 +130,6 @@ import { cwd } from 'process'
 import { getCwd } from 'src/utils/cwd.js'
 import omit from 'lodash-es/omit.js'
 import reject from 'lodash-es/reject.js'
-import { isPolicyAllowed } from 'src/services/policyLimits/index.js'
 import type { ReplBridgeHandle } from 'src/bridge/replBridge.js'
 import { getRemoteSessionUrl } from 'src/constants/product.js'
 import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil.js'
@@ -1640,12 +1637,6 @@ function runHeadlessStreaming(
           headers: connection.config.headers,
           oauth: connection.config.oauth,
         }
-      } else if (connection.config.type === 'claudeai-proxy') {
-        config = {
-          type: 'claudeai-proxy' as const,
-          url: connection.config.url,
-          id: connection.config.id,
-        }
       } else if (isMcpStdioServerConfig(connection.config)) {
         config = {
           type: 'stdio' as const,
@@ -1704,11 +1695,6 @@ function runHeadlessStreaming(
   // NOTE: Nested function required - needs closure access to applyMcpServerChanges and updateSdkMcp
   async function installPluginsAndApplyMcpInBackground(): Promise<void> {
     try {
-      // Remote management policies may be fetched, while user settings remain local.
-      await withDiagnosticsTiming('headless_managed_settings_wait', () =>
-        waitForRemoteManagedSettingsToLoad(),
-      )
-
       const pluginsInstalled = await installPluginsForHeadless()
 
       if (pluginsInstalled) {
@@ -4975,12 +4961,6 @@ async function loadInitialMessages(
   // Handle teleport in print mode
   if (options.teleport) {
     try {
-      if (!isPolicyAllowed('allow_remote_sessions')) {
-        throw new Error(
-          "Remote sessions are disabled by your organization's policy.",
-        )
-      }
-
       logEvent('tengu_teleport_print', {})
 
       if (typeof options.teleport !== 'string') {
@@ -5332,7 +5312,7 @@ export type McpSetServersResult = {
  * Handles mcp_set_servers requests by processing both SDK and process-based servers.
  * SDK servers run in the SDK process; process-based servers are spawned by the CLI.
  *
- * Applies enterprise allowedMcpServers/deniedMcpServers policy — same filter as
+ * Applies locally configured allowedMcpServers/deniedMcpServers policy — same filter as
  * --mcp-config (see filterMcpServersByPolicy call in main.tsx). Without this,
  * SDK V2 Query.setMcpServers() was a second policy bypass vector. Blocked servers
  * are reported in response.errors so the SDK consumer knows why they weren't added.
@@ -5343,7 +5323,7 @@ export async function handleMcpSetServers(
   dynamicState: DynamicMcpState,
   setAppState: (f: (prev: AppState) => AppState) => void,
 ): Promise<McpSetServersResult> {
-  // Enforce enterprise MCP policy on process-based servers (stdio/http/sse).
+  // Enforce locally configured MCP allow/deny policy on process-based servers (stdio/http/sse).
   // Mirrors the --mcp-config filter in main.tsx — both user-controlled injection
   // paths must have the same gate. type:'sdk' servers are exempt (SDK-managed,
   // CLI never spawns/connects for them — see filterMcpServersByPolicy jsdoc).
@@ -5352,7 +5332,7 @@ export async function handleMcpSetServers(
   const policyErrors: Record<string, string> = {}
   for (const name of blocked) {
     policyErrors[name] =
-      'Blocked by enterprise policy (allowedMcpServers/deniedMcpServers)'
+      'Blocked by local MCP allow/deny policy'
   }
 
   // Separate SDK servers from process-based servers

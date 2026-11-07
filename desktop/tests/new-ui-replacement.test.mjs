@@ -45,7 +45,9 @@ test('新 UI 业务入口对应实际回调，重要危险操作仍保留确认'
   const app=src('../src/App.tsx')
   for(const name of ['sessions.open','sessions.send','sessions.interrupt','sessions.setModel','agents.setMode','missions.jobs.runQueue','missions.jobs.approve','workspace.read','workspace.write','mcp.toggle','mcp.remove','host.reject'])assert.ok(app.includes(name),`缺少 ${name}`)
   assert.ok(app.includes('window.confirm'))
-  assert.ok(app.includes('onSuggestion={toChat}'))
+  assert.ok(app.includes('onSuggestion={setDraft}'))
+  assert.ok(app.includes('onExecute={()=>void executeSmart()}'))
+  assert.ok(app.includes("'smart.execute'"))
 })
 
 test('剔除未接入的原项目 UI 样式与冗余组件，不改变本地功能入口',()=>{
@@ -57,4 +59,21 @@ test('剔除未接入的原项目 UI 样式与冗余组件，不改变本地功�
   assert.equal(Boolean(manifest.devDependencies['@tailwindcss/typography']),false)
   assert.equal(theme.includes('--color-activity-heat-'),false,'删除原来源独立热力图的无引用调色令牌')
   assert.ok(theme.length<60000,'移植 CSS 仍带有大面积来源功能样式')
+})
+
+test('PR22 MCP 本地配置及诊断清理使用统一新 UI 和真实后台',()=>{
+  const app=src('../src/App.tsx')
+  const maintenance=src('../src/components/layout/LocalMaintenance.tsx')
+  const gateway=src('../../src/services/desktop/gateway.ts')
+  const protocol=src('../../src/services/desktop/protocol.ts')
+  const electron=src('../electron/main.ts')
+  for(const method of ['system.diagnostics','data.purge.preview','data.purge.apply']){
+    assert.ok(maintenance.includes(method))
+    assert.ok(gateway.includes(`case '${method}'`))
+    assert.ok(protocol.includes(`request('${method}'`))
+  }
+  assert.ok(maintenance.includes('确认后会关闭空闲会话'))
+  assert.ok(app.includes('mcpEnvironment'))
+  assert.ok(app.includes('<McpImportPanel'))
+  assert.ok(electron.includes('[已隐藏]'))
 })

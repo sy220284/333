@@ -15,7 +15,7 @@ function requireWindow(): BrowserWindow {
 }
 const git = promisify(execFile)
 const permitted = new Set([
-  'hello','models.list','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
+  'hello','models.list','smart.execute','smart.inspect','smart.history','system.diagnostics','data.purge.preview','data.purge.apply','mcp.list','mcp.add','mcp.remove','mcp.toggle','sessions.open','sessions.resume','sessions.ensureOpen','sessions.list','sessions.history',
   'sessions.close','sessions.status','sessions.send','sessions.interrupt','sessions.setModel',
   'sessions.setPermissionMode','host.list','host.respond','host.reject','permissions.list',
   'permissions.decide','agents.overview','agents.members','agents.setMode','missions.list','missions.get',
@@ -237,7 +237,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
   }
   if(method==='mcp.add'||method==='mcp.remove'||method==='mcp.toggle'){
     const name=String(data.name||'')
-    const details=method==='mcp.add'?JSON.stringify(data.config):method==='mcp.toggle'?`启用：${String(data.enabled)}`:'删除现有服务配置'
+    const details=method==='mcp.add'?JSON.stringify(data.config,(key,value)=>key==='env'&&value&&typeof value==='object'?Object.fromEntries(Object.keys(value).map(name=>[name,'[已隐藏]'])):value):method==='mcp.toggle'?`启用：${String(data.enabled)}`:'删除现有服务配置'
     const answer=await dialog.showMessageBox(requireWindow(),{
       type:'warning',title:'确认 MCP 服务器配置',
       buttons:['取消','确认修改'],defaultId:0,cancelId:0,

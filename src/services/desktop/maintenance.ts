@@ -1,20 +1,29 @@
 /** Shared local-project maintenance without a terminal renderer. */
-import { readFile, realpath } from 'node:fs/promises'
+import { lstat, readFile, realpath } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { getGlobalClaudeFile } from '../../utils/env.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { findGitRoot } from '../../utils/git.js'
 import { planPurge, executePurgeItem, type PurgeItem } from '../../utils/purgeProject.ts'
+import { getSmartExecutionJournalFile } from './smartExecutionJournal.js'
 
 export type LocalPurgePlan = { workspace: string; items: PurgeItem[]; warnings: string[] }
 
-export async function planLocalProjectPurge(workspace: string): Promise<LocalPurgePlan> {
+export async function planLocalProjectPurge(workspace: string, smartJournalRoot?: string): Promise<LocalPurgePlan> {
   const project = resolve(workspace)
   const projectKeys = Object.keys(getGlobalConfig().projects ?? {})
   const canonical = await realpath(project)
   const aliases = [findGitRoot(project), findGitRoot(canonical)].filter((s): s is string => !!s)
   const plan = await planPurge(getClaudeConfigHomeDir(), project, { projectKeys, configAliases: aliases })
+  const journalFile = getSmartExecutionJournalFile(project, smartJournalRoot)
+  try {
+    const info = await lstat(journalFile)
+    if (!info.isFile() || info.nlink !== 1) throw new Error('智能执行记录必须是普通独立文件')
+    plan.items.push({ path: journalFile, kind: 'file', reason: '当前工作区的智能执行历史与费用记录' })
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   return { workspace: project, items: plan.items, warnings: plan.warnings }
 }
 

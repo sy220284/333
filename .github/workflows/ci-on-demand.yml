@@ -1,7 +1,7 @@
 name: CI 按需调度与待审全量验收
 on:
   pull_request:
-    branches: [main]
+    branches: [main, integration/333-independent-pr16-pr18-20261106]
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
 permissions:
@@ -29,6 +29,7 @@ jobs:
       latest_stable_six_host: ${{ steps.route.outputs.latest_stable_six_host }}
       local_feature_promotion: ${{ steps.route.outputs.local_feature_promotion }}
       local_privacy: ${{ steps.route.outputs.local_privacy }}
+      personal_retirement_boundary: ${{ steps.route.outputs.personal_retirement_boundary }}
       m1_317_bootstrap_security: ${{ steps.route.outputs.m1_317_bootstrap_security }}
       m1_317_official_reference: ${{ steps.route.outputs.m1_317_official_reference }}
       m1_evidence: ${{ steps.route.outputs.m1_evidence }}
@@ -38,8 +39,6 @@ jobs:
       m1_sed_preview_parity: ${{ steps.route.outputs.m1_sed_preview_parity }}
       m1_spinner_parity: ${{ steps.route.outputs.m1_spinner_parity }}
       m2_prompt_functional_integration_317: ${{ steps.route.outputs.m2_prompt_functional_integration_317 }}
-      m6_gateway_providers_317: ${{ steps.route.outputs.m6_gateway_providers_317 }}
-      m6_self_hosted_runner_317: ${{ steps.route.outputs.m6_self_hosted_runner_317 }}
       rebuild: ${{ steps.route.outputs.rebuild }}
       sdk_stream_parity: ${{ steps.route.outputs.sdk_stream_parity }}
       type_migration_pr7: ${{ steps.route.outputs.type_migration_pr7 }}
@@ -66,7 +65,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: CI 调度规则与全量覆盖回归
         run: |
-          node --test tests/ci-routing.test.mjs tests/ci-test-discovery.test.mjs tests/upgrade-317-coverage.test.mjs tests/upgrade317-evidence-report.test.mjs
+          node --test tests/ci-routing.test.mjs tests/ci-test-discovery.test.mjs tests/upgrade-317-coverage.test.mjs tests/upgrade317-evidence-report.test.mjs tests/enterprise-retirement-boundary.test.mjs
           node build/upgrade317-product-scope.mjs --check
           node build/ci-gate-audit.mjs
 
@@ -146,6 +145,12 @@ jobs:
     if: needs.plan.outputs.full == 'true' || needs.plan.outputs.local_feature_promotion == 'true'
     uses: ./.github/workflows/local-feature-promotion.yml
 
+  personal-retirement-boundary:
+    name: personal-retirement-boundary ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.personal_retirement_boundary == 'true'
+    uses: ./.github/workflows/personal-retirement-boundary.yml
+
   local-privacy:
     name: local-privacy ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
     needs: plan
@@ -206,18 +211,6 @@ jobs:
     if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m2_prompt_functional_integration_317 == 'true'
     uses: ./.github/workflows/m2-prompt-functional-integration-317.yml
 
-  m6-gateway-providers-317:
-    name: m6-gateway-providers-317 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
-    needs: plan
-    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m6_gateway_providers_317 == 'true'
-    uses: ./.github/workflows/m6-gateway-providers-317.yml
-
-  m6-self-hosted-runner-317:
-    name: m6-self-hosted-runner-317 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
-    needs: plan
-    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m6_self_hosted_runner_317 == 'true'
-    uses: ./.github/workflows/m6-self-hosted-runner-317.yml
-
   rebuild:
     name: rebuild ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
     needs: plan
@@ -251,7 +244,7 @@ jobs:
   complete:
     name: 统一验收结果
     if: ${{ !cancelled() }}
-    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, local-privacy, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, m6-gateway-providers-317, m6-self-hosted-runner-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
+    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, local-privacy, personal-retirement-boundary, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
     runs-on: ubuntu-latest
     steps:
       - name: 校验必需检查和所有实际运行的专项

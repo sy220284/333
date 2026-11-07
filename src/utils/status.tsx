@@ -133,7 +133,7 @@ export function buildSettingSourcesProperties(): Property[] {
   });
 
   // Map internal names to user-friendly names
-  // For policySettings, distinguish between remote and local (or skip if neither exists)
+  // For policySettings, distinguish local administrator sources (or skip if neither exists)
   const sourceNames = sourcesWithSettings.map(source => {
     if (source === 'policySettings') {
       const origin = getPolicySettingsOrigin();
@@ -141,12 +141,10 @@ export function buildSettingSourcesProperties(): Property[] {
         return null; // Skip - no policy settings exist
       }
       switch (origin) {
-        case 'remote':
-          return 'Enterprise managed settings (remote)';
         case 'plist':
-          return 'Enterprise managed settings (plist)';
+          return '本机管理配置 (plist)';
         case 'hklm':
-          return 'Enterprise managed settings (HKLM)';
+          return '本机管理配置 (HKLM)';
         case 'file':
           {
             const {
@@ -154,15 +152,15 @@ export function buildSettingSourcesProperties(): Property[] {
               hasDropIns
             } = getManagedFileSettingsPresence();
             if (hasBase && hasDropIns) {
-              return 'Enterprise managed settings (file + drop-ins)';
+              return '本机管理配置 (file + drop-ins)';
             }
             if (hasDropIns) {
-              return 'Enterprise managed settings (drop-ins)';
+              return '本机管理配置 (drop-ins)';
             }
-            return 'Enterprise managed settings (file)';
+            return '本机管理配置 (file)';
           }
         case 'hkcu':
-          return 'Enterprise managed settings (HKCU)';
+          return '本机管理配置 (HKCU)';
       }
     }
     return getSettingSourceDisplayNameCapitalized(source);

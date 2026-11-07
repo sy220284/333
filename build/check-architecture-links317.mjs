@@ -38,11 +38,6 @@ const contracts = [
   ['M4', 'src/utils/sessionStorage.ts', 'src/utils/sessionTranscriptPathsV5.ts'],
   ['M5', 'src/main.tsx', 'src/utils/plugins/pluginLoader.ts'],
   ['M6', 'src/cli/print.ts', 'src/QueryEngine.ts'],
-  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerApi317.ts'],
-  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerWorkspace317.ts'],
-  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/bridge/sessionRunner.ts'],
-  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerCliArgs317.ts'],
-  ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerAgents317.ts'],
 ]
 
 function canonicalModule(path) {

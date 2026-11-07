@@ -37,7 +37,6 @@ describe('MCP 317 login transport and credential semantics', () => {
   test('hosted connectors use the cloud sign-in boundary, including normalized hosts', () => {
     expect(classifyMcpLogin({ ...config, url: 'https://GMAIL.mcp.claude.com./mcp', scope: 'user' }).kind).toBe('anthropic-hosted')
     expect(classifyMcpLogin({ ...config, url: 'https://gmail.mcp.claude.com.evil.test/mcp', scope: 'user' }).kind).toBe('oauth')
-    expect(classifyMcpLogin({ type: 'claudeai-proxy', id: 'mcprs_1', url: config.url, scope: 'claudeai' }).kind).toBe('claudeai-proxy')
   })
   test('failed durable deletion throws and leaves stored credentials intact', () => {
     seed(); writable = false

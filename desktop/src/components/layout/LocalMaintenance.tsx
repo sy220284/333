@@ -100,7 +100,7 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
         <p className="mt-3 break-all text-[11px] text-[var(--color-text-tertiary)]">当前工作区：{workspace}</p>
         {preview && <div className="mt-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2"><Badge size="sm" tone="warning">{preview.items.length} 项待清理</Badge>
-            <span className="text-[11px] text-[var(--color-text-secondary)]">当前打开会话：{preview.activeSessions}。空闲会话将在确认后关闭。</span></div>
+            <span className="text-[11px] text-[var(--color-text-secondary)]">当前打开会话：{preview.activeSessions}。确认后会关闭空闲会话；执行中的任务请先停止。</span></div>
           {preview.warnings.map(warning => <p key={warning} role="alert" className="text-[12px] text-[var(--color-error)]">{warning}</p>)}
           <div className="max-h-56 overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
             {preview.items.length ? preview.items.map(item => <div key={`${item.kind}:${item.path}`} className="border-b border-[var(--color-border)] py-2 last:border-b-0">

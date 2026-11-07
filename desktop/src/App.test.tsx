@@ -32,6 +32,10 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
+    case 'smart.history':return []
+    case 'smart.inspect':return {model:args.model||'默认模型',status:'native',message:'沿用本地配置',checkedOffline:true}
+    case 'smart.execute':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',model:args.model||'默认模型'}
+    case 'mcp.add':return {added:true}
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
@@ -64,6 +68,11 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       const end=manyFiles?Math.min(260,offset+Number(args.limit||200)):0
       return {path:'/projects/example',total:manyFiles?260:0,entries:Array.from({length:Math.max(0,end-offset)},(_,i)=>({name:`file-${offset+i}.ts`,path:`/projects/example/file-${offset+i}.ts`,directory:false}))}
     }
+    case 'system.diagnostics':return {installation:{installationType:'本地安装',version:'2.1.317',installationPath:'/local/bin/yaoyao',autoUpdates:'manual',warnings:[],multipleInstallations:[],ripgrepStatus:{working:true,mode:'local'}},runtime:{cwd:'/projects/example',activeSessions:0,activeTasks:0},configuredProviders:['minimax'],mcp:[{scope:'project',count:1,errors:[]}],note:'已完成本地配置核查'}
+    case 'data.purge.preview':return {token:'f433a864-7cff-4cd3-9ae5-4f68e0b97b10',workspace:'/projects/example',activeSessions:0,items:[{path:'/projects/example/.yaoyaoche/sessions',kind:'dir',reason:'本地会话记录'}],warnings:[]}
+    case 'data.purge.apply':return {deleted:1,total:1,errors:[]}
+    case 'mcp.import.pick':return {token:'49c26b4d-d7b9-440a-9cb8-f2f762b074fb',source:'desktop-mcp.json',servers:[{sourceName:'primary',name:'primary',type:'stdio',collision:false},{sourceName:'clash',name:'clash',type:'http',collision:true}]}
+    case 'mcp.import.apply':return {added:['primary'],errors:[]}
     case 'mcp.list':
       if(suspendMcpRefresh)await new Promise<void>(resolve=>{releaseMcpRefresh=resolve})
       if(failMcpRefresh)throw new Error('MCP 服务离线')
@@ -148,18 +157,74 @@ describe('摇摇车真实桌面页面交互',()=>{
       expect(call).not.toHaveBeenCalledWith('workspace.read',{path:'/projects/example/file-1.ts'})
     }finally{confirm.mockRestore()}
   })
-  it('新界面原生首页使用任务启动而非旧仪表盘，点击建议可进入真实输入流',async()=>{
+  it('原生新首页单次输入后直接执行，没有建会话加发送的重复操作',async()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
     expect(screen.getByRole('heading',{name:'今天，从哪里开始？'})).toBeInTheDocument()
-    expect(screen.getByRole('button',{name:'新建会话'})).toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:/分析当前项目结构/}))
-    expect(screen.getByRole('textbox',{name:'输入任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
-    await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{
-      sessionId:SID,message:'请分析当前项目的架构、主要模块与调用关系'
+    expect(screen.getByRole('textbox',{name:'智能执行任务'})).toHaveValue('请分析当前项目的架构、主要模块与调用关系')
+    await user.click(screen.getByRole('button',{name:'智能执行'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{
+      prompt:'请分析当前项目的架构、主要模块与调用关系',
     }))
+    expect(call.mock.calls.some(args=>args[0]==='sessions.open'||args[0]==='sessions.send')).toBe(false)
+  })
+  it('高级选项默认收起，明确设置模型、预算和权限后只传给单次任务',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    expect(screen.queryByRole('spinbutton',{name:'智能执行费用上限'})).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:/高级选项/}))
+    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行模型'}),'minimax/M3')
+    await user.type(screen.getByRole('spinbutton',{name:'智能执行费用上限'}),'2.50')
+    await user.selectOptions(screen.getByRole('combobox',{name:'智能执行权限'}),'plan')
+    await user.type(screen.getByRole('textbox',{name:'智能执行任务'}),'检查代码并测试')
+    await user.click(screen.getByRole('button',{name:'智能执行'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{
+      prompt:'检查代码并测试',model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',
+    }))
+    expect(Number(window.localStorage.getItem('yaoyaoche-desktop:smart-budget'))).toBeCloseTo(2.5)
+  })
+  it('模型自检调用本地离线检查接口，不借助模型编造诊断结果',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'模型管理'}))
+    await user.click(screen.getByRole('button',{name:/检查配置/}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.inspect',{}))
+    expect(screen.getByText('沿用本地配置')).toBeInTheDocument()
+  })
+
+  it('新版系统诊断与清理界面通过确认后调用当前工作区协议',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'设置与权限'}))
+    await user.click(screen.getByRole('button',{name:'运行诊断'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('system.diagnostics'))
+    expect(await screen.findByText(/已完成本地配置核查/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'预览清理清单'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('data.purge.preview'))
+    expect(await screen.findByText('/projects/example/.yaoyaoche/sessions')).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox',{name:/已核对删除清单/}))
+    await user.click(screen.getByRole('button',{name:'确认清理所列记录'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('data.purge.apply',{token:'f433a864-7cff-4cd3-9ae5-4f68e0b97b10'}))
+    expect(await screen.findByText('实际清理：1/1 项')).toBeInTheDocument()
+  })
+
+  it('新版 MCP 导入先预览、剔除同名默认选项，再按配置范围确认导入',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'技能与 MCP'}))
+    await user.click(screen.getByRole('button',{name:'选择配置文件'}))
+    expect(await screen.findByText('来源：desktop-mcp.json · 2 个服务')).toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'导入选中的 1 个服务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.import.apply',{
+      token:'49c26b4d-d7b9-440a-9cb8-f2f762b074fb',names:['primary'],scope:'project',
+    }))
+    expect(await screen.findByText(/成功导入：1 个/)).toBeInTheDocument()
   })
 
   it('六套主题可以切换并在重新打开时恢复',async()=>{
@@ -290,7 +355,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'AI 对话'}))
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'分析这个项目')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',{sessionId:SID,message:'分析这个项目'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{prompt:'分析这个项目'}))
     await act(async()=>listener({event:'permission.request',sessionId:SID,permission:{id:'approval-1',toolName:'Bash',input:{command:'bun test'}}}))
     const dialog=screen.getByRole('dialog',{name:'工具权限审批'})
     expect(within(dialog).getByText(/Bash/)).toBeInTheDocument()
@@ -371,7 +436,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'AI 对话'}))
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第一次分析')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(1))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(1))
 
     await user.click(screen.getByRole('button',{name:'智能体团队'}))
     await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
@@ -380,8 +445,8 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(screen.queryByText('第一次分析')).not.toBeInTheDocument())
     await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第二次分析')
     await user.click(screen.getByRole('button',{name:'发送'}))
-    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(2))
-    expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({message:'第二次分析'}))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='smart.execute')).toHaveLength(2))
+    expect(call).toHaveBeenCalledWith('smart.execute',expect.objectContaining({prompt:'第二次分析'}))
     expect(call).not.toHaveBeenCalledWith('sessions.close',expect.anything())
   })
 
@@ -473,6 +538,21 @@ describe('摇摇车真实桌面页面交互',()=>{
     await screen.findByText('本地后台已连接')
     expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'white')
     expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
+  })
+
+
+  it('MCP 本地命令手工添加支持环境变量并且不把敏感值写进界面偏好',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'技能与 MCP'}))
+    await user.type(screen.getByPlaceholderText('例如 github-mcp'),'test-mcp')
+    await user.selectOptions(screen.getByRole('combobox',{name:/连接方式/}),'stdio')
+    await user.type(screen.getByPlaceholderText('例如 npx'),'npx')
+    await user.type(screen.getByPlaceholderText('API_TOKEN=在本机输入密钥'),'API_TOKEN=test-secret')
+    await user.click(screen.getByRole('button',{name:'添加服务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.add',{name:'test-mcp',scope:'project',config:{type:'stdio',command:'npx',args:[],env:{API_TOKEN:'test-secret'}}}))
+    expect([...preferenceStore.values()].join(' ')).not.toContain('test-secret')
   })
 
 })

@@ -19,10 +19,19 @@ const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S)
  * stay in their canonical stream-json shapes. */
 export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
-  request('models.list', { sessionId: sessionId.optional() }),
   request('system.diagnostics', {}),
   request('data.purge.preview', {}),
   request('data.purge.apply', { token: z.string().uuid() }),
+  request('models.list', { sessionId: sessionId.optional() }),
+  request('smart.inspect', { model: z.string().min(1).max(300).optional() }),
+  request('smart.history', {}),
+  request('smart.execute', {
+    prompt: z.string().trim().min(1).max(6000),
+    model: z.string().min(1).max(300).optional(),
+    maxBudgetUsd: z.number().positive().finite().max(100000).optional(),
+    permissionMode: z.enum(['default','acceptEdits','plan','dontAsk']).optional(),
+  }),
+
   request('mcp.list', {}),
   request('mcp.add', { name: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), scope: z.enum(['project', 'user', 'local']), config: z.union([
     z.object({ type: z.literal('http'), url: z.string().url().max(2048), headers: z.record(z.string().max(120), z.string().max(8192)).optional(), headersHelper: z.string().min(1).max(1024).optional() }).strict(),
@@ -80,6 +89,7 @@ export type DesktopReply =
 
 export type DesktopEvent =
   | { event: 'session.state'; sessionId: string; state: HeadlessSessionSnapshot }
+  | { event: 'smart.finished'; sessionId: string; status: 'completed' | 'failed' | 'interrupted'; costUsd?: number }
   | { event: 'session.message'; sessionId: string; turnId: string; message: SDKMessage }
   | { event: 'session.error'; sessionId: string; turnId?: string; error: string }
   | { event: 'host.request'; sessionId: string; request: PendingHostControl }

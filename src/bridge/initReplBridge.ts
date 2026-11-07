@@ -19,10 +19,6 @@ import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import type { SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
 import { getFeatureValue_CACHED_WITH_REFRESH } from '../services/analytics/growthbook.js'
 import { getOrganizationUUID } from '../services/oauth/client.js'
-import {
-  isPolicyAllowed,
-  waitForPolicyLimitsToLoad,
-} from '../services/policyLimits/index.js'
 import type { Message } from '../types/message.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
@@ -140,17 +136,6 @@ export async function initReplBridge(
   if (!getBridgeAccessToken()) {
     logBridgeSkip('no_oauth', '[bridge:repl] Skipping: no OAuth tokens')
     onStateChange?.('failed', '/login')
-    return null
-  }
-
-  // 3. Check organization policy — remote control may be disabled
-  await waitForPolicyLimitsToLoad()
-  if (!isPolicyAllowed('allow_remote_control')) {
-    logBridgeSkip(
-      'policy_denied',
-      '[bridge:repl] Skipping: allow_remote_control policy not allowed',
-    )
-    onStateChange?.('failed', "disabled by your organization's policy")
     return null
   }
 

@@ -76,7 +76,7 @@ test('GitHub installation integration uses Node-native TypeScript stripping rath
 
 test('离线工具链保留完整回归覆盖：外部依赖套件在真实环境专项中执行', () => {
   const records = verifyPortableCoverage()
-  assert.equal(records.length, 6)
+  assert.equal(records.length, 5)
   assert.deepEqual([...Object.keys(PORTABLE_EXTERNAL_FIXTURES)].sort(),
     records.map(([file]) => file).sort())
   const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url),'utf8'))

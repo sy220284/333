@@ -59,14 +59,6 @@ jobs:
           node build/compile-standalone.mjs
           test -s dist/yaoyaoche
           dist/yaoyaoche --version
-      - name: 网关授权与推理链真实运行回归
-        run: bun test tests/m6-gateway-device-317.test.mjs tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-client-ip-317.test.mjs
-      - name: 网关授权、IP限流、费用及管理员限额真实行为回归
-        run: node --test tests/m6-gateway-jsonb-317.test.mjs tests/m6-gateway-device-rate-317.test.mjs tests/m6-gateway-admin-317.test.mjs tests/m6-gateway-spend-integration-317.test.mjs
-      - name: PostgreSQL 实例下的真实设备授权与令牌事务验证
-        env:
-          GATEWAY_TEST_POSTGRES_URL: postgres://postgres:gateway-test-only@127.0.0.1:5432/postgres
-        run: bun test tests/m6-gateway-postgres-317.test.mjs
       - name: Hook并发调度和Web超时取消真实行为回归
         run: node --test tests/m1-hook-concurrency-312.test.mjs tests/m1-web-tools-deadline-311.test.mjs
       - name: 插件评测评分器与执行引擎行为回归
@@ -74,7 +66,7 @@ jobs:
       - name: 固定 HTTPS 实际连接地址与 DNS 攻击场景回归
         run: bun test tests/session-plugin-pinned-dns-317.test.mjs
       - name: 账户会话发现、列表及管理员真实API回归
-        run: node --test tests/m1-account-peer-discovery.test.mjs tests/m1-list-agents.test.mjs tests/m6-gateway-admin-317.test.mjs
+        run: node --test tests/m1-account-peer-discovery.test.mjs tests/m1-list-agents.test.mjs
       - name: 队友发现及插件命令来源授权真实性回归
         run: node --test tests/m1-list-agents.test.mjs tests/m3-plugin-source-command-consent-317.test.mjs tests/m3-plugin-source-fingerprint-317.test.mjs
       - name: 预加载进程与会话声明真实行为回归

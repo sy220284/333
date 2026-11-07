@@ -5,7 +5,7 @@ import { SPECIALISTS, WORKFLOWS, routeChanges, selectBaseline } from '../build/c
 
 const active = plan => Object.entries(plan).filter(([, enabled]) => enabled).map(([name]) => name)
 
-test('29 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
+test('28 个专项保留、统一入口调用，全量始终覆盖所有专项', () => {
   const files = readdirSync(new URL('../.github/workflows/', import.meta.url))
     .filter(x => x.endsWith('.yml') && x !== 'ci-on-demand.yml' && x !== 'latest-stable-upgrade.yml')
   assert.deepEqual(WORKFLOWS.slice().sort(), files.map(x => x.slice(0, -4)).sort())
@@ -18,28 +18,23 @@ test('29 个专项保留、统一入口调用，全量始终覆盖所有专项',
   assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
 })
 
-test('企业网关变更单独触发协议、真实数据库和遥测专项', () => {
-  const gateway = routeChanges([
-    'src/cli/gateway/gatewayServer317.ts',
-    'src/cli/gateway/gatewayForward317.ts',
-    'src/services/remoteManagedSettings/index.ts',
-    'tests/m6-gateway-telemetry-policy-317.test.mjs',
-  ])
-  assert.equal(gateway['m6-gateway-providers-317'], true)
-  assert.equal(gateway['ci-test-matrix'], false)
-  assert.equal(gateway['latest-stable-six-host'], false)
-  const unrelated = routeChanges(['src/cli/selfHostedRunner/runnerAdmin317.ts'])
-  assert.equal(unrelated['m6-gateway-providers-317'], false)
-  assert.equal(unrelated['m6-self-hosted-runner-317'], true)
-  const full = routeChanges([], true)
-  assert.equal(full['m6-gateway-providers-317'], true)
+test('企业网关与原厂 Runner 均已清退，个人后台任务保持独立', () => {
+  assert.equal(Object.hasOwn(SPECIALISTS, 'm6-gateway-providers-317'), false)
+  assert.equal(Object.hasOwn(SPECIALISTS, 'm6-self-hosted-runner-317'), false)
+  const plan = routeChanges(['src/services/agentCenter/missionJobs.ts'])
+  assert.equal(plan['local-feature-promotion'], true)
   const dispatcher = readFileSync(new URL('../.github/workflows/ci-on-demand.yml', import.meta.url), 'utf8')
-  assert.match(dispatcher, /needs.plan.outputs.m6_gateway_providers_317 == 'true'/)
-  assert.match(dispatcher, /\.\/\.github\/workflows\/m6-gateway-providers-317\.yml/)
-  const workflow = readFileSync(new URL('../.github/workflows/m6-gateway-providers-317.yml', import.meta.url), 'utf8')
-  assert.match(workflow, /GATEWAY_TEST_POSTGRES_URL/)
-  assert.match(workflow, /m6-gateway-telemetry-policy-317\.test\.mjs/)
-  assert.match(workflow, /m6-gateway-postgres-317\.test\.mjs/)
+  assert.doesNotMatch(dispatcher, /m6_gateway_providers_317|m6_self_hosted_runner_317/)
+  assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
+})
+
+test('个人版退役门禁在服务或保护测试变化时按需运行', () => {
+  const plan = routeChanges(['src/cli/gateway/gatewayAdmin317.ts', 'tests/enterprise-retirement-boundary.test.mjs'])
+  assert.equal(plan['personal-retirement-boundary'], true)
+  assert.equal(plan['ci-test-matrix'], false)
+  const dispatcher = readFileSync(new URL('../.github/workflows/ci-on-demand.yml', import.meta.url), 'utf8')
+  assert.match(dispatcher, /personal_retirement_boundary/)
+  assert.ok(dispatcher.includes('uses: ./.github/workflows/personal-retirement-boundary.yml'))
 })
 
 test('每次基础门禁固定启用、文档变更不启动全量检查', () => {
@@ -50,12 +45,10 @@ test('最近提交只派发对应专项，多个提交累计改动合并为并�
   const touched = [
     'src/services/desktop/gateway.ts',
     'src/proactive/useProactive.ts',
-    'src/cli/selfHostedRunner/runner.ts',
   ]
   const planned = routeChanges(touched)
   assert.equal(planned['desktop-communication'], true)
   assert.equal(planned['local-feature-promotion'], true)
-  assert.equal(planned['m6-self-hosted-runner-317'], true)
   assert.equal(planned['ci-test-matrix'], false)
   assert.equal(planned['latest-stable-six-host'], false)
   assert.equal(planned.rebuild, false)

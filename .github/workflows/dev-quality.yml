@@ -78,7 +78,7 @@ jobs:
           node build/install-public-deps.mjs
       - name: 变更文件类型检查、Biome、覆盖率和原生加载
         env:
-          DEV333_DIFF_BASE: main
+          DEV333_DIFF_BASE: ${{ github.base_ref || 'main' }}
         run: npm run dev:verify
       - name: Linux ShellCheck
         if: runner.os == 'Linux'
