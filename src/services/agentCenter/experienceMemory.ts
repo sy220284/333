@@ -108,7 +108,8 @@ export async function listProjectExperiences(
   const selected = doc.experiences.filter(item => options.includeCandidates || item.status === 'approved')
   if (options.includeCandidates) return selected
   const verified = await Promise.all(selected.map(async item => {
-    const snapshots = item.evidenceSnapshot?.filter(check=>check.ref.startsWith('file:')) ?? []
+    const snapshots = item.evidenceSnapshot?.filter(check=>check.ref.startsWith('file:') ||
+      /^artifact:[0-9a-f-]{36}$/.test(check.ref)) ?? []
     if (!snapshots.length) return item
     const checks = await inspectExperienceEvidence(projectDir,snapshots.map(check=>check.ref),root)
     return checks.every((check,index)=>check.status==='verified' &&
