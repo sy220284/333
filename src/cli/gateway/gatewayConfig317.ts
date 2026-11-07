@@ -187,10 +187,11 @@ export function validateGatewayConfig317(value: unknown) {
     }
   }
   const telemetry = requireRecord(value.telemetry ?? { forward_to: [] }, 'telemetry')
-  if (telemetry.forward_to !== undefined && !Array.isArray(telemetry.forward_to)) {
+  const forwardTo = telemetry.forward_to
+  if (forwardTo !== undefined && !Array.isArray(forwardTo)) {
     throw new Error('telemetry.forward_to must be a list')
   }
-  if ((telemetry.forward_to ?? []).length > 0) {
+  if (Array.isArray(forwardTo) && forwardTo.length > 0) {
     throw new Error('独立产品已移除企业网关外部遥测转发；请删除 telemetry.forward_to')
   }
   const rate_limits: Record<string, Record<string, number>> = {}
