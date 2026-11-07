@@ -139,7 +139,7 @@ import { registerMcpXaaIdpCommand } from 'src/commands/mcp/xaaIdpCommand.js';
 import { logPermissionContextForAnts } from 'src/services/internalLogging.js';
 import { fetchClaudeAIMcpConfigsIfEligible } from 'src/services/mcp/claudeai.js';
 import { clearServerCache } from 'src/services/mcp/client.js';
-import { areMcpConfigsAllowedWithEnterpriseMcpConfig, dedupClaudeAiMcpServers, doesEnterpriseMcpConfigExist, filterMcpServersByPolicy, getClaudeCodeMcpConfigs, getMcpServerSignature, parseMcpConfig, parseMcpConfigFromFilePath } from 'src/services/mcp/config.js';
+import { dedupClaudeAiMcpServers, filterMcpServersByPolicy, getClaudeCodeMcpConfigs, getMcpServerSignature, parseMcpConfig, parseMcpConfigFromFilePath } from 'src/services/mcp/config.js';
 import { excludeCommandsByServer, excludeResourcesByServer } from 'src/services/mcp/utils.js';
 import { isXaaEnabled } from 'src/services/mcp/xaaIdpLogin.js';
 import { getRelevantTips } from 'src/services/tips/tipRegistry.js';
@@ -1287,31 +1287,12 @@ async function run(): Promise<CommanderCommand> {
     // Extract strict MCP config flag
     const strictMcpConfig = options.strictMcpConfig || false;
 
-    // Check if enterprise MCP configuration exists. When it does, only allow dynamic MCP
-    // configs that contain special server types (sdk)
-    if (doesEnterpriseMcpConfigExist()) {
-      if (strictMcpConfig) {
-        process.stderr.write(chalk.red('You cannot use --strict-mcp-config when an enterprise MCP config is present'));
-        process.exit(1);
-      }
-
-      // For --mcp-config, allow if all servers are internal types (sdk)
-      if (dynamicMcpConfig && !areMcpConfigsAllowedWithEnterpriseMcpConfig(dynamicMcpConfig)) {
-        process.stderr.write(chalk.red('You cannot dynamically configure MCP servers when an enterprise MCP config is present'));
-        process.exit(1);
-      }
-    }
-
     // chicago MCP: guarded Computer Use (app allowlist + frontmost gate +
     // SCContentFilter screenshots). Ant-only, GrowthBook-gated — failures
     // are silent (this is dogfooding). Platform + interactive checks inline
     // so non-macOS / print-mode ants skip the heavy @ant/computer-use-mcp
     // import entirely. gates.js is light (type-only package import).
     //
-    // Placed AFTER the enterprise-MCP-config check: that check rejects any
-    // dynamicMcpConfig entry with `type !== 'sdk'`, and our config is
-    // `type: 'stdio'`. An enterprise-config ant with the GB gate on would
-    // otherwise process.exit(1). Register computer-use after the enterprise MCP check.
     if (feature('CHICAGO_MCP') && getPlatform() === 'macos' && !getIsNonInteractiveSession()) {
       try {
         const {
@@ -1484,8 +1465,8 @@ async function run(): Promise<CommanderCommand> {
     // claude.ai config fetch: -p mode only (interactive uses useManageMCPConnections
     // two-phase loading). Kicked off here to overlap with setup(); awaited
     // before runHeadless so single-turn -p sees connectors. Skipped under
-    // enterprise/strict MCP to preserve policy boundaries.
-    const claudeaiConfigPromise: Promise<Record<string, ScopedMcpServerConfig>> = isNonInteractiveSession && !strictMcpConfig && !doesEnterpriseMcpConfigExist() &&
+    // strict MCP to preserve local policy boundaries.
+    const claudeaiConfigPromise: Promise<Record<string, ScopedMcpServerConfig>> = isNonInteractiveSession && !strictMcpConfig &&
     // --bare / SIMPLE: skip claude.ai proxy servers (datadog, Gmail,
     // Slack, BigQuery, PubMed — 6-14s each to connect). Scripted calls
     // that need MCP pass --mcp-config explicitly.
