@@ -561,7 +561,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'智能体团队'}))
     await screen.findByText('长期审计工作')
     expect(screen.getByText('另一会话检查')).toBeInTheDocument()
-    expect(call).toHaveBeenCalledWith('agents.activity',{})
+    expect(call).toHaveBeenCalledWith('agents.activity')
     await act(async()=>listener({
       event:'task.updated',sessionId:OTHER,
       task:{taskId:'new-agent',description:'跨会话并行核查',status:'running'},
