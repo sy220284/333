@@ -128,9 +128,15 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
   }
   if(method==='workspace.list'){
     const folder=await safeFile(String(data.path||active))
+    const offset=data.offset===undefined?0:Number(data.offset)
+    const limit=data.limit===undefined?200:Number(data.limit)
+    if(!Number.isInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>500)
+      throw new Error('文件列表分页参数无效')
     const stat=await readdir(folder,{withFileTypes:true})
-    return {path:folder,entries:stat.filter(e=>!['.git','node_modules','.next','dist'].includes(e.name)).slice(0,500)
-      .map(e=>({name:e.name,path:join(folder,e.name),directory:e.isDirectory()}))}
+    const entries=stat.filter(e=>!['.git','node_modules','.next','dist'].includes(e.name))
+      .sort((a,b)=>Number(b.isDirectory())-Number(a.isDirectory())||a.name.localeCompare(b.name,'zh-CN'))
+    return {path:folder,total:entries.length,offset,hasMore:offset+limit<entries.length,
+      entries:entries.slice(offset,offset+limit).map(e=>({name:e.name,path:join(folder,e.name),directory:e.isDirectory()}))}
   }
   if(method==='workspace.read'){
     const path=await safeFile(String(data.path||''))
@@ -153,9 +159,20 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     return {saved:true,path}
   }
   if(method==='workspace.gitStatus'||method==='workspace.gitDiff'){
-    const args=method==='workspace.gitStatus'?['status','--short','--branch']:['diff','--','.' ]
-    const result=await git('git',args,{cwd:active,timeout:12000,maxBuffer:2*1024*1024,windowsHide:true})
-    return {text:result.stdout}
+    const options={cwd:active,timeout:12000,maxBuffer:2*1024*1024,windowsHide:true}
+    if(method==='workspace.gitStatus'){
+      const result=await git('git',['status','--short','--branch'],options)
+      return {text:result.stdout}
+    }
+    const [unstaged,staged]=await Promise.all([
+      git('git',['diff','--no-ext-diff','--no-color','--','.'],options),
+      git('git',['diff','--cached','--no-ext-diff','--no-color','--','.'],options)
+    ])
+    const chunks=[
+      unstaged.stdout.trim()?['未暂存修改',unstaged.stdout].join('\n'):'',
+      staged.stdout.trim()?['已暂存修改（Index）',staged.stdout].join('\n'):''
+    ].filter(Boolean)
+    return {text:chunks.join('\n\n')||'暂无已暂存或未暂存的 Git 差异'}
   }
   if(method==='mcp.add'||method==='mcp.remove'||method==='mcp.toggle'){
     const name=String(data.name||'')
@@ -181,7 +198,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
 }
 function createWindow(){
   window=new BrowserWindow({
-    width:1470,height:920,minWidth:980,minHeight:670,
+    width:1470,height:920,minWidth:860,minHeight:640,
     backgroundColor:'#0A101B',show:false,autoHideMenuBar:true,
     title:'摇摇车 · AI 智能体工作台',
     webPreferences:{
