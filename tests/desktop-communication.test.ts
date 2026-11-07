@@ -10,6 +10,7 @@ import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { previewWorktreeIntegration, integrateWorktree } from '../src/services/agentCenter/worktreeIntegration.js'
 import { createProjectBudget } from '../src/services/agentCenter/projectBudget.js'
 import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js'
+import { createDesktopSessionSettingsJournal } from '../src/services/desktop/sessionSettingsJournal.js'
 import { createMission, getMission, linkMissionAssignment, selectMission } from '../src/utils/agentMissions.js'
 import { enqueueMissionJob, approveMissionJob, missionJobAssignmentId } from '../src/services/agentCenter/missionJobs.js'
 import { getConfiguredAgentMode, setAgentMode } from '../src/utils/agentMode.js'
@@ -475,6 +476,38 @@ test('desktop journal reads the last committed snapshot after a concurrent faile
     const recovered = { ...saved, description: 'Recovered result' }
     await journal.write(id, [recovered])
     expect((await journal.read(id))[0]).toMatchObject(recovered)
+  } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('session model and permissions read the last committed settings despite a failed concurrent write', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-settings-read-failure-'))
+  try {
+    const root = join(cwd, 'state')
+    const journal = createDesktopSessionSettingsJournal(cwd, root)
+    const id = randomUUID()
+    const saved = { model: 'verified-model', permissionMode: 'plan' as const }
+    await journal.write(id, saved)
+    const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
+    const path = join(root, workspace, 'session-settings', id + '.json')
+    // Turn the settings file into a directory, forcing a real rename failure
+    // without changing the last successful write before the read is queued.
+    const { rename } = await import('node:fs/promises')
+    const backup = path + '.safe'
+    await rename(path, backup)
+    await mkdir(path)
+    const failedWrite = journal.write(id, { model: 'new-model', permissionMode: 'default' })
+    const failure = expect(failedWrite).rejects.toThrow()
+    const concurrentRead = journal.read(id)
+    await failure
+    // Restore the original snapshot before allowing the waiting read through
+    // on the next scheduling tick; the queue must never inherit the write error.
+    await rm(path, { recursive: true })
+    await rename(backup, path)
+    expect(await concurrentRead).toEqual(saved)
+    await journal.write(id, { model: 'new-model', permissionMode: 'default' })
+    expect(await journal.read(id)).toEqual({ model: 'new-model', permissionMode: 'default' })
   } finally {
     await rm(cwd, { recursive: true, force: true })
   }
