@@ -34,6 +34,12 @@ jobs:
           node-version: '26.13.0'
       - name: 验证新 UI 无障碍与旧终端实际移除
         run: node --test desktop/tests/desktop-accessibility.test.mjs tests/desktop-tui-retirement.test.mjs
+      - name: 恢复主项目协议与原生依赖
+        run: |
+          node build/verify-bundled-assets.mjs
+          node build/restore-claude-api.mjs --verify
+          node build/restore-dependencies.mjs
+          node build/install-public-deps.mjs
       - name: 安装桌面冻结依赖
         run: cd desktop && npm install --no-audit --no-fund
       - name: 检查桌面类型与实际打包
