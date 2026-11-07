@@ -169,6 +169,31 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
           result?.text?.includes('本地后台已连接')) {
         assert.equal(result.state, 'complete')
         await screenshot(page.webSocketDebuggerUrl, 'desktop/release/deployed-workbench-smoke.png')
+        // Validate the actual packaged Chromium responsive drawer at all
+        // desktop minimum-width boundary sizes.
+        for (const width of [860,920,960]) {
+          await evaluate(page.webSocketDebuggerUrl,`window.resizeTo(${width},740)`)
+          await sleep(250)
+          const result=await evaluate(page.webSocketDebuggerUrl,`(()=>{
+            const trigger=document.querySelector('button[aria-label="打开详情面板"],button[aria-label="隐藏详情面板"]')
+            if(!document.querySelector('aside[aria-label="实时上下文"]'))trigger?.click()
+            const aside=document.querySelector('aside[aria-label="实时上下文"]')
+            const shade=document.querySelector('button[aria-label="关闭详情遮罩"]')
+            const shown=aside&&aside.getBoundingClientRect().width>0&&
+              getComputedStyle(aside).display!=='none'
+            return {width:innerWidth,shown:Boolean(shown),
+              overlayVisible:Boolean(shade&&getComputedStyle(shade).display!=='none'),
+              trigger:Boolean(trigger)}
+          })()`)
+          assert.ok(result.width<=960&&result.width>=800,
+            `无法进入窄窗口响应式尺寸 ${width}: ${JSON.stringify(result)}`)
+          assert.equal(result.trigger,true,'窄窗口的详情按钮缺失')
+          assert.equal(result.shown,true,`窄窗口 ${width} 无法打开详情抽屉`)
+          assert.equal(result.overlayVisible,true,`窄窗口 ${width} 缺少抽屉遮罩`)
+        }
+        await evaluate(page.webSocketDebuggerUrl,'window.resizeTo(1280,900)')
+        await sleep(200)
+
         // Verify actual packaged UI navigation, not only React test mocks.
         // A user can reach the two different agent modes and the Mission board
         // from the installed app while the native Host remains connected.
