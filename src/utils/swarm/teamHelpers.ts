@@ -177,10 +177,23 @@ function writeTeamFile(teamName: string, teamFile: TeamFile): void {
 export async function writeTeamFileAsync(
   teamName: string,
   teamFile: TeamFile,
+  create = false,
 ): Promise<void> {
-  const teamDir = getTeamDir(teamName)
-  await mkdir(teamDir, { recursive: true })
-  await writeFile(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2))
+  await withTeamLifecycleLock(teamName, async () => {
+    const path = getTeamFilePath(teamName)
+    if (create) {
+      await mkdir(getTeamDir(teamName), { recursive: true })
+      await writeFile(path, jsonStringify(teamFile, null, 2), { flag: 'wx' })
+      return
+    }
+    // Only the initial TeamCreate may create a new config. A late teammate
+    // update cannot resurrect a removed team or overwrite its replacement.
+    const previous = JSON.parse(await readFile(path, 'utf-8')) as TeamFile
+    if (previous.createdAt !== teamFile.createdAt) {
+      throw new Error(`Team ${teamName} was replaced during member update`)
+    }
+    await writeFile(path, jsonStringify(teamFile, null, 2), 'utf-8')
+  })
 }
 
 /**
@@ -465,32 +478,26 @@ export async function setMemberActive(
   memberName: string,
   isActive: boolean,
 ): Promise<void> {
-  const teamFile = await readTeamFileAsync(teamName)
-  if (!teamFile) {
+  await withTeamLifecycleLock(teamName, async () => {
+    const teamFile = await readTeamFileAsync(teamName)
+    if (!teamFile) {
+      logForDebugging(`[TeammateTool] Team ${teamName} no longer exists; active state not written`)
+      return
+    }
+    const member = teamFile.members.find(m => m.name === memberName)
+    if (!member) {
+      logForDebugging(`[TeammateTool] Member ${memberName} no longer exists in team ${teamName}`)
+      return
+    }
+    if (member.isActive === isActive) return
+    member.isActive = isActive
+    // This write is already inside the shared lifecycle lock, so use the
+    // existing path directly without mkdir and without taking a nested lock.
+    await writeFile(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2), 'utf-8')
     logForDebugging(
-      `[TeammateTool] Cannot set member active: team ${teamName} not found`,
+      `[TeammateTool] Set member ${memberName} in team ${teamName} to ${isActive ? 'active' : 'idle'}`,
     )
-    return
-  }
-
-  const member = teamFile.members.find(m => m.name === memberName)
-  if (!member) {
-    logForDebugging(
-      `[TeammateTool] Cannot set member active: member ${memberName} not found in team ${teamName}`,
-    )
-    return
-  }
-
-  // Only write if the value is actually changing
-  if (member.isActive === isActive) {
-    return
-  }
-
-  member.isActive = isActive
-  await writeTeamFileAsync(teamName, teamFile)
-  logForDebugging(
-    `[TeammateTool] Set member ${memberName} in team ${teamName} to ${isActive ? 'active' : 'idle'}`,
-  )
+  })
 }
 
 /**
