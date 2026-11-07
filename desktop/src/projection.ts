@@ -1,6 +1,6 @@
 export type ConversationItem={id:string;kind:'user'|'assistant'|'tool'|'notice';text:string;time:number}
-export function asObject(input:unknown):Record<string,any>|null {
-  return input&&typeof input==='object'&&!Array.isArray(input)?input as Record<string,any>:null
+export function asObject(input:unknown):Record<string,unknown>|null {
+  return input&&typeof input==='object'&&!Array.isArray(input)?input as Record<string,unknown>:null
 }
 export function textFromMessage(input:unknown):string {
   if(typeof input==='string')return input
@@ -13,7 +13,7 @@ export function textFromMessage(input:unknown):string {
 }
 /** Replay-stable fallback for SDK events with no uuid/id. A history index
  * differentiates identical messages; live events use their payload fingerprint. */
-function fallbackMessageId(message:Record<string,any>,index?:number):string {
+function fallbackMessageId(message:Record<string,unknown>,index?:number):string {
   const serialized=JSON.stringify(message)
   let fingerprint=2166136261
   for(let i=0;i<serialized.length;i++) fingerprint=Math.imul(fingerprint^serialized.charCodeAt(i),16777619)
