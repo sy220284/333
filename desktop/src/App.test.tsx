@@ -451,6 +451,35 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(screen.queryByText('刷新历史完成')).not.toBeInTheDocument()
   })
 
+  it('MCP 表单缺必填值时留在当前请求，数字与枚举类型正确后才回传接受',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await act(async()=>listener({event:'host.request',sessionId:SID,request:{
+      id:'mcp-form-1',request:{subtype:'elicitation',mode:'form',
+        mcp_server_name:'审核服务',message:'填写审计任务信息',
+        requested_schema:{type:'object',required:['name','attempts'],properties:{
+          name:{type:'string',title:'任务名称',minLength:2},
+          attempts:{type:'integer',title:'尝试次数',minimum:1},
+          approved:{type:'boolean',title:'已审核'},
+          priority:{type:'integer',title:'优先级',enum:[1,2]},
+        }}
+      }
+    }}))
+    const dialog=await screen.findByRole('dialog',{name:'主机交互请求'})
+    await user.click(within(dialog).getByRole('button',{name:'提交输入'}))
+    expect(call).not.toHaveBeenCalledWith('host.respond',expect.anything())
+    expect(await screen.findByRole('alert')).toHaveTextContent(/请填写 MCP 必填字段/)
+    await user.type(within(dialog).getByRole('textbox',{name:/任务名称/}),'长篇小说审计')
+    await user.type(within(dialog).getByRole('spinbutton',{name:/尝试次数/}),'2')
+    await user.selectOptions(within(dialog).getByRole('combobox',{name:/优先级/}),'2')
+    await user.click(within(dialog).getByRole('button',{name:'提交输入'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('host.respond',{
+      sessionId:SID,requestId:'mcp-form-1',
+      response:{action:'accept',content:{name:'长篇小说审计',attempts:2,approved:false,priority:2}}
+    }))
+  })
+
   it('MCP URL请求提供HTTPS浏览器访问、完成确认与明确拒绝',async()=>{
     const user=userEvent.setup()
     render(<App/>)

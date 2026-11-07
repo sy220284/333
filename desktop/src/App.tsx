@@ -9,6 +9,7 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import { api, type AppEvent, type Item } from './api'
+import { prepareMcpElicitationContent } from './mcpElicitation'
 import { NewSessionStarter } from './components/layout/NewSessionStarter'
 import { WorkspaceInspector } from './components/layout/WorkspaceInspector'
 import { LocalMaintenance } from './components/layout/LocalMaintenance'
@@ -1111,7 +1112,11 @@ export function App(){
       const pending=hostRequests.find(request=>request.id===id&&request.sessionId===sessionId)
       if(!pending?.sessionId)throw new Error('主机请求已过期，请刷新会话')
       const key=`${pending.sessionId}:${id}`
-      await invoke('host.respond',{sessionId:pending.sessionId,requestId:id,response:action==='accept'&&obj(pending.request).mode!=='url'?{action,content:hostForms[key]??{}}:{action}})
+      const details=obj(pending.request)
+      const response=action==='accept'&&details.subtype==='elicitation'&&details.mode!=='url'
+        ? {action,content:prepareMcpElicitationContent(details.requested_schema,hostForms[key]??{})}
+        : {action}
+      await invoke('host.respond',{sessionId:pending.sessionId,requestId:id,response})
       setHostRequests(old=>old.filter(r=>r.id!==id||r.sessionId!==pending.sessionId))
       setHostForms(old=>{const next={...old};delete next[key];return next})
     })
@@ -1747,7 +1752,7 @@ export function App(){
         <Button variant="primary" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</Button>
       </div>
     </>:requestedDetails.subtype==='elicitation'?<>
-      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:e.target.value}}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:e.target.checked}}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}}))}/>}</label>})}</div>
+      <div className="space-y-3">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value),valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`} className="flex flex-col gap-1.5 text-[12px]"><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:field.enum.find((item:unknown)=>String(item)===e.target.value)}}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:e.target.checked}}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForms(old=>({...old,[requestedKey]:{...(old[requestedKey]??{}),[key]:(valueType==='number'||valueType==='integer')&&e.target.value!==''?Number(e.target.value):e.target.value}}))}/>}</label>})}</div>
       <div className="mt-5 flex justify-end gap-2"><Button variant="danger-outline" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'decline')}>拒绝</Button><Button variant="primary" size="base" onClick={()=>void respondHost(requested.sessionId,requested.id,'accept')}>提交输入</Button></div>
     </>:<div className="flex justify-end"><Button variant="secondary" size="base" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</Button></div>}
   </Modal>}
