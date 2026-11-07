@@ -9,6 +9,7 @@ let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
 let failMcpRefresh=false
 let activeAgentMode:'master'|'super'='master'
+let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
@@ -35,14 +36,14 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'mcp.list':
       if(failMcpRefresh)throw new Error('MCP 服务离线')
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
-    case 'sessions.open':return {sessionId:SID,tasks:[]}
+    case 'sessions.open':return {sessionId:SID,tasks:mockTasks}
     case 'sessions.send':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8'}
     case 'permissions.decide':return {permissionId:args.permissionId,accepted:true}
     case 'credentials.set':return {saved:true}
     case 'mcp.toggle':return {name:args.name,enabled:args.enabled}
     case 'external.open':return {opened:true}
     case 'host.respond':return {requestId:args.requestId,accepted:true}
-    case 'tasks.list':return []
+    case 'tasks.list':return mockTasks
     default:return {}
   }
 })
@@ -53,7 +54,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master'})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[]})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -202,6 +203,35 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(2))
     expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({message:'第二次分析'}))
     expect(call).not.toHaveBeenCalledWith('sessions.close',expect.anything())
+  })
+
+  it('正在执行的智能体只显示停止，停止或失败的智能体只显示继续',async()=>{
+    const user=userEvent.setup()
+    mockTasks=[{taskId:'task-running',description:'执行单元 A',status:'running'}]
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'新建会话'}))
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('执行单元 A')
+    expect(screen.getByRole('button',{name:'停止任务'})).toBeInTheDocument()
+    expect(screen.queryByRole('button',{name:'继续任务'})).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'停止任务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.stop',{sessionId:SID,taskId:'task-running'}))
+  })
+
+  it('中断智能体的继续按钮真正向原SDK提交续跑要求',async()=>{
+    const user=userEvent.setup()
+    mockTasks=[{taskId:'task-interrupted',description:'未完成的代码审计',status:'interrupted'}]
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'新建会话'}))
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('未完成的代码审计')
+    expect(screen.queryByRole('button',{name:'停止任务'})).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button',{name:'继续任务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('tasks.resume',
+      expect.objectContaining({sessionId:SID,taskId:'task-interrupted',
+        prompt:expect.stringContaining('核对已有执行结果')})))
   })
 
 })
