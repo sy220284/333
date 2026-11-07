@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { AlertTriangle, Activity, HardDrive, RefreshCw, ShieldCheck } from 'lucide-react'
 import { api } from '../../api'
 import { Badge } from '../ui/Badge'
@@ -32,9 +32,6 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
   const [purgeResult, setPurgeResult] = useState<PurgeResult | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
-  useEffect(() => {
-    setPreview(null); setPurgeResult(null); setConfirmed(false); setDiagnostic(null); setError('')
-  }, [workspace])
   async function diagnose() {
     setBusy('diagnose'); setError('')
     try { setDiagnostic(await api.call<Diagnostic>('system.diagnostics')) }
@@ -54,7 +51,7 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
       const result = await api.call<PurgeResult>('data.purge.apply', { token: preview.token })
       if (result.cancelled) return
       setPurgeResult(result); setPreview(null); setConfirmed(false)
-      if (!result.errors?.length) onPurged()
+      if ((result.deleted ?? 0) > 0) onPurged()
     } catch (e) {
       setPreview(null); setConfirmed(false)
       setError(e instanceof Error ? e.message : String(e))
@@ -82,11 +79,11 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
               <p>MCP 服务：{diagnostic.mcp.reduce((sum, row) => sum + row.count, 0)}</p>
             </div>
           </div>
-          {diagnostic.installation.warnings.map((warning, index) => <div key={index} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+          {diagnostic.installation.warnings.map(warning => <div key={`${warning.issue}:${warning.fix}`} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
             <strong className="flex items-center gap-2"><AlertTriangle size={14}/> {warning.issue}</strong><p className="mt-1 text-[var(--color-text-secondary)]">{warning.fix}</p>
           </div>)}
-          {diagnostic.mcp.flatMap(row => row.errors.map(message => row.scope + '：' + message)).map((message, index) =>
-            <p key={index} role="alert" className="text-[var(--color-error)]">{message}</p>)}
+          {diagnostic.mcp.flatMap(row => row.errors.map(message => `${row.scope}：${message}`)).map(message =>
+            <p key={message} role="alert" className="text-[var(--color-error)]">{message}</p>)}
           {diagnostic.installation.warnings.length === 0 && diagnostic.mcp.every(row => !row.errors.length) &&
             <p className="flex items-center gap-2 text-[var(--color-text-secondary)]"><ShieldCheck size={15}/>当前检查未发现安装配置告警</p>}
           <p className="text-[11px] text-[var(--color-text-tertiary)]">{diagnostic.note}；检查结果不包含实网模型连通性测试。</p>
@@ -104,9 +101,9 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
         {preview && <div className="mt-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2"><Badge size="sm" tone="warning">{preview.items.length} 项待清理</Badge>
             <span className="text-[11px] text-[var(--color-text-secondary)]">当前打开会话：{preview.activeSessions}。确认后会关闭空闲会话；执行中的任务请先停止。</span></div>
-          {preview.warnings.map((warning, i) => <p key={i} role="alert" className="text-[12px] text-[var(--color-error)]">{warning}</p>)}
+          {preview.warnings.map(warning => <p key={warning} role="alert" className="text-[12px] text-[var(--color-error)]">{warning}</p>)}
           <div className="max-h-56 overflow-auto rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-            {preview.items.length ? preview.items.map((item, i) => <div key={i} className="border-b border-[var(--color-border)] py-2 last:border-b-0">
+            {preview.items.length ? preview.items.map(item => <div key={`${item.kind}:${item.path}`} className="border-b border-[var(--color-border)] py-2 last:border-b-0">
               <div className="break-all text-[11px] font-medium">{item.path}</div>
               <p className="text-[11px] text-[var(--color-text-tertiary)]">{item.reason}</p>
             </div>) : <p className="text-[12px] text-[var(--color-text-secondary)]">当前工作区没有需要清理的记录。</p>}
@@ -120,7 +117,7 @@ export function LocalMaintenance({ workspace, connected, onPurged }: {
         </div>}
         {purgeResult && <div className="mt-4 text-[12px]" role="status">
           <p>实际清理：{purgeResult.deleted}/{purgeResult.total} 项</p>
-          {purgeResult.errors?.map((message, i) => <p key={i} className="mt-1 break-all text-[var(--color-error)]">{message}</p>)}
+          {purgeResult.errors?.map(message => <p key={message} className="mt-1 break-all text-[var(--color-error)]">{message}</p>)}
           {purgeResult.errors?.length ? <Button size="sm" variant="secondary" onClick={() => void inspect()}>重新检查剩余记录</Button> : null}
         </div>}
       </Card>

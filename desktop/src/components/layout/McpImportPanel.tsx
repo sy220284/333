@@ -47,7 +47,7 @@ export function McpImportPanel({ onImported }: { onImported: () => void }) {
       <div className="max-h-60 space-y-1 overflow-auto">
         {preview.servers.map(server => <label key={server.sourceName} className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 text-[12px]">
           <input type="checkbox" checked={selected.includes(server.sourceName)} onChange={e => setSelected(old => e.target.checked ? [...old, server.sourceName] : old.filter(name => name !== server.sourceName))}/>
-          <span className="min-w-0 flex-1 break-all">{server.sourceName}{server.name !== server.sourceName ? ' → ' + server.name : ''}</span>
+          <span className="min-w-0 flex-1 break-all">{server.sourceName}{server.name !== server.sourceName ? ` → ${server.name}` : ''}</span>
           <span className="text-[var(--color-text-tertiary)]">{server.type}</span>
           {server.collision && <span className="text-[var(--color-text-secondary)]">同名将自动重命名</span>}
         </label>)}
@@ -62,8 +62,8 @@ export function McpImportPanel({ onImported }: { onImported: () => void }) {
       <p className="text-[11px] text-[var(--color-text-tertiary)]">配置中的环境变量会随 MCP 服务原样保存在本地，不在预览界面显示；执行前还会再次确认。</p>
     </div>}
     {outcome && <div className="mt-4 text-[12px]" role="status">
-      <p>成功导入：{outcome.added.length} 个{outcome.added.length ? ' · ' + outcome.added.join('、') : ''}</p>
-      {outcome.errors.map((message, i) => <p key={i} className="mt-1 text-[var(--color-error)]">{message}</p>)}
+      <p>成功导入：{outcome.added.length} 个{outcome.added.length ? ` · ${outcome.added.join('、')}` : ''}</p>
+      {outcome.errors.map(message => <p key={message} className="mt-1 text-[var(--color-error)]">{message}</p>)}
     </div>}
     {error && <p role="alert" className="mt-3 text-[12px] text-[var(--color-error)]">{error}</p>}
   </Card>

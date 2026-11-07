@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
 test('新 UI 的智能执行与模型自检必须通过 Electron IPC 白名单', () => {
   const bridge = read('electron/main.ts')

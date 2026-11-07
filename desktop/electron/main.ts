@@ -135,7 +135,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     const approval=await dialog.showMessageBox(requireWindow(),{
       type:'warning',title:'确认批量导入 MCP 服务',
       buttons:['取消','确认导入'],defaultId:0,cancelId:0,
-      message:'将导入 '+importRows.length+' 个本地 MCP 服务',
+      message:`将导入 ${importRows.length} 个本地 MCP 服务`,
       detail:'导入的命令、服务器地址和环境变量将存入所选配置范围。请仅导入可信来源。'
     })
     if(approval.response!==1)return {cancelled:true,added:[],errors:[]}
@@ -147,13 +147,13 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
     for(const item of importRows){
       let name=item.name
       let index=2
-      while(used.has(name))name=item.name.slice(0,73)+'_'+index++
+      while(used.has(name))name=`${item.name.slice(0,73)}_${index++}`
       try{
         await connect(active).client.invoke({method:'mcp.add',name,scope,config:item.config} as Parameters<ReturnType<typeof createDesktopClient>['invoke']>[0])
         used.add(name)
         added.push(name)
       }catch(error){
-        errors.push(item.sourceName+'：'+(error instanceof Error?error.message:String(error)))
+        errors.push(`${item.sourceName}：${error instanceof Error ? error.message : String(error)}`)
       }
     }
     return {added,errors}
@@ -252,7 +252,7 @@ async function call(method:unknown,args:unknown):Promise<unknown>{
       type:'warning',title:'确认清理本地项目记录',
       buttons:['取消','确认永久清理'],defaultId:0,cancelId:0,
       message:'将永久清理本地工作区记录',
-      detail:'工作区：'+active+'。项目源码文件保留，相关 AI 会话、任务和历史可能被删除。此操作无法撤销。'
+      detail:`工作区：${active}。项目源码文件保留，相关 AI 会话、任务和历史可能被删除。此操作无法撤销。`
     })
     if(confirmation.response!==1)return {cancelled:true}
   }

@@ -3,9 +3,9 @@
  * These are dynamically imported only when the corresponding `claude mcp *` command runs.
  */
 
-import { stat } from 'fs/promises';
+import { stat } from 'node:fs/promises';
 import pMap from 'p-map';
-import { cwd } from 'process';
+import { cwd } from 'node:process';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
 import { clearMcpClientConfig, clearServerTokensFromLocalStorage, getMcpClientConfig, readClientSecret, saveMcpClientSecret } from '../../services/mcp/auth.js';
 import { connectToServer, getMcpServerConnectionBatchSize } from '../../services/mcp/client.js';
@@ -17,7 +17,6 @@ import { updateSettingsForSource } from '../../utils/settings/settings.js';
 import { isFsInaccessible } from '../../utils/errors.js';
 import { gracefulShutdown } from '../../utils/gracefulShutdown.js';
 import { safeParseJSON } from '../../utils/json.js';
-import { getPlatform } from '../../utils/platform.js';
 import { cliError, cliOk } from '../exit.js';
 async function checkMcpServerHealth(name: string, server: ScopedMcpServerConfig): Promise<string> {
   try {
@@ -110,7 +109,8 @@ export async function mcpRemoveHandler(name: string, options: {
       cliError(`No MCP server found with name: "${name}"`);
     } else if (scopes.length === 1) {
       // Server exists in only one scope, remove it
-      const scope = scopes[0]!;
+      const scope = scopes[0];
+      if (!scope) throw new Error('MCP 配置作用范围不存在');
       logEvent('tengu_mcp_delete', {
         name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
@@ -143,10 +143,8 @@ export async function mcpListHandler(): Promise<void> {
     servers: configs
   } = await getAllMcpConfigs();
   if (Object.keys(configs).length === 0) {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log('No MCP servers configured. Use `claude mcp add` to add a server.');
   } else {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log('Checking MCP server health...\n');
 
     // Check servers concurrently
@@ -165,14 +163,11 @@ export async function mcpListHandler(): Promise<void> {
     } of results) {
       // Intentionally excluding sse-ide servers here since they're internal
       if (server.type === 'sse') {
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`${name}: ${server.url} (SSE) - ${status}`);
       } else if (server.type === 'http') {
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`${name}: ${server.url} (HTTP) - ${status}`);
       } else if (isMcpStdioServerConfig(server)) {
         const args = Array.isArray(server.args) ? server.args : [];
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`${name}: ${server.command} ${args.join(' ')} - ${status}`);
       }
     }
@@ -192,27 +187,20 @@ export async function mcpGetHandler(name: string): Promise<void> {
     cliError(`No MCP server found with name: ${name}`);
   }
 
-  // biome-ignore lint/suspicious/noConsole:: intentional console output
   console.log(`${name}:`);
-  // biome-ignore lint/suspicious/noConsole:: intentional console output
   console.log(`  Scope: ${getScopeLabel(server.scope)}`);
 
   // Check server health
   const status = await checkMcpServerHealth(name, server);
-  // biome-ignore lint/suspicious/noConsole:: intentional console output
   console.log(`  Status: ${status}`);
 
   // Intentionally excluding sse-ide servers here since they're internal
   if (server.type === 'sse') {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  Type: sse`);
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  URL: ${server.url}`);
     if (server.headers) {
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log('  Headers:');
       for (const [key, value] of Object.entries(server.headers)) {
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`    ${key}: ${value}`);
       }
     }
@@ -224,19 +212,14 @@ export async function mcpGetHandler(name: string): Promise<void> {
         if (clientConfig?.clientSecret) parts.push('client_secret configured');
       }
       if (server.oauth.callbackPort) parts.push(`callback_port ${server.oauth.callbackPort}`);
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log(`  OAuth: ${parts.join(', ')}`);
     }
   } else if (server.type === 'http') {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  Type: http`);
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  URL: ${server.url}`);
     if (server.headers) {
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log('  Headers:');
       for (const [key, value] of Object.entries(server.headers)) {
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`    ${key}: ${value}`);
       }
     }
@@ -248,27 +231,20 @@ export async function mcpGetHandler(name: string): Promise<void> {
         if (clientConfig?.clientSecret) parts.push('client_secret configured');
       }
       if (server.oauth.callbackPort) parts.push(`callback_port ${server.oauth.callbackPort}`);
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log(`  OAuth: ${parts.join(', ')}`);
     }
   } else if (isMcpStdioServerConfig(server)) {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  Type: stdio`);
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  Command: ${server.command}`);
     const args = Array.isArray(server.args) ? server.args : [];
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`  Args: ${args.join(' ')}`);
     if (server.env) {
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
       console.log('  Environment:');
       for (const [key, value] of Object.entries(server.env)) {
-        // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.log(`    ${key}=${value}`);
       }
     }
   }
-  // biome-ignore lint/suspicious/noConsole:: intentional console output
   console.log(`\nTo remove this server, run: claude mcp remove "${name}" -s ${server.scope}`);
   // Use gracefulShutdown to properly clean up MCP server connections
   // (process.exit bypasses cleanup handlers, leaving child processes orphaned)
@@ -318,23 +294,22 @@ export async function mcpAddFromDesktopHandler(options: {
     if (!names.length) return cliOk('Claude Desktop 配置中没有 MCP 服务。')
     if (!options.yes || options.dryRun) {
       const known = new Set(Object.keys((await getAllMcpConfigs()).servers))
-      const lines = names.map(name => '  ' + name + (known.has(name) ? '（重名，导入时自动重命名）' : ''))
-      return cliOk('检测到 ' + names.length + ' 个 MCP 服务：\n' + lines.join('\n') +
-        '\n请使用桌面「技能与 MCP → 导入配置」逐项选择，或执行 --yes 全部导入。')
+      const lines = names.map(name => `  ${name}${known.has(name) ? '（重名，导入时自动重命名）' : ''}`)
+      return cliOk(`检测到 ${names.length} 个 MCP 服务：\n${lines.join('\n')}\n请使用桌面「技能与 MCP → 导入配置」逐项选择，或执行 --yes 全部导入。`)
     }
     const existing = new Set(Object.keys((await getAllMcpConfigs()).servers))
     const imported: string[] = []
     for (const sourceName of names) {
       let name = sourceName
       let counter = 2
-      while (existing.has(name)) name = sourceName.slice(0, 70) + '_' + counter++
+      while (existing.has(name)) name = `${sourceName.slice(0, 70)}_${counter++}`
       const config = servers[sourceName]
-      if (!config) throw new Error('MCP 配置缺失：' + sourceName)
+      if (!config) throw new Error(`MCP 配置缺失：${sourceName}`)
       await addMcpConfig(name, config, scope)
       existing.add(name)
       imported.push(name)
     }
-    return cliOk('已从 Claude Desktop 导入 ' + imported.length + ' 个 MCP 服务：' + imported.join('、'))
+    return cliOk(`已从 Claude Desktop 导入 ${imported.length} 个 MCP 服务：${imported.join('、')}`)
   } catch (error) {
     return cliError(error instanceof Error ? error.message : String(error))
   }

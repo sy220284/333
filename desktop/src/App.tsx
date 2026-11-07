@@ -1008,7 +1008,7 @@ export function App(){
     </div>):<Empty icon={ShieldCheck} title="当前没有待处理的审批" detail="受保护的工具操作会在这里请求许可。"/>}
   </Card></Section>
   <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={r.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
-  <LocalMaintenance workspace={workspace} connected={connected} onPurged={()=>{
+  <LocalMaintenance key={workspace} workspace={workspace} connected={connected} onPurged={()=>{
     setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setPermissions([]);setHostRequests([]);setSessionPhase('idle');setSmartHistory([]);setSmartInspection(null);
     void refresh()
   }}/>
