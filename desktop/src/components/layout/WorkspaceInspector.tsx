@@ -9,7 +9,7 @@ export function WorkspaceInspector({connected,phase,model,mode,approvals,tasks,a
   projectBudget?:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number};
   onClose:()=>void;onPermissions:()=>void;onMissions:()=>void;onModels:()=>void;
 }){
-  return <aside aria-label="实时上下文" className="flex w-[268px] min-w-[268px] flex-col border-l border-[var(--color-border)] bg-[var(--color-surface-container-low)] max-[1150px]:w-[225px] max-[1150px]:min-w-[225px] max-[960px]:fixed max-[960px]:inset-y-0 max-[960px]:right-0 max-[960px]:z-40 max-[960px]:w-[min(88vw,340px)] max-[960px]:min-w-0 max-[960px]:shadow-2xl">
+  return <aside aria-label="实时上下文" className="flex w-[268px] min-w-[268px] flex-col border-l border-[var(--color-border)] bg-[var(--color-surface-container-low)] max-[1150px]:w-[225px] max-[1150px]:min-w-[225px] max-[961px]:fixed max-[961px]:inset-y-0 max-[961px]:right-0 max-[961px]:z-40 max-[961px]:w-[min(88vw,340px)] max-[961px]:min-w-0 max-[961px]:shadow-2xl">
     <div className="flex min-h-[55px] items-center justify-between border-b border-[var(--color-border)] px-4"><strong className="text-[12px]">实时上下文</strong><Button variant="ghost" size="sm" aria-label="收起详情" onClick={onClose}><X size={15}/></Button></div>
     <div className="min-h-0 flex-1 overflow-y-auto">
       <section className="border-b border-[var(--color-border)] p-4">

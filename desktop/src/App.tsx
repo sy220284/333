@@ -1292,7 +1292,7 @@ export function App(){
 </div>}
           </div>
         </div>
-        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="hidden max-[960px]:block fixed inset-0 z-30 bg-black/40" onClick={()=>setRightOpen(false)}/><WorkspaceInspector
+        {rightOpen&&<><button type="button" aria-label="关闭详情遮罩" className="hidden max-[961px]:block fixed inset-0 z-30 bg-black/40" onClick={()=>setRightOpen(false)}/><WorkspaceInspector
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
           smartExecution={smartHistory.find(record=>record.sessionId===sessionId)}
