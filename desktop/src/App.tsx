@@ -38,6 +38,7 @@ type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'c
 type MissionJob={id:string;title:string;instruction:string;model?:string;permissionMode?:'default'|'plan'|'dontAsk';status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;integrationCommit?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type TeamInbox={memberName:string;messages:Array<{from:string;text:string;timestamp:string;read:boolean;messageId?:string}>}
+type AgentActivity={id:string;source:'session-task'|'mission-job'|'mission-assignment';title:string;status:string;updatedAt:string;sessionId?:string;missionId?:string;jobId?:string;kind?:string;model?:string}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
 type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
@@ -168,6 +169,8 @@ export function App(){
   const [jobModel,setJobModel]=useState('')
   const [jobPermission,setJobPermission]=useState<'default'|'plan'|'dontAsk'>('default')
   const [tasks,setTasks]=useState<Task[]>([])
+  const [agentActivities,setAgentActivities]=useState<AgentActivity[]>([])
+  const [agentActivityCount,setAgentActivityCount]=useState(0)
   const [permissions,setPermissions]=useState<Permission[]>([])
   const [hostRequests,setHostRequests]=useState<HostRequest[]>([])
   const [hostForms,setHostForms]=useState<Record<string,Record<string,unknown>>>({})
@@ -252,6 +255,10 @@ export function App(){
         if(!current())return
         setOverview(data);setMode(data.mode==='super'?'super':'master')
       }),
+      api.call<{activities:AgentActivity[];totalVisible:number}>('agents.activity').then(data=>{
+        if(!current())return
+        setAgentActivities(data.activities??[]);setAgentActivityCount(data.totalVisible??0)
+      }),
       api.call<{missions:Mission[];selectedMissionId:string|null}>('missions.list').then(data=>{
         if(!current())return
         setMissions(data.missions??[]);setSelectedMission(data.selectedMissionId??'')
@@ -266,7 +273,7 @@ export function App(){
     // A hung external provider must never hold the global action lock.
     // Surface individual failures immediately instead of waiting for the
     // slowest service before showing the user a reason.
-    const names=['模型列表','智能执行记录','项目共享预算','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
+    const names=['模型列表','智能执行记录','项目共享预算','历史会话','智能体概览','跨模式执行记录','长期任务','模型凭证','MCP服务']
     const failed:string[]=[]
     queries.forEach((query,index)=>{
       void query.catch(error=>{
@@ -276,6 +283,17 @@ export function App(){
       })
     })
   },[])
+  const refreshAgentActivities=useCallback(async()=>{
+    const project=workspaceGeneration.current
+    const result=await api.call<{activities:AgentActivity[];totalVisible:number}>('agents.activity')
+    if(project===workspaceGeneration.current){
+      setAgentActivities(result.activities??[]);setAgentActivityCount(result.totalVisible??0)
+    }
+  },[])
+  const upsertAgentActivity=(activity:AgentActivity)=>{
+    setAgentActivities(old=>[activity,...old.filter(item=>item.id!==activity.id)]
+      .sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,100))
+  }
   const syncMissionOverview=useCallback(()=>{
     // A later workspace refresh invalidates earlier responses, so data from
     // an old project can never overwrite the currently selected project.
@@ -362,7 +380,7 @@ export function App(){
       if(event.event==='desktop.disconnected'){
         setConnected(false);setError(String(event.error||'桌面后台连接已断开'));return
       }
-      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','mission.activity','smart.finished']
+      const globalInbox=['permission.request','permission.resolved','host.request','host.resolved','mission.activity','smart.finished','task.updated']
       if(event.sessionId&&event.sessionId!==sessionRef.current&&!globalInbox.includes(event.event))return
       if(event.event==='smart.finished'){
         const project=workspaceGeneration.current
@@ -396,8 +414,15 @@ export function App(){
         const queueMessage=event.message
         if(typeof queueMessage==='string')setActivity(old=>[queueMessage,...old.filter(item=>item!==queueMessage)].slice(0,20))
       }else if(event.event==='mission.job.updated'&&event.job){
-        if(String(event.missionId||'')!==selectedMissionRef.current)return
         const updated=obj(event.job) as unknown as MissionJob
+        upsertAgentActivity({
+          id:`job:${event.missionId}:${updated.id}`,source:'mission-job',
+          title:updated.title,status:updated.status,
+          updatedAt:String(updated.updatedAt||new Date().toISOString()),
+          missionId:String(event.missionId||''),jobId:updated.id,
+          ...(updated.sessionId?{sessionId:updated.sessionId}:{}),
+        })
+        if(String(event.missionId||'')!==selectedMissionRef.current)return
         setMissionJobs(old=>old.some(job=>job.id===updated.id)
           ? old.map(job=>job.id===updated.id?updated:job)
           : [...old,updated])
@@ -415,7 +440,13 @@ export function App(){
         ].slice(0,50))
       }else if(event.event==='task.updated'&&event.task){
         const task=obj(event.task) as unknown as Task
-        setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
+        upsertAgentActivity({
+          id:`session:${event.sessionId}:${task.taskId}`,source:'session-task',
+          title:String(task.description||task.taskId),status:String(task.status||'running'),
+          updatedAt:new Date().toISOString(),sessionId:String(event.sessionId||''),
+        })
+        if(event.sessionId===sessionRef.current)
+          setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
       }else if(event.event==='session.message'){
         const payload=obj(event.message)
         if(payload.type==='result'){
@@ -1153,6 +1184,16 @@ export function App(){
                   </Card>
                 </div>:
                 <Card radius="lg" surface="lowest"><Empty icon={UsersRound} title="当前项目暂无团队" detail="先创建长期目标，然后在 Super Agents 模式下建立团队。" action={<Button variant="secondary" size="base" onClick={()=>setView('missions')}>创建长期目标 <ArrowRight size={14}/></Button>}/></Card>}
+            </Section>
+            <Section title="跨模式执行总览" subtitle={`主子任务、长期工作项和团队分工 · 已显示 ${agentActivities.length}/${agentActivityCount} 项`} action={<Button variant="secondary" size="sm" onClick={()=>void operation('刷新协作记录',refreshAgentActivities)} disabled={Boolean(busy)}><RefreshCw size={13}/>刷新记录</Button>}>
+              <Card radius="lg" surface="lowest" padding="sm">
+                {agentActivities.length?agentActivities.slice(0,30).map(item=><div key={item.id} className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-3 last:border-0">
+                  <span className="min-w-0 flex-1"><strong className="block truncate text-[12px]">{item.title}</strong><small className="text-[11px] text-[var(--color-text-tertiary)]">{item.source==='session-task'?'主子智能体':item.source==='mission-job'?'长期工作项':item.kind==='team'?'团队分工':'长期分工'} · {item.updatedAt}</small></span>
+                  <Badge size="sm" tone={item.status==='completed'?'success':item.status==='running'||item.status==='review'?'warning':item.status==='failed'||item.status==='interrupted'?'danger':'neutral'}>{item.status}</Badge>
+                  {item.missionId&&<Button variant="secondary" size="sm" onClick={()=>{setSelectedMission(item.missionId!);setView('missions')}}>查看任务</Button>}
+                  {!item.missionId&&item.sessionId&&<Button variant="secondary" size="sm" onClick={()=>void resumeSession(item.sessionId!)}>打开会话</Button>}
+                </div>):<Empty icon={Activity} title="暂无已登记的协作活动" detail="任务创建、成员分工或子智能体执行后会显示真实记录。"/>}
+              </Card>
             </Section>
             <Section title="智能体执行记录" action={<Button variant="link" size="base" onClick={()=>setView('chat')}>进入对话 <ArrowRight size={14}/></Button>}>
               <Card radius="lg" surface="lowest" padding="sm">
