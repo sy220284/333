@@ -71,7 +71,7 @@ function startHost(binary, cwd, configDir, dataDir, sdkCli) {
           reject(new Error(`Desktop host request ${method} timed out; stderr: ${stderr}`))
         }, 20000)
         waiting.set(id, { resolve, reject, timeout })
-        child.stdin.write(JSON.stringify({ id, method, ...args }) + '\n', error => {
+        child.stdin.write(`${JSON.stringify({ id, method, ...args })}\n`, error => {
           if (!error) return
           clearTimeout(timeout)
           waiting.delete(id)
