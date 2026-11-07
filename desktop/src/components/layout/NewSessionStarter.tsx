@@ -27,7 +27,7 @@ export function NewSessionStarter({projectName,modelName,teamMode,sessions,missi
       <p className="max-w-lg text-[13px] leading-6 text-[var(--color-text-secondary)]">选择任务起点或开始新会话，使用当前项目的本地执行引擎处理工作。</p>
     </div>
     <Card surface="lowest" radius="xl" padding="lg" shadow="composer" className="mx-auto w-full max-w-[720px]">
-      <button type="button" aria-label="新建会话" onClick={onCreateSession} className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-left text-[13px] text-[var(--color-text-tertiary)] transition-colors hover:border-[var(--color-brand)]">
+      <button type="button" aria-label="从首页新建会话" onClick={onCreateSession} className="flex w-full items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-left text-[13px] text-[var(--color-text-tertiary)] transition-colors hover:border-[var(--color-brand)]">
         <MessageSquare size={20}/><span className="flex-1">打开新会话，输入今天的任务…</span><span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-brand)] text-[var(--color-on-primary)]"><Plus size={16}/></span>
       </button>
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-[var(--color-text-tertiary)]">

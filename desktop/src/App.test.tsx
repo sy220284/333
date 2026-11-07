@@ -432,7 +432,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     const user=userEvent.setup()
     render(<App/>)
     await screen.findByText('本地后台已连接')
-    await user.click(screen.getByText('长历史会话'))
+    await user.click(screen.getByRole('button',{name:'长历史会话'}))
     await screen.findByText('历史-259')
     expect(screen.queryByText('历史-0')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button',{name:/加载更早的 120 条消息/}))
