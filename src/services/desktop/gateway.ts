@@ -510,7 +510,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       case 'missions.create': {
         const mission = await createMission(request.objective, cwd, options.missionRoot)
         selectMission(mission.id, cwd)
-        setAgentMode('super')
+        // Creating a mission only records the user's objective. The mode of
+        // existing sessions changes exclusively through agents.setMode.
         return mission
       }
       case 'missions.select': {
