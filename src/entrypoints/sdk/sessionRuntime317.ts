@@ -323,7 +323,7 @@ function startSession(
           const answer = await options.onUserDialog({
             dialogKind: request.dialog_kind,
             payload: request.payload,
-            toolUseID: request.tool_use_id,
+            toolUseID: typeof request.tool_use_id === 'string' ? request.tool_use_id : undefined,
           }, { signal: controller.signal, requestId: request_id })
           if (answer === null) return
           decision = answer
