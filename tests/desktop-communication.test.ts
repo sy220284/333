@@ -297,6 +297,44 @@ test('SDK preset tools and hook events reach the spawned CLI process', async () 
   }
 })
 
+test('SDK closeAndWait allows the CLI to finish delayed session persistence after stdin EOF', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sdk-graceful-exit-'))
+  const script = join(cwd, 'sdk-flush.cjs')
+  const marker = join(cwd, 'session-flushed.txt')
+  const fixtureScript = [
+    "const { writeFileSync } = require('node:fs')",
+    "const { createInterface } = require('node:readline')",
+    "const input = createInterface({ input: process.stdin })",
+    "input.on('line', line => {",
+    "  const frame = JSON.parse(line)",
+    "  if (frame.type === 'control_request') {",
+    "    process.stdout.write(JSON.stringify({ type: 'control_response', response: {",
+    "      subtype: 'success', request_id: frame.request_id, response: {}",
+    "    } }) + '\\n')",
+    "  }",
+    "})",
+    "input.on('close', () => setTimeout(() => {",
+    "  writeFileSync(process.env.SDK_TEST_FLUSH_PATH, 'fully-persisted')",
+    "  process.exit(0)",
+    "}, 80))",
+  ].join('\n')
+  await writeFile(script, fixtureScript)
+  const session = createSessionRuntime317({
+    cwd,
+    model: 'model-example',
+    pathToClaudeCodeExecutable: script,
+    env: { SDK_TEST_FLUSH_PATH: marker },
+  })
+  try {
+    await session.initialization
+    await session.closeAndWait()
+    expect(await readFile(marker, 'utf8')).toBe('fully-persisted')
+  } finally {
+    session.close()
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('SDK 2.1.317 task_updated and background metadata survive desktop restart', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'desktop-task-metadata-'))
   try {
