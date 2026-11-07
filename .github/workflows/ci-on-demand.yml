@@ -28,7 +28,6 @@ jobs:
       independent_product_cleanup: ${{ steps.route.outputs.independent_product_cleanup }}
       latest_stable_six_host: ${{ steps.route.outputs.latest_stable_six_host }}
       local_feature_promotion: ${{ steps.route.outputs.local_feature_promotion }}
-      superagents_v3_foundation: ${{ steps.route.outputs.superagents_v3_foundation }}
       local_privacy: ${{ steps.route.outputs.local_privacy }}
       personal_retirement_boundary: ${{ steps.route.outputs.personal_retirement_boundary }}
       m1_317_bootstrap_security: ${{ steps.route.outputs.m1_317_bootstrap_security }}
@@ -146,12 +145,6 @@ jobs:
     if: needs.plan.outputs.full == 'true' || needs.plan.outputs.local_feature_promotion == 'true'
     uses: ./.github/workflows/local-feature-promotion.yml
 
-  superagents-v3-foundation:
-    name: superagents-v3-foundation ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
-    needs: plan
-    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.superagents_v3_foundation == 'true'
-    uses: ./.github/workflows/superagents-v3-foundation.yml
-
   personal-retirement-boundary:
     name: personal-retirement-boundary ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
     needs: plan
@@ -251,7 +244,7 @@ jobs:
   complete:
     name: 统一验收结果
     if: ${{ !cancelled() }}
-    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, superagents-v3-foundation, local-privacy, personal-retirement-boundary, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
+    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, local-privacy, personal-retirement-boundary, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
     runs-on: ubuntu-latest
     steps:
       - name: 校验必需检查和所有实际运行的专项

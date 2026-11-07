@@ -5,8 +5,7 @@ import { SPECIALISTS, WORKFLOWS, routeChanges, selectBaseline } from '../build/c
 
 const active = plan => Object.entries(plan).filter(([, enabled]) => enabled).map(([name]) => name)
 
-test('所有专项统一入口调用，包含 Super Agents 能力链路', () => {
-  assert.ok(WORKFLOWS.includes('superagents-v3-foundation'))
+test('所有专项统一入口调用并实际存在', () => {
   const files = readdirSync(new URL('../.github/workflows/', import.meta.url))
     .filter(x => x.endsWith('.yml') && x !== 'ci-on-demand.yml' && x !== 'latest-stable-upgrade.yml')
   assert.deepEqual(WORKFLOWS.slice().sort(), files.map(x => x.slice(0, -4)).sort())
@@ -19,13 +18,14 @@ test('所有专项统一入口调用，包含 Super Agents 能力链路', () => 
   assert.deepEqual(active(routeChanges([], true)).sort(), WORKFLOWS.slice().sort())
 })
 
-test('Super Agents 能力与桌面变更由统一调度选择专项并进入最终验收', () => {
+test('Super Agents 能力复用本地功能与桌面专项，调度不引用已合并的工作流', () => {
   const plan = routeChanges(['src/services/agentCenter/experienceMemory.ts'])
-  assert.equal(plan['superagents-v3-foundation'], true)
+  assert.equal(plan['local-feature-promotion'], true)
+  assert.equal(plan['desktop-communication'], true)
   const dispatcher = readFileSync(new URL('../.github/workflows/ci-on-demand.yml', import.meta.url), 'utf8')
-  assert.match(dispatcher, /superagents_v3_foundation/)
-  assert.match(dispatcher, /uses: \.\/\.github\/workflows\/superagents-v3-foundation\.yml/)
-  assert.match(dispatcher, /local-feature-promotion, superagents-v3-foundation, local-privacy/)
+  assert.match(dispatcher, /uses: \.\/\.github\/workflows\/local-feature-promotion\.yml/)
+  assert.match(dispatcher, /uses: \.\/\.github\/workflows\/desktop-communication\.yml/)
+  assert.doesNotMatch(dispatcher, /superagents-v3-foundation/)
 })
 
 test('企业网关与原厂 Runner 均已清退，个人后台任务保持独立', () => {

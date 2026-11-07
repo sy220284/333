@@ -48,12 +48,6 @@ export const SPECIALISTS = Object.freeze({
     /^build\/audit-independent-sources\.mjs$/,
   ],
   'latest-stable-six-host': [],
-  'superagents-v3-foundation': [
-    /^src\/services\/agentCenter\//,
-    /^src\/services\/desktop\//,
-    /^desktop\//,
-    /^tests\/(?:.*capability.*|experience-memory|skill-workshop|superagents-capability-protocol)\.test\.ts$/,
-  ],
   'local-feature-promotion': [
     /^src\/(proactive|coordinator|tasks|voice)\//,
     /^src\/tools\/(AgentTool|TeamCreateTool|TeamDeleteTool|ListAgentsTool|SendMessageTool|MissionTool|BriefTool|ScheduleCronTool)\//,
