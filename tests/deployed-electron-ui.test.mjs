@@ -181,6 +181,9 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
           assert.ok(text.includes(expected),
             `导航到 ${label} 后缺少真实功能内容 ${expected}：${text.slice(0,700)}`)
           assert.ok(text.includes('本地后台已连接'), '切换页面后桌面宿主必须保持连接')
+          const pageTop = await evaluate(page.webSocketDebuggerUrl,
+            'document.querySelector(".yy-page")?.scrollTop ?? -1')
+          assert.equal(pageTop, 0, '导航后页面应从顶部展示，避免新页面沿用上一页的滚动位置')
           await screenshot(page.webSocketDebuggerUrl, screenshotFile)
         }
         await navigate('智能体团队','Super Agents 团队模式','desktop/release/deployed-agents-smoke.png')

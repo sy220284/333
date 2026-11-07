@@ -694,7 +694,7 @@ export function App(){
         </div>
       </header>
       <div className="yy-columns flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <div className="yy-page min-w-0 flex-1 overflow-y-auto" data-view={view}>
+        <div key={view} className="yy-page min-w-0 flex-1 overflow-y-auto" data-view={view}>
           <div className="yy-page-inner mx-auto w-full max-w-[1220px] px-6 py-6">
           {view!=='dashboard'&&<div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>}
           {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}

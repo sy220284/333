@@ -21,6 +21,11 @@ test('桌面使用原生UI的新页面并不存在旧UI回退入口',()=>{
   assert.equal(layout.includes('.git-output,'),false)
   assert.ok(layout.includes('.yy-tab'))
 })
+test('工作区切换页面时重新挂载滚动容器，避免出现页面顶部被截断',()=>{
+  const app=src('../src/App.tsx')
+  assert.ok(app.includes('key={view} className="yy-page'))
+})
+
 test('工作项卡片采用纵向结构，操作按钮保持可读', () => {
   const app=src('../src/App.tsx'),layout=src('../src/theme/yaoyao-layout.css')
   assert.equal(app.includes('className="job-card"'),false)
