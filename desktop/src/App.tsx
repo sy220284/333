@@ -47,6 +47,7 @@ type SmartInspection={model:string;status:string;message:string;checkedOffline:b
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 type CapabilityItem={id:string;name:string;kind:'skill'|'workflow'|'plugin'|'mcp'|'command';source:string;scope:string;description:string;status:'available'|'configured'|'disabled';version?:string}
 type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
+type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -124,6 +125,10 @@ export function App(){
   const [capabilityItems,setCapabilityItems]=useState<CapabilityItem[]>([])
   const [capabilityWarnings,setCapabilityWarnings]=useState<string[]>([])
   const [experienceItems,setExperienceItems]=useState<ExperienceItem[]>([])
+  const [skillDrafts,setSkillDrafts]=useState<SkillDraft[]>([])
+  const [skillSlug,setSkillSlug]=useState('')
+  const [skillDescription,setSkillDescription]=useState('')
+  const [skillInstructions,setSkillInstructions]=useState('')
   const [catalogRevision,setCatalogRevision]=useState(0)
   const [catalogError,setCatalogError]=useState('')
   const [mcpAddOpen,setMcpAddOpen]=useState(true)
@@ -236,7 +241,8 @@ export function App(){
     void Promise.allSettled([
       api.call<{items:CapabilityItem[];warnings:string[]}>('capabilities.list'),
       api.call<{experiences:ExperienceItem[]}>('experience.list',{includeCandidates:true}),
-    ]).then(([catalog,memory])=>{
+      api.call<{drafts:SkillDraft[]}>('capabilities.skills.drafts'),
+    ]).then(([catalog,memory,drafts])=>{
       if(!active)return
       if(catalog.status==='fulfilled'){
         setCapabilityItems(catalog.value.items??[])
@@ -247,9 +253,12 @@ export function App(){
       }
       if(memory.status==='fulfilled')setExperienceItems(memory.value.experiences??[])
       else setExperienceItems([])
+      if(drafts.status==='fulfilled')setSkillDrafts(drafts.value.drafts??[])
+      else setSkillDrafts([])
       const errors=[
         ...(catalog.status==='rejected'?['能力目录：'+presentError(catalog.reason)]:[]),
         ...(memory.status==='rejected'?['经验规范：'+presentError(memory.reason)]:[]),
+        ...(drafts.status==='rejected'?['技能候选：'+presentError(drafts.reason)]:[]),
       ]
       setCatalogError(errors.join('；'))
     })
@@ -1433,6 +1442,34 @@ export function App(){
                 </div>
                 {capabilityWarnings.map((item,index)=><p key={index} role="alert" className="mt-2 text-[11px] text-[var(--color-warning)]">{item}</p>)}
                 {catalogError&&<p role="alert" className="mt-2 text-[12px] text-[var(--color-error)]">{catalogError}</p>}
+              </Card>
+            </Section>
+            <Section title="本地技能构建与发布" subtitle="先保存为候选，确认内容后发布至当前项目技能目录，随即刷新能力中心。">
+              <Card radius="lg" surface="lowest" padding="lg" shadow="card">
+                <div className="grid grid-cols-2 gap-3 max-[900px]:grid-cols-1">
+                  <label className="space-y-1 text-[12px]">技能名称（小写字母、数字、连字符）<input value={skillSlug} onChange={e=>setSkillSlug(e.target.value)} placeholder="subtitle-timebase" className="w-full"/></label>
+                  <label className="space-y-1 text-[12px]">用途描述<input value={skillDescription} onChange={e=>setSkillDescription(e.target.value)} placeholder="用于整理时间轴并验证字幕对齐" className="w-full"/></label>
+                  <label className="col-span-2 space-y-1 text-[12px] max-[900px]:col-span-1">技能执行规范<textarea rows={5} value={skillInstructions} onChange={e=>setSkillInstructions(e.target.value)} placeholder="写明适用条件、输入素材、操作步骤、预期输出和验收方法…" className="w-full"/></label>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="secondary" size="base" disabled={!/^[a-z][a-z0-9-]{2,63}$/.test(skillSlug)||skillDescription.trim().length<12||skillInstructions.trim().length<60||Boolean(busy)} onClick={()=>void operation('保存技能候选',async()=>{
+                    await invoke('capabilities.skills.createDraft',{slug:skillSlug,description:skillDescription,instructions:skillInstructions})
+                    setSkillSlug('');setSkillDescription('');setSkillInstructions('')
+                    setCatalogRevision(v=>v+1)
+                  })}><Plus size={14}/>保存候选</Button>
+                  <Button variant="secondary" size="base" onClick={()=>toChat('请根据当前项目需求设计一项可复用技能，写出名称、用途描述、适用条件、完整步骤、输出成果和验收方法，供用户审核后注册到能力中心。')}><WandSparkles size={14}/>让 AI 设计技能</Button>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {skillDrafts.map(item=><div key={item.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+                    <div className="flex items-center gap-2"><strong className="min-w-0 flex-1 truncate text-[12px]">{item.slug}</strong><Badge size="xs" tone={item.state==='published'?'success':'warning'}>{item.state==='published'?'已发布':'待发布'}</Badge></div>
+                    <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{item.description}</p>
+                    <details className="mt-2 text-[11px]"><summary className="cursor-pointer">查看技能正文与验收步骤</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-[11px]">{item.instructions}</pre></details>
+                    {item.state==='candidate'&&<Button size="sm" variant="secondary" className="mt-2" onClick={()=>void operation('发布技能',async()=>{
+                      await invoke('capabilities.skills.publish',{draftId:item.id})
+                      setCatalogRevision(v=>v+1)
+                    })}><ShieldCheck size={13}/>确认并发布</Button>}
+                  </div>)}
+                </div>
               </Card>
             </Section>
             <Section title="长期经验规范" subtitle="按适用场景、复用步骤和验证证据保存；候选经验经审核后才能被检索为可靠规范。">
