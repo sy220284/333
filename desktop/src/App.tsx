@@ -11,6 +11,7 @@ import {
 import { api, type AppEvent, type Item } from './api'
 import { MarkdownMessage } from './MarkdownMessage'
 import { NewSessionStarter } from './components/layout/NewSessionStarter'
+import { WorkspaceInspector } from './components/layout/WorkspaceInspector'
 import { SessionChatSurface } from './components/chat/SessionChatSurface'
 import { Badge } from './components/ui/Badge'
 import { Button } from './components/ui/Button'
@@ -969,7 +970,11 @@ export function App(){
 </div>}
           </div>
         </div>
-        {rightOpen&&<aside className="inspector"><div className="inspector-heading"><span>实时上下文</span><IconButton label="收起详情" onClick={()=>setRightOpen(false)}><X size={15}/></IconButton></div><div className="inspector-content"><div className="inspector-section"><span className="side-section-label">运行状态</span><div className="runtime-tile"><div className={`runtime-indicator ${connected?'ok':'off'}`}>{connected?<Activity size={20}/>:<AlertCircle size={20}/>}</div><strong>{connected?'引擎已连接':'等待连接'}</strong><span>{statusName(sessionPhase)}</span></div></div><div className="inspector-section"><span className="side-section-label">当前配置</span><div className="detail-row"><span>智能体模式</span><strong>{mode==='super'?'Super Agents':'主子模式'}</strong></div><div className="detail-row"><span>当前模型</span><strong title={selectedModel}>{selectedModel||'默认模型'}</strong></div><div className="detail-row"><span>待审权限</span><strong className={permissions.length?'attention':''}>{permissions.length} 项</strong></div><div className="detail-row"><span>活动任务</span><strong>{tasks.length}</strong></div></div><div className="inspector-section"><span className="side-section-label">快捷操作</span><button type="button" className="inspector-action" onClick={()=>setView('settings')}><ShieldCheck size={16}/>管理权限<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('missions')}><ListChecks size={16}/>任务簿<ChevronRight size={15}/></button><button type="button" className="inspector-action" onClick={()=>setView('models')}><Cpu size={16}/>模型选择<ChevronRight size={15}/></button></div><div className="inspector-section"><span className="side-section-label">最近活动</span>{activity.length?activity.slice(0,6).map(event=><div className="activity-entry" key={event}><span className="activity-dot"/>{event}</div>):<p className="muted small">运行任务时，这里显示执行活动。</p>}</div></div><div className="inspector-footer"><span className={`connection-light ${connected?'online':'offline'}`}/><span>本地工作区 · {busy||'已就绪'}</span></div></aside>}
+        {rightOpen&&<WorkspaceInspector
+          connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
+          approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
+          onClose={()=>setRightOpen(false)} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
+        />}
 
       </div>
       <footer className="yy-statusbar flex h-8 shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 text-[11px] text-[var(--color-text-tertiary)]"><span>{connected?'● 后端已连接':'○ 等待连接'}</span><span className="min-w-0 flex-1 truncate">{workspace||'未选择项目'}</span><span>{sessionId?`会话 ${sessionId.slice(0,8)} · `:''}{statusName(sessionPhase)}</span></footer>
