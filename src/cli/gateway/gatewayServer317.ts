@@ -17,7 +17,7 @@ import { precheckGatewaySpend317, gatewayUsageResponse317 } from './gatewaySpend
 import { createCriAdmission317, isCriJwt317 } from './gatewayCri317.ts'
 import { createGatewayManagedSettings317, responseForManagedSettings317 } from './gatewayManaged317.ts'
 import {
-  forwardGatewayInference317, forwardGatewayTelemetry317, listGatewayModels317,
+  forwardGatewayInference317, listGatewayModels317,
 } from './gatewayForward317.ts'
 
 const secureHeaders = Object.freeze({
@@ -196,10 +196,6 @@ export async function createGatewayService317(config, deps: GatewayServiceDeps31
             })
           }
           return forwardGatewayInference317(request, context)
-        }
-        if (['/v1/metrics','/v1/traces','/v1/logs'].includes(url.pathname)
-          && request.method === 'POST') {
-          return forwardGatewayTelemetry317(request, context)
         }
         return error(404, 'not_found_error', 'not found', requestId)
       } catch (cause) {
