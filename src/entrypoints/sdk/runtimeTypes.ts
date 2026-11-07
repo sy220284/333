@@ -96,6 +96,17 @@ export type SDKOriginalElicitationHandler = (
   options: { signal: AbortSignal; requestId: string },
 ) => Promise<SDKControlElicitationResponse|null>
 
+export type SDKOAuthTokenProvider = (options: {
+  signal: AbortSignal
+  /** Original 2.1.317 accepts only four decline reasons. */
+  onDecline: (reason: string) => void
+  kind?: unknown
+}) => Promise<string|null|undefined>
+
+export type SDKHostAuthTokenProvider = (
+  options: { signal: AbortSignal },
+) => Promise<string|Record<string,unknown>|null|undefined>
+
 export type SDKOriginalUserDialogHandler = (
   request: { dialogKind?: unknown; payload?: unknown; toolUseID?: string },
   options: { signal: AbortSignal; requestId: string },
@@ -148,6 +159,8 @@ export type Options = {
   onControlRequest?: HostControlRequestHandler
   onElicitation?: SDKOriginalElicitationHandler
   onUserDialog?: SDKOriginalUserDialogHandler
+  getOAuthToken?: SDKOAuthTokenProvider
+  getHostAuthToken?: SDKHostAuthTokenProvider
   hooks?: HookCallbacks
   mcpServers?: Record<string, McpServerConfig>
   agents?: Record<string, AgentDefinition>
@@ -230,6 +243,8 @@ export type SDKSessionOptions = {
   onControlRequest?: HostControlRequestHandler
   onElicitation?: SDKOriginalElicitationHandler
   onUserDialog?: SDKOriginalUserDialogHandler
+  getOAuthToken?: SDKOAuthTokenProvider
+  getHostAuthToken?: SDKHostAuthTokenProvider
   hooks?: HookCallbacks
   /** Opt into the SDK prompt suggestion event stream. */
   promptSuggestions?: boolean

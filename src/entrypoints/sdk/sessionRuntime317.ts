@@ -327,6 +327,26 @@ function startSession(
           }, { signal: controller.signal, requestId: request_id })
           if (answer === null) return
           decision = answer
+        } else if (request.subtype === 'oauth_token_refresh' && options.getOAuthToken) {
+          // Official 2.1.317: an empty token is null, and the only permitted
+          // decline reasons come from the original SDK's D_s enumeration.
+          let declineReason: string | undefined
+          const token = await options.getOAuthToken({
+            signal: controller.signal,
+            onDecline: reason => {
+              if (['signed_out','identity_changed','transient','refresh_failed'].includes(reason))
+                declineReason = reason
+            },
+            ...(request.kind !== undefined && { kind: request.kind }),
+          }) ?? null
+          decision = token === null && declineReason !== undefined
+            ? { accessToken: null, reason: declineReason }
+            : { accessToken: token }
+        } else if (request.subtype === 'host_auth_token_refresh' && options.getHostAuthToken) {
+          const token = await options.getHostAuthToken({ signal: controller.signal }) ?? null
+          decision = typeof token === 'string' || token === null
+            ? { authToken: token }
+            : token
         } else if (hostControlSubtypes.has(request.subtype) && options.onControlRequest) {
           if (request.subtype === 'remote_control_work_secret' && request.session_id !== sessionId) {
             throw new Error('Work secret request names a different SDK session')
@@ -339,6 +359,10 @@ function startSession(
             throw new Error(`Host control callback returned null for ${request.subtype}`)
           }
           decision = hostDecision
+        } else if (request.subtype === 'oauth_token_refresh') {
+          throw new Error('getOAuthToken callback is not provided.')
+        } else if (request.subtype === 'host_auth_token_refresh') {
+          throw new Error('getHostAuthToken callback is not provided.')
         } else if (request.subtype === 'elicitation') {
           // Official SDK: missing elicitation handler defaults to decline.
           decision = { action: 'decline' }
