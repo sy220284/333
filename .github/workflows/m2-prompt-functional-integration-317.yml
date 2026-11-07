@@ -27,6 +27,8 @@ jobs:
       - name: 验证提示词功能、事件处理和权限隔离
         run: |
           bun test tests/m2-artifact-comment-pipeline-317.test.ts tests/m2-observer-lifecycle-317.test.ts tests/m2-knowledge-nudge-317.test.ts
+      - name: 验证317 ultrathink当前轮与运行中输入提升
+        run: bun test tests/m2-ultrathink-turn-effort-317.test.ts
       - name: 检查新功能与全仓类型
         run: |
           npm ci --prefix tools/dev --ignore-scripts --no-audit --no-fund
