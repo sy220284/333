@@ -195,11 +195,15 @@ export function App(){
     })
   },[])
   const syncMissionOverview=useCallback(()=>{
-    // Mission mutations already return authoritative data. Only refresh the
-    // lightweight overview; avoid launching a new SDK model probe and MCP
-    // discovery on every checkpoint or queue update.
-    void api.call<Item>('agents.overview').then(data=>setOverview(data))
-      .catch(error=>setError(`智能体概览刷新失败：${presentError(error)}`))
+    // A later workspace refresh invalidates earlier responses, so data from
+    // an old project can never overwrite the currently selected project.
+    const generation=refreshGeneration.current
+    void api.call<Item>('agents.overview')
+      .then(data=>{if(generation===refreshGeneration.current)setOverview(data)})
+      .catch(error=>{
+        if(generation===refreshGeneration.current)
+          setError(`智能体概览刷新失败：${presentError(error)}`)
+      })
   },[])
   const refreshSession=useCallback(async(id:string)=>{
     const [p,h,t]=await Promise.allSettled([
