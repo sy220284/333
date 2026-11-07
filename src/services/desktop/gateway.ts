@@ -19,6 +19,7 @@ import type { getSessionInfo, getSessionMessages, listSessions } from '../../ent
 import type { InternalOptions, SDKSessionOptions } from '../../entrypoints/sdk/runtimeTypes.js'
 import { createHeadlessConversationSession } from '../conversation/headlessSession.js'
 import { createDesktopTaskJournal, type DesktopTaskJournal } from './taskJournal.js'
+import { createSmartExecutionJournal, type SmartExecutionJournal } from './smartExecutionJournal.js'
 import { isAgentProgress, projectBackgroundTasks, projectTask, type DesktopTask } from './taskProjection.js'
 import { DESKTOP_PROTOCOL_VERSION, type DesktopEvent, type DesktopRequest } from './protocol.js'
 import { z } from 'zod/v4'
@@ -50,6 +51,7 @@ export type DesktopGatewayOptions = {
   /** Optional task-diary root for isolated local hosts and tests. */
   missionRoot?: string
   journal?: DesktopTaskJournal
+  smartJournal?: SmartExecutionJournal
   createSession?: SessionFactory
   history?: HistoryService
   /** Test seam; production uses the original AgentTool worktree creator. */
@@ -81,6 +83,9 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     },
   }
   const journal = options.journal ?? createDesktopTaskJournal(cwd, options.dataDir)
+  const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
+  const smartActive = new Set<string>()
+  const smartPrepared = new Map<string, string>()
   const sessions = new Map<string, Entry>()
   let pendingPurge: { token: string; createdAt: number; plan: import('./maintenance.js').LocalPurgePlan } | undefined
   let purgeRunning = false
@@ -120,9 +125,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     if (!entry) throw new Error(`Desktop session is not open: ${sessionId}`)
     return entry
   }
-  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>, sessionCwd = cwd): InternalOptions {
+  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>, sessionCwd = cwd,
+    smartPolicy?: Pick<InternalOptions, 'maxBudgetUsd' | 'permissionMode'>): InternalOptions {
     return {
       ...options.sessionOptions,
+      ...smartPolicy,
       ...(sessionEnv ? { env: { ...options.sessionOptions?.env, ...sessionEnv } } : {}),
       cwd: sessionCwd,
       ...(selectedModel || model ? { model: selectedModel ?? model } : {}),
@@ -172,6 +179,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   async function openSession(
     selectedModel?: string, resume?: string,
     sessionEnv?: Record<string, string | undefined>, requestedCwd?: string,
+    smartPolicy?: Pick<InternalOptions, 'maxBudgetUsd' | 'permissionMode'>,
   ) {
     if (closed) throw new Error('Desktop gateway is closed')
     if (resume) {
@@ -193,7 +201,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
-      runtime = launch(sdkOptions(selectedModel, sessionEnv, sessionCwd), resume)
+      runtime = launch(sdkOptions(selectedModel, sessionEnv, sessionCwd, smartPolicy), resume)
       const info = await initializeModels(runtime)
       if (closed) throw new Error('Desktop gateway closed during session initialization')
       const id = runtime.sessionId
@@ -330,6 +338,54 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }
   }
 
+  async function inspectSmartModel(selectedModel?: string) {
+    const activeModel = selectedModel ?? model
+    if (!activeModel) return {
+      model: '默认模型', status: 'inherited' as const, checkedOffline: true,
+      message: '继承本机当前模型和已有权限，不会自动切换到其他服务商',
+    }
+    const { isRemovedIndependentModel, resolveIndependentModel } =
+      await import('../api/multimodel/registry.js')
+    if (isRemovedIndependentModel(activeModel)) throw new Error('该模型服务商已退出个人版支持范围')
+    const route = resolveIndependentModel(activeModel)
+    if (!route) return {
+      model: activeModel, status: 'native' as const, checkedOffline: true,
+      message: '沿用现有模型配置；实际可用性在执行时由服务商确认',
+    }
+    const { getConfiguredModelProviders, getConfiguredModelSnapshots } =
+      await import('../api/multimodel/catalog.js')
+    const { getSavedCapabilityReport } = await import('../api/multimodel/capabilityProbe.js')
+    const { readIndependentPricing } = await import('../api/multimodel/pricing.js')
+    const configured = getConfiguredModelProviders().includes(route.provider)
+    const snapshot = getConfiguredModelSnapshots().find(item => item.model === activeModel)
+    const probe = getSavedCapabilityReport(activeModel)
+    const hasPricing = readIndependentPricing()[activeModel] !== undefined
+    return {
+      model: activeModel, provider: route.provider,
+      status: configured ? 'configured' as const : 'missing-credential' as const,
+      checkedOffline: true, hasPricing,
+      contextWindow: snapshot?.contextWindow ?? null,
+      maxOutputTokens: snapshot?.maxOutputTokens ?? null,
+      outputSource: snapshot?.outputSource ?? 'unverified',
+      toolRoundTrip: probe?.toolRoundTrip ?? null,
+      probeTime: probe?.timestamp ?? null,
+      message: !configured ? '请先在模型管理中配置该服务商的凭证'
+        : '本地配置已就绪；在线工具能力测试可在需要时手动运行',
+    }
+  }
+
+
+  async function finishSmartExecution(
+    sessionId: string, status: 'completed' | 'failed' | 'interrupted', costUsd?: number,
+  ): Promise<void> {
+    if (!smartActive.has(sessionId)) return
+    await smartJournal.finish(sessionId, status, costUsd)
+    smartActive.delete(sessionId)
+    smartPrepared.delete(sessionId)
+    emit({ event: 'smart.finished', sessionId, status,
+      ...(costUsd === undefined ? {} : { costUsd }) })
+  }
+
   async function send(sessionId: string, message: Parameters<Headless['send']>[0]) {
     const entry = requireSession(sessionId)
     if (entry.closing || entry.consuming || entry.sending)
@@ -354,9 +410,24 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }
     const pump = async () => {
       let pendingReviewSummary: string | undefined
+      let pendingSmartResult: { status: 'completed'|'failed'|'interrupted'; costUsd?: number } | undefined
       try {
         for await (const sdkMessage of entry.runtime.stream()) {
           emit({ event: 'session.message', sessionId, turnId, message: sdkMessage })
+          if (sdkMessage.type === 'result' && smartActive.has(sessionId)) {
+            const interrupted = sdkMessage.terminal_reason === 'aborted_tools' ||
+              sdkMessage.terminal_reason === 'aborted_streaming'
+            const status = interrupted ? 'interrupted'
+              : (!sdkMessage.is_error && sdkMessage.subtype === 'success' ? 'completed' : 'failed')
+            const cost = typeof sdkMessage.total_cost_usd === 'number' &&
+              Number.isFinite(sdkMessage.total_cost_usd) && sdkMessage.total_cost_usd >= 0
+                ? sdkMessage.total_cost_usd : undefined
+            if (status === 'completed' && [...entry.tasks.values()].some(task => task.status === 'running')) {
+              pendingSmartResult = { status, ...(cost === undefined ? {} : { costUsd: cost }) }
+            } else {
+              await finishSmartExecution(sessionId, status, cost)
+            }
+          }
           if (sdkMessage.type === 'result' && executingMissionJobs.has(sessionId)) {
             const success = !sdkMessage.is_error && sdkMessage.subtype === 'success'
             const summary = typeof sdkMessage.result === 'string' && sdkMessage.result.trim()
@@ -391,6 +462,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
               event: 'mission.activity', missionId: job.missionId, jobId: job.jobId,
               sessionId, task,
             })
+            if (pendingSmartResult && smartActive.has(sessionId) &&
+                ![...entry.tasks.values()].some(item => item.status === 'running')) {
+              await finishSmartExecution(sessionId, pendingSmartResult.status, pendingSmartResult.costUsd)
+              pendingSmartResult = undefined
+            }
             if (pendingReviewSummary && executingMissionJobs.has(sessionId) &&
                 ![...entry.tasks.values()].some(item => item.status === 'running')) {
               await settleExecutingJob(sessionId, 'review', pendingReviewSummary)
@@ -404,6 +480,14 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           error: error instanceof Error ? error.message : String(error),
         })
       } finally {
+        if (smartActive.has(sessionId)) {
+          try {
+            await finishSmartExecution(sessionId, 'interrupted', pendingSmartResult?.costUsd)
+          } catch (error) {
+            emit({ event: 'session.error', sessionId, turnId,
+              error: `智能执行记录写入失败：${String(error)}` })
+          }
+        }
         if (executingMissionJobs.has(sessionId)) {
           try {
             await settleExecutingJob(sessionId, 'interrupted',
@@ -479,8 +563,60 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs'],
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
+      case 'smart.inspect': return inspectSmartModel(request.model)
+      case 'smart.history': {
+        await smartJournal.reconcile(ownerKey, new Set(sessions.keys()))
+        return smartJournal.list()
+      }
+      case 'smart.execute': {
+        const inspection = await inspectSmartModel(request.model)
+        if (inspection.status === 'missing-credential') throw new Error(inspection.message)
+        if (request.maxBudgetUsd !== undefined &&
+            'hasPricing' in inspection && !inspection.hasPricing) {
+          throw new Error('该模型尚未配置费率，请先设置价格，才能使用费用上限')
+        }
+        const policy = {
+          ...(request.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: request.maxBudgetUsd }),
+          ...(request.permissionMode === undefined ? {} : { permissionMode: request.permissionMode }),
+        }
+        const opened = await openSession(request.model, undefined, undefined, undefined, policy)
+        try {
+          await smartJournal.start({
+            sessionId: opened.sessionId, status: 'running',
+            model: inspection.model, ownerPid: process.pid, ownerId: ownerKey,
+            permissionMode: request.permissionMode ?? options.sessionOptions?.permissionMode ?? 'default',
+            startedAt: new Date().toISOString(),
+            ...(request.maxBudgetUsd === undefined ? {} : { budgetUsd: request.maxBudgetUsd }),
+          })
+          smartActive.add(opened.sessionId)
+          if (request.deferStart) {
+            smartPrepared.set(opened.sessionId, request.prompt)
+            return { sessionId: opened.sessionId, prepared: true, model: inspection.model }
+          }
+          const turn = await send(opened.sessionId, request.prompt)
+          return { sessionId: opened.sessionId, turnId: turn.turnId, model: inspection.model,
+            budgetUsd: request.maxBudgetUsd ?? null }
+        } catch (error) {
+          if (smartActive.has(opened.sessionId)) await finishSmartExecution(opened.sessionId, 'failed')
+          await closeSessionInternal(opened.sessionId)
+          throw error
+        }
+      }
+      case 'smart.start': {
+        const prompt = smartPrepared.get(request.sessionId)
+        if (!prompt || !smartActive.has(request.sessionId)) throw new Error('该智能执行任务未准备或已启动')
+        smartPrepared.delete(request.sessionId)
+        try {
+          const turn = await send(request.sessionId, prompt)
+          return { sessionId: request.sessionId, turnId: turn.turnId }
+        } catch (error) {
+          await finishSmartExecution(request.sessionId, 'failed')
+          await closeSessionInternal(request.sessionId)
+          throw error
+        }
+      }
       case 'system.diagnostics': {
         const { getDoctorDiagnostic } = await import('../../utils/doctorDiagnostic.js')
         const { listProviderApiKeyAccounts } = await import('../auth/apiKeyVault.js')
@@ -500,7 +636,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'data.purge.preview': {
         const { planLocalProjectPurge } = await import('./maintenance.js')
-        const plan = await planLocalProjectPurge(cwd)
+        const plan = await planLocalProjectPurge(cwd, options.dataDir)
         const token = randomUUID()
         pendingPurge = { token, createdAt: Date.now(), plan }
         return { token, workspace: plan.workspace, items: plan.items.map(item => ({ kind: item.kind, path: item.path, reason: item.reason })), warnings: plan.warnings, activeSessions: sessions.size }
@@ -517,7 +653,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         purgeRunning = true
         try {
           const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
-          const current = await planLocalProjectPurge(cwd)
+          const current = await planLocalProjectPurge(cwd, options.dataDir)
           const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
           if (signature(current.items) !== signature(pending.plan.items))
             throw new Error('清理内容已变化，请重新预览后确认')
@@ -884,6 +1020,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       if (entry.sending) pending.push(entry.sending)
       if (entry.consuming) pending.push(entry.consuming)
       await Promise.all(pending)
+      if (smartActive.has(id)) await finishSmartExecution(id, 'interrupted')
       if (executingMissionJobs.has(id)) {
         await settleExecutingJob(id, 'interrupted', '桌面执行宿主关闭；请核查结果后显式重试')
       }
