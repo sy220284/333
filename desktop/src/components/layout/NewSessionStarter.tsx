@@ -36,14 +36,14 @@ export function NewSessionStarter({projectName,modelName,teamMode,sessions,missi
         <span className="flex items-center gap-1.5"><Cpu size={13}/>{modelName}</span>
       </div>
     </Card>
-    <div role="group" className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-3 max-[850px]:grid-cols-1" aria-label="建议的任务">
+    <fieldset className="mx-auto grid w-full min-w-0 max-w-[720px] grid-cols-2 gap-3 border-0 p-0 max-[850px]:grid-cols-1" aria-label="建议的任务">
       {suggestions.map(({label,subtitle,prompt,icon:Icon})=><Card key={label} radius="lg" padding="none" surface="lowest" shadow="card" interactive lift>
         <button type="button" onClick={()=>onSuggestion(prompt)} className="flex min-h-[78px] w-full items-center gap-3 p-4 text-left">
           <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]"><Icon size={18}/></span>
           <span className="flex-1"><strong className="block text-[12px] font-semibold">{label}</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">{subtitle}</small></span><ArrowRight size={15} className="text-[var(--color-text-tertiary)]"/>
         </button>
       </Card>)}
-    </div>
+    </fieldset>
     <div className="grid grid-cols-2 gap-4 max-[850px]:grid-cols-1">
       <section aria-labelledby={recentId}>
         <div className="mb-2 flex items-center justify-between"><h3 id={recentId} className="flex items-center gap-2 text-[12px] font-semibold"><History size={14}/>最近会话</h3><Button variant="link" size="sm" onClick={onOpenHistory}>全部会话 <ArrowRight size={13}/></Button></div>

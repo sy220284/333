@@ -14,7 +14,7 @@ export async function reserveTeamDirectory(
   root: string = getTeamsDir(),
 ): Promise<{ teamName: string; teamDir: string }> {
   const cleaned = requestedName.trim()
-  if (!cleaned || cleaned.length > 120 || !/[\\p{L}\\p{N}]/u.test(cleaned))
+  if (!cleaned || cleaned.length > 120 || !/[\p{L}\p{N}]/u.test(cleaned))
     throw new Error('团队名称须包含文字或数字，长度不能超过 120 字')
   // The inherited ASCII-only path sanitizer collapses Chinese names to '-'.
   // Add a stable suffix in that case so two distinct localized names do not
