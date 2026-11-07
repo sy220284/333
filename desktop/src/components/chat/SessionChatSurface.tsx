@@ -1,48 +1,67 @@
-import {useEffect,useState} from 'react'
-import {AlertTriangle,ArrowDown,Check,LoaderCircle,Send,ShieldCheck,Square} from 'lucide-react'
-import {Button} from '../ui/Button'
-import {MarkdownMessage} from '../../MarkdownMessage'
+import type { RefObject } from 'react'
+import { ArrowDown, ArrowRight, Bot, CircleStop, History, Send, ShieldCheck, Sparkles, SquareTerminal } from 'lucide-react'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
+import { MarkdownMessage } from '../../MarkdownMessage'
+import { TerminalChrome } from './TerminalChrome'
+import type { ConversationItem } from '../../projection'
 
-function ToolOutput({text}:{text:string}){
-  const lengthy=text.length>1200||text.split('\n').length>18
-  const failed=/(error|failed|exception|错误|失败|异常)/i.test(text)
-  const [expanded,setExpanded]=useState(failed)
-  const open=!lengthy||expanded
-  return <details className="yy-tool-output" open={open} onToggle={event=>setExpanded(event.currentTarget.open)}><summary>{lengthy?(open?'收起工具输出':`展开工具输出 · ${text.split('\n').length} 行`):'工具输出'}</summary><pre>{text}</pre></details>
-}
-
+type Model={value:string;displayName:string}
 export type SessionChatSurfaceProps={
-  sessionId:string;workspaceName:string;sessionName:string;busy:boolean;actionError:string
-  messages:any[];runs:any[];approvals:any[];sessionPhase:string;sessionStopReason:string
-  draft:string;setDraft:(value:string)=>void;send:(kind:string)=>void;stop:()=>void
-  approve:(approval:any,decision:'allow'|'deny')=>void;setNotice:(value:string)=>void
-  showThinking:boolean;setShowThinking:(value:boolean)=>void
-  showTools:boolean;setShowTools:(value:boolean)=>void
-  followLatest:boolean;setFollowLatest:(value:boolean)=>void
-  hasEarlier:boolean;loadingEarlier:boolean;loadEarlier:()=>void
-  chatScrollRef:React.RefObject<HTMLDivElement|null>;inputRef:React.RefObject<HTMLTextAreaElement|null>;registerElement:(id:string,element:HTMLElement|null)=>void
+  sessionId:string;sessionPhase:string;historyOnly:boolean;models:Model[];selectedModel:string;permissionMode:string;modelVerified:boolean;permissionVerified:boolean;
+  messages:ConversationItem[];visibleMessageCount:number;historyOffset:number;onLoadEarlier:()=>void;followLatest:boolean;permissionsCount:number;
+  draft:string;mode:'master'|'super';busy:boolean;connected:boolean;
+  smartRecord?:{model:string;status:"running"|"completed"|"failed"|"interrupted";costUsd?:number;budgetUsd?:number};
+  streamRef:RefObject<HTMLDivElement|null>;messagesEnd:RefObject<HTMLDivElement|null>;inputRef:RefObject<HTMLTextAreaElement|null>;
+  onModel:(value:string)=>void;onPermissionMode:(value:string)=>void;onStop:()=>void;
+  onScrollBottom:(value:boolean)=>void;onVisibleCount:(value:number)=>void;onFollowLatest:(value:boolean)=>void;
+  onOpenApprovals:()=>void;onDraft:(value:string)=>void;onSend:()=>void;onOpenLink:(url:string)=>void;
 }
-
+const prompts=['分析当前工作区的项目结构','检查当前工作区最新代码问题','规划一个多智能体协作任务']
 export function SessionChatSurface(p:SessionChatSurfaceProps){
-  const [marked,setMarked]=useState<number[]>([])
-  const sessionRun=p.runs.find((run:any)=>run.sessionId===p.sessionId)
-  const visibleApprovals=p.approvals.filter((approval:any)=>approval.status==='pending'&&approval.sessionId===p.sessionId)
-  const canStop=p.sessionPhase==='running'||p.sessionPhase==='requires_action'
-  const canSend=p.sessionPhase==='idle'||p.sessionPhase==='completed'||p.sessionPhase==='failed'||p.sessionPhase==='stopped'
-  useEffect(()=>{const input=p.inputRef.current;if(!input)return;input.style.height='auto';input.style.height=`${Math.min(input.scrollHeight,160)}px`},[p.draft,p.inputRef])
-  const phaseLabel=p.sessionPhase==='running'?'正在执行':p.sessionPhase==='requires_action'?'等待审批':p.sessionPhase==='failed'?'执行失败':p.sessionPhase==='stopped'?'已停止':p.sessionPhase==='completed'?'已完成':'待发送'
-  const runTone=p.sessionPhase==='running'?'info':p.sessionPhase==='failed'?'danger':p.sessionPhase==='completed'?'success':'neutral'
-  return <section className="yy-chat-surface">
-    <div className="yy-chat-status"><span><strong>{p.sessionName||'会话'}</strong><small>{p.workspaceName} · {p.sessionId||'尚未建立会话'}</small></span><span className="yy-chat-status-actions"><i className={`yy-badge yy-badge-${runTone}`}>{phaseLabel}</i><Button variant="ghost" size="sm" icon={<Square size={13}/>} onClick={p.stop} disabled={!canStop} title="停止当前任务" aria-label="停止当前任务"/></span></div>
-    <div className="yy-chat-display-options"><label><input type="checkbox" checked={p.showThinking} onChange={e=>p.setShowThinking(e.target.checked)}/>思考过程</label><label><input type="checkbox" checked={p.showTools} onChange={e=>p.setShowTools(e.target.checked)}/>工具过程</label></div>
-    {p.hasEarlier&&<div className="yy-history-earlier"><Button variant="secondary" size="sm" loading={p.loadingEarlier} onClick={p.loadEarlier}>加载更早消息</Button></div>}
-    {p.messages.length===0&&<div className="yy-chat-empty"><strong>这个会话还没有消息</strong><span>可以先描述目标，再让智能体拆解执行。</span><div>{['检查这个工作区的结构并给出入口','运行测试并解释失败原因','阅读项目文档，列出下一步建议'].map(text=><button key={text} type="button" onClick={()=>p.setDraft(text)}>{text}</button>)}</div></div>}
-    {p.messages.map((m:any,i:number)=><article className={`yy-message yy-message-${m.role||'event'}`} key={`${m.id||m.seq||i}`}><div className="yy-message-meta"><span>{m.role==='user'?'你':m.role==='assistant'?'智能体':m.event||m.kind||'事件'}</span><time>{m.createdAt?new Date(m.createdAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):''}</time></div>{(m.role==='user'||m.role==='assistant')?<><MarkdownMessage text={m.content||m.text||''}/>{m.streaming&&<span className="yy-stream-caret" aria-label="正在生成"/>}</>:m.thinking&&p.showThinking?<pre>{m.thinking}</pre>:m.tool&&p.showTools?<><strong className="yy-tool-name">{m.tool}</strong><ToolOutput text={m.output||m.error||m.text||''}/></>:m.kind&&m.kind!=='message'?<p>{m.text||m.reason||m.kind}</p>:null}{m.role==='assistant'&&<div className="yy-message-tools"><Button variant="ghost" size="xs" onClick={()=>{navigator.clipboard?.writeText(m.content||m.text||'');p.setNotice('已复制消息')}}>复制</Button><Button variant="ghost" size="xs" aria-pressed={marked.includes(i)} onClick={()=>setMarked(old=>old.includes(i)?old.filter(n=>n!==i):[...old,i])}>{marked.includes(i)?'已标记':'标记'}</Button></div>}</article>)}
-    {visibleApprovals.length>0&&<section className="yy-approval-stack" aria-label="待处理审批">{visibleApprovals.map((approval:any)=><div className="yy-approval" key={approval.id}><AlertTriangle size={17}/><div><strong>{approval.title||approval.kind||'需要你的批准'}</strong><p>{approval.detail||approval.reason||'本地引擎请求一项受控操作。'}</p></div><div className="yy-approval-actions"><Button size="base" variant="danger" onClick={()=>p.approve(approval,'deny')}>拒绝</Button><Button size="base" icon={<ShieldCheck size={14}/>} onClick={()=>p.approve(approval,'allow')}>批准</Button></div></div>)}</section>}
-    {!p.followLatest&&<Button className="yy-chat-latest" size="base" icon={<ArrowDown size={14}/>} onClick={()=>{p.setFollowLatest(true);requestAnimationFrame(()=>{if(p.chatScrollRef.current)p.chatScrollRef.current.scrollTop=p.chatScrollRef.current.scrollHeight})}}>回到最新消息</Button>}
-    {p.actionError&&<div className="yy-error" role="alert">{p.actionError}</div>}
-    <form className="yy-chat-composer" onSubmit={e=>{e.preventDefault();p.send('send')}}><textarea ref={p.inputRef} rows={1} value={p.draft} onChange={e=>p.setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();p.send('send')}}} placeholder={canSend?'描述目标，Enter 发送，Shift + Enter 换行':'当前阶段不能发送，可停止后重试'} aria-label="发送给智能体的消息" disabled={!canSend}/><div><span>{sessionRun?`运行 ${sessionRun.id?.slice(0,12)||''} · ${sessionRun.status||p.sessionPhase}`:p.sessionStopReason||'本地引擎流式连接'}</span><Button type="submit" loading={p.busy} icon={p.busy?<LoaderCircle size={15}/>:p.sessionPhase==='failed'?<Check size={15}/>:<Send size={15}/>} disabled={!canSend||!p.draft.trim()}>{p.sessionPhase==='failed'?'重试':'发送'}</Button></div></form>
+  const runState=p.historyOnly?'历史记录':({running:'执行中',requires_action:'等待确认',completed:'已完成',cancelled:'已取消',failed:'执行失败'} as Record<string,string>)[p.sessionPhase]||'待命'
+  return <section aria-label="AI 对话区" className="flex min-h-[540px] flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] shadow-[var(--shadow-card)]">
+    <div className="flex min-h-[57px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-3">
+      <div aria-live="polite" aria-atomic="true" className="flex items-center gap-2.5"><Badge size="sm" tone={p.sessionPhase==='running'?'warning':'neutral'}>{runState}</Badge>{p.sessionId&&<span title={p.sessionId} className="font-mono text-[11px] text-[var(--color-text-tertiary)]">会话 {p.sessionId.slice(0,8)}</span>}</div>
+      <div className="flex items-center gap-2">
+        <select aria-label="当前模型" value={p.sessionId&&!p.modelVerified?'__unknown__':p.selectedModel} disabled={p.historyOnly} onChange={e=>p.onModel(e.target.value)}>{p.sessionId&&!p.modelVerified&&<option value="__unknown__" disabled>模型未核实</option>}<option value="">默认模型</option>{p.models.map(m=><option key={m.value} value={m.value}>{m.displayName||m.value}</option>)}</select>
+        <select aria-label="权限模式" disabled={p.historyOnly||!p.sessionId} value={p.sessionId&&!p.permissionVerified?'unknown':p.permissionMode} onChange={e=>p.onPermissionMode(e.target.value)}>{p.sessionId&&!p.permissionVerified&&<option value="unknown" disabled>权限未核实</option>}<option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>
+        {p.sessionId&&!p.historyOnly&&<Button size="base" variant="ghost" onClick={p.onStop} aria-label="停止当前执行"><CircleStop size={17}/></Button>}
+      </div>
+    </div>
+    <div ref={p.streamRef} onScroll={e=>{const node=e.currentTarget;p.onScrollBottom(node.scrollHeight-node.scrollTop-node.clientHeight<96)}} className="flex min-h-[220px] flex-1 flex-col gap-5 overflow-y-auto px-5 py-6">
+      {p.messages.length===0?<div className="m-auto flex w-full max-w-[620px] flex-col items-center gap-4 text-center">
+        <EmptyState variant="plain" size="lg" icon={<Sparkles size={24}/>} title="今天想完成什么？" description="分析项目、编写代码、管理任务，或邀请智能体协作。"/>
+        <div className="flex flex-wrap justify-center gap-2">{prompts.map(prompt=><Button key={prompt} size="base" variant="secondary" onClick={()=>p.onDraft(prompt)}>{prompt}<ArrowRight size={13}/></Button>)}</div>
+      </div>:<>
+        {p.messages.length>p.visibleMessageCount?<Button variant="secondary" size="base" onClick={()=>{p.onVisibleCount(p.visibleMessageCount+120);p.onFollowLatest(false)}}>加载更早的 {Math.min(120,p.messages.length-p.visibleMessageCount)} 条消息</Button>:p.historyOffset>0?<Button variant="secondary" size="base" onClick={p.onLoadEarlier}>从磁盘加载更早的消息</Button>:null}
+        {p.messages.slice(-p.visibleMessageCount).map(m=><article key={m.id} className="mx-auto flex w-full max-w-[840px] gap-3">
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] ${(m.kind==='user'?'bg-[var(--color-brand-soft)] text-[var(--color-on-brand-soft)]':'bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]')}`}>{m.kind==='user'?<span className="text-[11px]">我</span>:m.kind==='assistant'?<Sparkles size={16}/>:<SquareTerminal size={16}/>}</div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex items-center gap-3"><span className="text-[12px] font-semibold">{m.kind==='user'?'你':m.kind==='assistant'?'摇摇车':'工具'}</span><time className="text-[10px] text-[var(--color-text-tertiary)]">{new Date(m.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</time></div>
+            {m.kind==='tool'?<TerminalChrome label="工具执行"><div className="max-h-96 overflow-auto px-4 py-3 font-mono text-xs whitespace-pre-wrap break-words">{m.text}</div></TerminalChrome>:<div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-[var(--color-text-primary)]">{m.kind==='assistant'?<MarkdownMessage text={m.text} onOpenLink={p.onOpenLink}/>:m.text}</div>}
+          </div>
+        </article>)}
+      </>}
+      <div ref={p.messagesEnd}/>
+    </div>
+    {!p.followLatest&&p.messages.length>0&&<div className="flex justify-center pb-2"><Button variant="tonal" size="sm" onClick={()=>p.onFollowLatest(true)}><ArrowDown size={13}/>回到最新消息</Button></div>}
+    {p.permissionsCount>0&&<div className="flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-warning-container)] px-5 py-3 text-[12px] text-[var(--color-on-warning-container)]"><ShieldCheck size={17}/><span>{p.permissionsCount} 项工具操作等待批准</span><Button variant="secondary" size="sm" onClick={p.onOpenApprovals}>查看审批<ArrowRight size={13}/></Button></div>}
+    {p.smartRecord&&<div aria-live="polite" className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] px-5 py-2 text-[11px] text-[var(--color-text-secondary)]">
+      <span>{p.smartRecord.model} · {p.smartRecord.status==="running"?"执行中":p.smartRecord.status==="completed"?"已完成":p.smartRecord.status==="failed"?"执行失败":"已中断"}</span>
+      <span>费用 {p.smartRecord.costUsd===undefined?"待确认":`USD ${p.smartRecord.costUsd.toFixed(4)}`}</span>
+      {p.smartRecord.budgetUsd!==undefined&&<span>· 上限 USD {p.smartRecord.budgetUsd.toFixed(2)}</span>}
+    </div>}
+    {p.historyOnly&&<div className="flex items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-5 py-3 text-[12px] text-[var(--color-text-secondary)]"><History size={16}/>当前正在查看历史执行记录。发送新消息时将恢复原会话。</div>}
+    <div className="shrink-0 border-t border-[var(--color-border)] p-4">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 pt-3 shadow-[var(--shadow-composer)]">
+        <textarea ref={p.inputRef} aria-label="输入任务" value={p.draft} onChange={e=>p.onDraft(e.target.value)} placeholder="描述任务，支持引用项目文件与技能…" rows={3} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();p.onSend()}}} className="min-h-[68px] w-full resize-none border-0! bg-transparent! shadow-none! focus:shadow-none!"/>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] py-2.5">
+          <div className="flex items-center gap-3 text-[11px] text-[var(--color-text-tertiary)]"><span className="flex items-center gap-1.5"><Bot size={14}/>{p.mode==='super'?'Super Agents':'主子智能体'}</span><span>Ctrl / ⌘ + Enter 发送</span></div>
+          <Button variant="accent" size="base" aria-label="发送" disabled={!p.draft.trim()||p.busy||!p.connected} onClick={p.onSend}><Send size={15}/>发送</Button>
+        </div>
+      </div>
+    </div>
   </section>
 }
-
-export function EventMessage({event}:{event:any}){return <div className="yy-system-event"><MarkdownMessage text={String(event.text||event.kind||'')}/></div>}
