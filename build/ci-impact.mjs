@@ -92,6 +92,8 @@ export const SPECIALISTS = Object.freeze({
     /^src\/query(?:\.ts|\/turnEffort317\.ts)$/,
     /^src\/utils\/(?:thinking|effort|attachments)\.ts$/,
     /^tests\/m2-ultrathink-turn-effort-317\.test\.ts$/,
+    /^tests\/m2-ultrathink-release-request-317\.test\.mjs$/,
+    /^build\/rebuild\.mjs$/,
     /^tests\/.*(?:prompt|system-prompt)/,
   ],
   'm6-gateway-providers-317': [
