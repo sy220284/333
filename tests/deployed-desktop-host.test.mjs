@@ -168,13 +168,13 @@ test('已编译发行宿主：启动、长期目标、排队、取消、归档�
 // Minimal real stdio SDK child: same 2.1.317 control/stream-json wire shape as
 // the SDK contract tests. It returns a deterministic local result without
 // requiring network access or an API key.
-const offlineCli = String.raw\`
+const offlineCli = String.raw`
 import { createInterface } from 'node:readline'
 import { randomUUID } from 'node:crypto'
 const args=process.argv.slice(2)
 const pick=flag=>{const i=args.indexOf(flag);return i<0?undefined:args[i+1]}
 const sessionId=pick('--session-id')||pick('--resume')||randomUUID()
-const send=frame=>process.stdout.write(JSON.stringify(frame)+'\\n')
+const send=frame=>process.stdout.write(JSON.stringify(frame)+'\n')
 const meta=()=>({session_id:sessionId,uuid:randomUUID()})
 const reply=(id,payload)=>send({type:'control_response',response:{subtype:'success',request_id:id,response:payload}})
 const reader=createInterface({input:process.stdin,crlfDelay:Infinity})
@@ -199,9 +199,9 @@ reader.on('line',line=>{
         stop_reason:null,total_cost_usd:0,usage:{},modelUsage:{},
         permission_denials:[],...meta()})
     }
-  }catch(error){process.stderr.write(String(error)+'\\n');process.exitCode=1}
+  }catch(error){process.stderr.write(String(error)+'\n');process.exitCode=1}
 })
-\`
+`
 
 test('真实桌面发行宿主和SDK子进程：工作项进入审核、人工确认及重启持久化', {
   timeout: 100000,
