@@ -188,6 +188,7 @@ const BRIEF_TOOL_NAME: string | null =
     : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { hasUltrathinkKeyword, isUltrathinkEnabled } from './thinking.js'
+import { modelSupportsXHighEffort } from './effort.js'
 import {
   tokenCountFromLastAPIResponse,
   tokenCountWithEstimation,
@@ -663,7 +664,7 @@ export type Attachment =
     }
   | {
       type: 'ultrathink_effort'
-      level: 'high'
+      level: 'high' | 'xhigh'
     }
   | {
       type: 'deferred_tools_delta'
@@ -783,7 +784,7 @@ export async function getAttachments(
       Promise.resolve(getDateChangeAttachments(messages)),
     ),
     maybe('ultrathink_effort', () =>
-      Promise.resolve(getUltrathinkEffortAttachment(input)),
+      Promise.resolve(getUltrathinkEffortAttachment(input, toolUseContext.options.mainLoopModel)),
     ),
     maybe('deferred_tools_delta', () =>
       Promise.resolve(
@@ -1385,12 +1386,15 @@ export function getDateChangeAttachments(
   return [{ type: 'date_change', newDate: currentDate }]
 }
 
-function getUltrathinkEffortAttachment(input: string | null): Attachment[] {
+function getUltrathinkEffortAttachment(input: string | null, model: string): Attachment[] {
   if (!isUltrathinkEnabled() || !input || !hasUltrathinkKeyword(input)) {
     return []
   }
   logEvent('tengu_ultrathink', {})
-  return [{ type: 'ultrathink_effort', level: 'high' }]
+  return [{
+    type: 'ultrathink_effort',
+    level: modelSupportsXHighEffort(model) ? 'xhigh' : 'high',
+  }]
 }
 
 // Exported for compact.ts — the gate must be identical at both call sites.
