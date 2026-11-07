@@ -92,6 +92,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
          updatedAt:'2026-11-07T10:00:00Z',sessionId:OTHER},
       ]:[],
     }
+    case 'supervisor.snapshot':return {findings:[],counts:{blocked:0,review:0,followup:0}}
     case 'agents.profiles.list':return {agents:showProfileSample?[{
       id:PROFILE_ID,name:'文字研究成员',description:'维护可验证的研究与文字产出',domains:['研究','文案'],
       capabilityIds:[],experienceKeys:[],status:'available',sessionBindings:[],roles:[{
