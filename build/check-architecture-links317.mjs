@@ -38,7 +38,6 @@ const contracts = [
   ['M4', 'src/utils/sessionStorage.ts', 'src/utils/sessionTranscriptPathsV5.ts'],
   ['M5', 'src/main.tsx', 'src/utils/plugins/pluginLoader.ts'],
   ['M6', 'src/cli/print.ts', 'src/QueryEngine.ts'],
-  ['M6', 'src/entrypoints/cli.tsx', 'src/cli/selfHostedRunner/runnerHost317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerApi317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/cli/selfHostedRunner/runnerWorkspace317.ts'],
   ['M6', 'src/cli/selfHostedRunner/runnerHost317.ts', 'src/bridge/sessionRunner.ts'],
@@ -82,6 +81,22 @@ for (const [layer, from, target] of contracts) {
   } catch (error) {
     failures.push(layer + ': ' + (error instanceof Error ? error.message : String(error)))
   }
+}
+
+// Official enterprise/cloud command entrypoints are retired. Keep the
+// recovered source modules for upstream comparisons but enforce that the
+// independent product cannot launch these routes accidentally.
+for (const [entry, retired] of [
+  ['src/entrypoints/cli.tsx','src/cli/selfHostedRunner/runnerHost317.ts'],
+  ['src/main.tsx','src/cli/gateway/gatewayServer317.ts'],
+]) {
+  if (importTargets(read(entry),entry).includes(canonicalModule(retired))) {
+    failures.push(`Retired enterprise route leaked into product: ${entry} -> ${retired}`)
+  }
+}
+if (read('src/entrypoints/cli.tsx').includes("args[0] === 'self-hosted-runner'") ||
+    read('src/main.tsx').includes("program.command('gateway')")) {
+  failures.push('Retired cloud runner or enterprise Gateway remains registered in production CLI')
 }
 
 const cli = read('src/entrypoints/cli.tsx')
