@@ -18,6 +18,9 @@ const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
 let failMcpRefresh=false
+let suspendMcpRefresh=false
+let releaseMcpRefresh:(()=>void)|undefined
+let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let longHistory=false
@@ -30,7 +33,13 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
-    case 'missions.list':return showHistoricalJob
+    case 'missions.create': {
+      createdMission={id:'mission_0123456789abcdef',objective:String(args.objective),status:'active'}
+      return createdMission
+    }
+    case 'missions.list':
+      if(createdMission)return {missions:[createdMission],selectedMissionId:createdMission.id}
+      return showHistoricalJob
       ? {missions:[{missionId:'mission-fixture',objective:'历史任务',status:'active'}],selectedMissionId:'mission-fixture'}
       : {missions:[],selectedMissionId:null}
     case 'missions.jobs.list':return showHistoricalJob
@@ -51,6 +60,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
       return {path:'/projects/example',total:manyFiles?260:0,entries:Array.from({length:Math.max(0,end-offset)},(_,i)=>({name:`file-${offset+i}.ts`,path:`/projects/example/file-${offset+i}.ts`,directory:false}))}
     }
     case 'mcp.list':
+      if(suspendMcpRefresh)await new Promise<void>(resolve=>{releaseMcpRefresh=resolve})
       if(failMcpRefresh)throw new Error('MCP 服务离线')
       return {servers:[{name:'project-mcp',scope:'project',type:'http',url:'https://example.org/mcp',disabled:false}],errors:[]}
     case 'sessions.open':return {sessionId:SID,tasks:mockTasks}
@@ -71,7 +81,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -176,6 +186,21 @@ describe('摇摇车真实桌面页面交互',()=>{
     render(<App/>)
     await screen.findByText('本地后台已连接')
     await screen.findByText(/刷新部分失败：MCP服务：MCP 服务离线/)
+  })
+
+  it('长期任务创建后立即显示结果，MCP 服务卡住也不影响用户操作',async()=>{
+    suspendMcpRefresh=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'真实安装版任务创建测试')
+    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+    await waitFor(()=>expect(screen.getByRole('heading',{name:'真实安装版任务创建测试'})).toBeInTheDocument())
+    expect(screen.getByText('Super Agents 工作项')).toBeInTheDocument()
+    expect(screen.getByRole('button',{name:'创建并选中任务'})).not.toBeDisabled()
+    expect(call).toHaveBeenCalledWith('missions.create',{objective:'真实安装版任务创建测试'})
+    await act(async()=>{suspendMcpRefresh=false;releaseMcpRefresh?.()})
   })
 
   it('加载真实工作区、模型和九个导航入口',async()=>{
