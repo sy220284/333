@@ -901,6 +901,9 @@ export function App(){
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setHostForms({});setTasks([]);setAgentActivities([]);setAgentActivityCount(0);setFiles([]);setFileTotal(0)
       setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setMissionActivity([]);setJobEvidence({});setOverview({});setTeamMembers([])
+      setAgentProfiles([]);setTeamHandoffs([]);setSupervisor(null);setArtifacts([])
+      setCapabilityItems([]);setCapabilityWarnings([]);setExperienceItems([]);setSkillDrafts([])
+      setExperienceEvidence({});setExperienceReviewNotes({});setArtifactChecks({});setArtifactReviews({});setHandoffReviewNotes({})
       setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
       setSelectedModel('');setPermissionMode('default');setModelVerified(false);setPermissionVerified(false)
       setHistoryOffset(0);setSmartHistory([]);setProjectBudget(null);projectBudgetInitialized.current=false
