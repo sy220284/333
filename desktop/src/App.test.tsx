@@ -26,6 +26,7 @@ let activeAgentMode:'master'|'super'='master'
 let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
 let failTeamDeliveryAck=false
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
+let showAgentActivitySample=false
 let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number;
   uncertain:Array<{id:string;reservedUsd:number;startedAt:string}>}={
   limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]}
@@ -75,6 +76,15 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
         :longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     }
     case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
+    case 'agents.activity':return {
+      totalVisible:showAgentActivitySample?2:0,
+      activities:showAgentActivitySample?[
+        {id:'job:mission_0123456789abcdef:job_0123456789abcdef',source:'mission-job',title:'长期审计工作',status:'review',
+         updatedAt:'2026-11-07T11:00:00Z',missionId:'mission_0123456789abcdef',jobId:'job_0123456789abcdef'},
+        {id:`session:${OTHER}:agent-x`,source:'session-task',title:'另一会话检查',status:'running',
+         updatedAt:'2026-11-07T10:00:00Z',sessionId:OTHER},
+      ]:[],
+    }
     case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
     case 'agents.team.message':
       if(failTeamDeliveryAck){failTeamDeliveryAck=false;throw new Error('模拟信箱确认丢失')}
@@ -158,7 +168,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];showAgentActivitySample=false;smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0,uncertain:[]};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;twoSessions=false;delayedHistoryId='';releaseHistory=undefined;delayedSessionList=false;releaseSessionList=undefined;delayedSave=false;releaseSave=undefined;delayedApprovalLists=false;releasePermissionList=undefined;releaseHostList=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -541,6 +551,23 @@ describe('摇摇车真实桌面页面交互',()=>{
       message:{type:'result',subtype:'success',result:'团队建队工具已返回'}
     }))
     await waitFor(()=>expect(call.mock.calls.filter(entry=>entry[0]==='agents.overview').length).toBeGreaterThan(prior))
+  })
+
+  it('跨模式总览从统一查询获取历史任务，并接收其他会话实时更新且不污染当前任务',async()=>{
+    showAgentActivitySample=true
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('长期审计工作')
+    expect(screen.getByText('另一会话检查')).toBeInTheDocument()
+    expect(call).toHaveBeenCalledWith('agents.activity',{})
+    await act(async()=>listener({
+      event:'task.updated',sessionId:OTHER,
+      task:{taskId:'new-agent',description:'跨会话并行核查',status:'running'},
+    }))
+    expect(await screen.findByText('跨会话并行核查')).toBeInTheDocument()
+    expect(screen.getByText('尚无运行中的智能体任务')).toBeInTheDocument()
   })
 
   it('团队增员由原生 AgentTool 执行，需有效长期目标和用户确认',async()=>{
