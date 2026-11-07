@@ -43,7 +43,6 @@ type Props = {
   onPermission: (value: Props['permission']) => void
   executions: SmartExecutionPreview[]
   onOpenExecution: (sessionId: string) => void
-  onCreateSession: () => void
   onSuggestion: (value: string) => void
   onOpenSession: (id: string) => void
   onOpenHistory: () => void
@@ -57,7 +56,7 @@ const executionText: Record<SmartExecutionPreview['status'], string> = {
 export function NewSessionStarter({
   projectName, modelName, teamMode, sessions, missions, task, onTask, onExecute,
   busy, connected, models, selectedModel, onModel, budget, onBudget,
-  permission, onPermission, executions, onOpenExecution, onCreateSession,
+  permission, onPermission, executions, onOpenExecution,
   onSuggestion, onOpenSession, onOpenHistory, onOpenMission, onOpenMissionBoard,
 }: Props) {
   const recentId = useId()
@@ -123,7 +122,7 @@ export function NewSessionStarter({
         <span className="flex items-center gap-1.5"><Cpu size={13}/>{modelName}</span>
       </div>
     </Card>
-    <div role="group" className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-3 max-[850px]:grid-cols-1" aria-label="建议的任务">
+    <fieldset className="mx-auto grid w-full min-w-0 max-w-[720px] grid-cols-2 gap-3 border-0 p-0 max-[850px]:grid-cols-1" aria-label="建议的任务">
       {suggestions.map(({label,subtitle,prompt,icon:Icon}) =>
         <Card key={label} radius="lg" padding="none" surface="lowest" shadow="card" interactive lift>
           <button type="button" onClick={() => {onSuggestion(prompt); inputRef.current?.focus()}}
@@ -133,7 +132,7 @@ export function NewSessionStarter({
             <ArrowRight size={15} className="text-[var(--color-text-tertiary)]"/>
           </button>
         </Card>)}
-    </div>
+    </fieldset>
     {executions.length > 0 && <section aria-label="智能执行记录" className="mx-auto w-full max-w-[720px] space-y-2">
       <h3 className="flex items-center gap-2 text-[12px] font-semibold"><History size={14}/>最近智能执行</h3>
       <div className="grid grid-cols-2 gap-2 max-[750px]:grid-cols-1">
@@ -141,7 +140,7 @@ export function NewSessionStarter({
           <button type="button" key={record.sessionId} onClick={() => onOpenExecution(record.sessionId)}
             className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-lowest)] px-3 py-3 text-left text-[11px] hover:border-[var(--color-brand)]">
             <span className="min-w-0 flex-1 truncate">{record.model} · {executionText[record.status]}</span>
-            <span className="text-[var(--color-text-tertiary)]">{record.costUsd === undefined ? '费用待确认' : '$' + record.costUsd.toFixed(4)}</span>
+            <span className="text-[var(--color-text-tertiary)]">{record.costUsd === undefined ? '费用待确认' : `${record.costUsd.toFixed(4)}`}</span>
           </button>)}
       </div>
     </section>}

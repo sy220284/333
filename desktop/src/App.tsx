@@ -724,7 +724,7 @@ export function App(){
         </div>
       </header>
       <div className="yy-columns flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <div className="yy-page min-w-0 flex-1 overflow-y-auto" data-view={view}>
+        <div key={view} className="yy-page min-w-0 flex-1 overflow-y-auto" data-view={view}>
           <div className="yy-page-inner mx-auto w-full max-w-[1220px] px-6 py-6">
           {view!=='dashboard'&&<div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>}
           {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
@@ -739,7 +739,7 @@ export function App(){
             models={models} selectedModel={selectedModel} onModel={setSelectedModel}
             budget={smartBudget} onBudget={setSmartBudget} permission={smartPolicy} onPermission={setSmartPolicy}
             executions={smartHistory} onOpenExecution={id=>void resumeSession(id)}
-            onCreateSession={()=>void createSession()} onSuggestion={setDraft}
+            onSuggestion={setDraft}
             onOpenSession={id=>id===sessionId?setView('chat'):void resumeSession(id)}
             onOpenHistory={()=>setView('history')}
             onOpenMission={id=>{setSelectedMission(id);setView('missions')}}
@@ -838,7 +838,7 @@ export function App(){
                   </div>
                 </div>
                 <div className="space-y-3">
-                  {missionJobs.map(job=><Card key={job.id} radius="lg" padding="md" surface="base" border="solid" className="job-card">
+                  {missionJobs.map(job=><Card key={job.id} radius="lg" padding="md" surface="base" border="solid" className="min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="text-[13px] font-semibold">{job.title}</h4>
                       <Badge size="sm" tone={job.status==='completed'?'success':job.status==='review'||job.status==='running'?'warning':job.status==='failed'||job.status==='interrupted'?'danger':'neutral'}>{({queued:'排队中',running:'执行中',review:'待审核',completed:'已完成',failed:'执行失败',interrupted:'已中断',cancelled:'已取消'} as Record<string,string>)[job.status]||job.status}</Badge>
