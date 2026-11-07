@@ -130,6 +130,8 @@ type State = {
   inMemoryErrorLog: Array<{ error: string; timestamp: string }>
   // Session-only plugins from --plugin-dir flag
   inlinePlugins: Array<string>
+  // Session-only plugins with MCP discovery explicitly disabled.
+  inlinePluginsWithoutMcp: Array<string>
   // Explicit --chrome / --no-chrome flag value (undefined = not set on CLI)
   chromeFlagOverride: boolean | undefined
   // Use cowork_plugins directory instead of plugins (--cowork flag or env var)
@@ -356,6 +358,7 @@ function getInitialState(): State {
     inMemoryErrorLog: [],
     // Session-only plugins from --plugin-dir flag
     inlinePlugins: [],
+    inlinePluginsWithoutMcp: [],
     // Explicit --chrome / --no-chrome flag value (undefined = not set on CLI)
     chromeFlagOverride: undefined,
     // Use cowork_plugins directory instead of plugins
@@ -1282,6 +1285,14 @@ export function setInlinePlugins(plugins: Array<string>): void {
 
 export function getInlinePlugins(): Array<string> {
   return STATE.inlinePlugins
+}
+
+export function setInlinePluginsWithoutMcp(paths: Array<string>): void {
+  STATE.inlinePluginsWithoutMcp = paths
+}
+
+export function getInlinePluginsWithoutMcp(): Array<string> {
+  return STATE.inlinePluginsWithoutMcp
 }
 
 export function setChromeFlagOverride(value: boolean | undefined): void {
