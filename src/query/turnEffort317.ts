@@ -1,4 +1,5 @@
 import type { Message } from '../types/message.js'
+import type { QueuedCommand } from '../types/textInputTypes.js'
 import { hasUltrathinkKeyword } from '../utils/thinking.js'
 
 /**
@@ -24,4 +25,22 @@ export function turnRequestsUltrathink(
     return hasUltrathinkKeyword(text)
   }
   return false
+}
+
+/**
+ * The 317 terminal also accepts a boost submitted WHILE a turn is running.
+ * A queued human prompt is the only permitted source; shell commands,
+ * subagent notifications and tool responses cannot change model effort.
+ */
+export function queuedTurnRequestsUltrathink(
+  commands: readonly QueuedCommand[],
+): boolean {
+  return commands.some(command =>
+    command.mode === 'prompt' &&
+    command.agentId === undefined &&
+    hasUltrathinkKeyword(
+      command.preExpansionValue ??
+      (typeof command.value === 'string' ? command.value : ''),
+    ),
+  )
 }
