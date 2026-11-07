@@ -255,7 +255,7 @@ const controlParityCli = String.raw`
 import { createInterface } from 'node:readline'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-const out = frame => process.stdout.write(JSON.stringify(frame) + '\\n')
+const out = frame => process.stdout.write(JSON.stringify(frame) + '\n')
 const replies = []
 const reader = createInterface({ input: process.stdin, crlfDelay: Infinity })
 reader.on('line', line => {
