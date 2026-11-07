@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="摇摇车应用图标">
+<defs>
+  <linearGradient id="base" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#304A88"/><stop offset=".50" stop-color="#263762"/><stop offset="1" stop-color="#171E3B"/></linearGradient>
+  <linearGradient id="orbit" x1=".13" y1=".06" x2=".88" y2=".91"><stop offset="0" stop-color="#C7D1FF"/><stop offset=".48" stop-color="#9EAFFF"/><stop offset="1" stop-color="#7CDBD3"/></linearGradient>
+  <linearGradient id="core" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".72" stop-color="#BCC9FF"/><stop offset="1" stop-color="#8DE7D7"/></linearGradient>
+  <radialGradient id="light" cx=".29" cy=".16" r=".89"><stop offset="0" stop-color="#748DFF" stop-opacity=".25"/><stop offset="1" stop-color="#748DFF" stop-opacity="0"/></radialGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="26"/></filter>
+</defs>
+<rect x="20" y="20" width="984" height="984" rx="225" fill="url(#base)"/>
+<rect x="20" y="20" width="984" height="984" rx="225" fill="url(#light)"/>
+<rect x="35" y="35" width="954" height="954" rx="213" fill="none" stroke="#A8B6FF" stroke-opacity=".30" stroke-width="7"/>
+<circle cx="512" cy="522" r="266" fill="#6675F6" opacity=".13" filter="url(#shadow)"/>
+<circle cx="512" cy="512" r="284" fill="none" stroke="#A9BCFF" stroke-opacity=".12" stroke-width="11"/>
+<path d="M265 407 C345 272 524 239 664 299 C750 339 802 413 803 503" fill="none" stroke="url(#orbit)" stroke-width="37" stroke-linecap="round"/>
+<path d="M759 641 C664 787 469 811 324 730 C250 688 215 605 228 514" fill="none" stroke="url(#orbit)" stroke-width="37" stroke-linecap="round" opacity=".80"/>
+<path d="M363 363 L510 519 L659 360 M510 519 L510 693" fill="none" stroke="url(#core)" stroke-width="75" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="702" cy="329" r="37" fill="#91EFDD"/>
+<circle cx="305" cy="701" r="30" fill="#AFBAFF"/>
+<path d="M257 273 L257 317 M235 295 L279 295" stroke="#C8D3FF" stroke-width="17" stroke-linecap="round" opacity=".68"/>
+</svg>
