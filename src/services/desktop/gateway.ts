@@ -632,7 +632,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'agent_activity', 'team_mailbox', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
+          capabilities: ['models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'agent_activity', 'team_mailbox', 'capability_catalog', 'experience_memory', 'missions', 'mission_jobs', 'smart_execute', 'smart_start', 'smart_inspect', 'smart_history'],
         }
       case 'budget.project.get': return projectBudget.reconcile()
       case 'budget.project.resolveUnknown':
@@ -739,6 +739,31 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         } finally {
           purgeRunning = false
         }
+      }
+      case 'capabilities.list': {
+        const { listCapabilityCatalog } = await import('../agentCenter/capabilityCatalog.js')
+        return listCapabilityCatalog(cwd)
+      }
+      case 'experience.list': {
+        const { listProjectExperiences } = await import('../agentCenter/experienceMemory.js')
+        return { experiences: await listProjectExperiences(cwd, { includeCandidates: request.includeCandidates }) }
+      }
+      case 'experience.search': {
+        const { findRelevantExperiences } = await import('../agentCenter/experienceMemory.js')
+        return { experiences: await findRelevantExperiences(cwd, request.query) }
+      }
+      case 'experience.propose': {
+        const { proposeProjectExperience, validateExperienceDraft } =
+          await import('../agentCenter/experienceMemory.js')
+        return proposeProjectExperience(cwd, validateExperienceDraft(request.draft))
+      }
+      case 'experience.approve': {
+        const { approveProjectExperience } = await import('../agentCenter/experienceMemory.js')
+        return approveProjectExperience(cwd, request.experienceId, request.reviewer)
+      }
+      case 'experience.retire': {
+        const { retireProjectExperience } = await import('../agentCenter/experienceMemory.js')
+        return retireProjectExperience(cwd, request.experienceId, request.reason)
       }
       case 'models.list': return models(request.sessionId)
       case 'mcp.list': {
