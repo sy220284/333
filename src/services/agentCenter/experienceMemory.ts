@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path'
 import { z } from 'zod/v4'
 import * as lockfile from '../../utils/lockfile.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { inspectExperienceEvidence, type ExperienceEvidenceCheck } from './experienceEvidence.js'
 
 const ruleFields = z.strictObject({
   key: z.string().regex(/^[a-z0-9][a-z0-9._-]{2,95}$/),
@@ -29,6 +30,12 @@ const experienceSchema = ruleFields.extend({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   verifiedBy: z.string().min(1).max(128).optional(),
+  reviewNote: z.string().trim().min(16).max(1500).optional(),
+  evidenceSnapshot: z.array(z.strictObject({
+    ref: z.string().min(3).max(400),
+    status: z.enum(['verified','manual','missing']),
+    fingerprint: z.string().optional(),
+  })).max(20).optional(),
   retiredReason: z.string().min(8).max(1000).optional(),
 })
 const documentSchema = z.strictObject({
@@ -96,8 +103,18 @@ export async function listProjectExperiences(
   projectDir: string,
   options: { includeCandidates?: boolean; root?: string } = {},
 ): Promise<ProjectExperience[]> {
-  const doc = await readDocument(projectDir, options.root ?? getClaudeConfigHomeDir())
-  return doc.experiences.filter(item => options.includeCandidates || item.status === 'approved')
+  const root = options.root ?? getClaudeConfigHomeDir()
+  const doc = await readDocument(projectDir, root)
+  const selected = doc.experiences.filter(item => options.includeCandidates || item.status === 'approved')
+  if (options.includeCandidates) return selected
+  const verified = await Promise.all(selected.map(async item => {
+    const snapshots = item.evidenceSnapshot?.filter(check=>check.ref.startsWith('file:')) ?? []
+    if (!snapshots.length) return item
+    const checks = await inspectExperienceEvidence(projectDir,snapshots.map(check=>check.ref),root)
+    return checks.every((check,index)=>check.status==='verified' &&
+      check.fingerprint===snapshots[index]?.fingerprint) ? item : null
+  }))
+  return verified.filter((item): item is ProjectExperience => item !== null)
 }
 export function validateExperienceDraft(input: unknown): ExperienceDraft {
   return ruleFields.parse(input)
@@ -127,15 +144,27 @@ export async function proposeProjectExperience(
 /** Must be invoked after an authorized reviewer checks evidence in the original task. */
 export async function approveProjectExperience(
   projectDir: string, id: string, reviewer: string, root = getClaudeConfigHomeDir(),
+  reviewNote?: string,
 ): Promise<ProjectExperience> {
   if (!z.string().uuid().safeParse(id).success || !reviewer.trim()) throw new Error('需要有效经验 ID 与审核人')
+  const note = z.string().trim().min(16).max(1500).parse(reviewNote)
+  const candidate = (await readDocument(projectDir,root)).experiences.find(item=>item.id===id)
+  if (!candidate) throw new Error('经验条目不存在')
+  const inspection = await inspectExperienceEvidence(projectDir,candidate.evidenceRefs,root)
+  if (inspection.some(check=>check.status==='missing'))
+    throw new Error('引用证据缺失或越界，请重新核查项目成果后审核')
   return mutate(projectDir, doc => {
     const previous = doc.experiences.find(item => item.id === id)
     if (!previous) throw new Error('经验条目不存在')
     if (previous.status === 'approved') return { doc, item: previous }
     if (previous.status !== 'candidate') throw new Error('已废弃经验不能直接批准')
+    if (JSON.stringify(previous.evidenceRefs) !== JSON.stringify(candidate.evidenceRefs))
+      throw new Error('审核期间证据已变更，请重新核对')
     const item: ProjectExperience = {
       ...previous, status: 'approved', verifiedBy: reviewer.trim().slice(0, 128),
+      reviewNote: note,
+      evidenceSnapshot: inspection.map(({ref,status,fingerprint})=>
+        ({ref,status,...(fingerprint ? {fingerprint} : {})})),
       revision: previous.revision + 1, updatedAt: new Date().toISOString(),
     }
     return { doc: { ...doc, experiences: doc.experiences.map(v => v.id === id ? item : v) }, item }
@@ -170,4 +199,19 @@ export async function findRelevantExperiences(
     return { item, score: tokens.filter(token => subject.includes(token)).length }
   }).filter(x => x.score > 0).sort((a, b) => b.score - a.score || a.item.key.localeCompare(b.item.key))
     .slice(0, 8).map(x => x.item)
+}
+
+/** Read-only preflight; manual references need a review note before approval. */
+export async function previewProjectExperienceEvidence(
+  projectDir: string, id: string, root = getClaudeConfigHomeDir(),
+): Promise<{checks: ExperienceEvidenceCheck[]; mayApprove: boolean; requiresHumanReview: boolean}> {
+  if (!z.string().uuid().safeParse(id).success) throw new Error('经验规范 ID 无效')
+  const item = (await readDocument(projectDir,root)).experiences.find(record=>record.id===id)
+  if (!item) throw new Error('经验规范不存在')
+  const checks = await inspectExperienceEvidence(projectDir,item.evidenceRefs,root)
+  return {
+    checks,
+    mayApprove: checks.every(check=>check.status!=='missing'),
+    requiresHumanReview:checks.some(check=>check.status==='manual'),
+  }
 }
