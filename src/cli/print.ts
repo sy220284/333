@@ -5313,7 +5313,7 @@ export type McpSetServersResult = {
  * Handles mcp_set_servers requests by processing both SDK and process-based servers.
  * SDK servers run in the SDK process; process-based servers are spawned by the CLI.
  *
- * Applies enterprise allowedMcpServers/deniedMcpServers policy — same filter as
+ * Applies locally configured allowedMcpServers/deniedMcpServers policy — same filter as
  * --mcp-config (see filterMcpServersByPolicy call in main.tsx). Without this,
  * SDK V2 Query.setMcpServers() was a second policy bypass vector. Blocked servers
  * are reported in response.errors so the SDK consumer knows why they weren't added.
@@ -5324,7 +5324,7 @@ export async function handleMcpSetServers(
   dynamicState: DynamicMcpState,
   setAppState: (f: (prev: AppState) => AppState) => void,
 ): Promise<McpSetServersResult> {
-  // Enforce enterprise MCP policy on process-based servers (stdio/http/sse).
+  // Enforce locally configured MCP allow/deny policy on process-based servers (stdio/http/sse).
   // Mirrors the --mcp-config filter in main.tsx — both user-controlled injection
   // paths must have the same gate. type:'sdk' servers are exempt (SDK-managed,
   // CLI never spawns/connects for them — see filterMcpServersByPolicy jsdoc).
@@ -5333,7 +5333,7 @@ export async function handleMcpSetServers(
   const policyErrors: Record<string, string> = {}
   for (const name of blocked) {
     policyErrors[name] =
-      'Blocked by enterprise policy (allowedMcpServers/deniedMcpServers)'
+      'Blocked by local MCP allow/deny policy'
   }
 
   // Separate SDK servers from process-based servers
