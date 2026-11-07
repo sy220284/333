@@ -89,6 +89,9 @@ export const SDKControlInitializeResponseSchema = lazySchema(() =>
         .optional()
         .describe('@internal CLI process PID for tmux socket isolation'),
       fast_mode_state: FastModeStateSchema().optional(),
+      /** 2.1.317 SDK requires this acknowledgment for blocking hooks. */
+      hook_on_failure_supported: z.boolean().optional(),
+      hooks_applied: z.boolean().optional(),
     })
     .describe(
       'Response from session initialization with available commands, models, and account info.',
