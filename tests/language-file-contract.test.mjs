@@ -125,19 +125,25 @@ test('主测试套件按 Node/Bun 分类执行并包含未注册用例扫描', (
   ]) {
     const command = scripts[name]
     const parts = command.split(/\s*&&\s*/)
-    // OAuth suites deliberately run in fresh Bun processes: retain the
-    // language contract for direct files and require the isolated sub-suite.
-    if (name === 'test:bun') {
-      assert.equal(parts.pop(), 'npm run test:multimodel',
-        'Bun must run ChatGPT account tests through the isolated suite')
+    // OAuth suites remain isolated, and other Bun suites may intentionally
+    // run in their own process when global state requires an independent host.
+    const isolated = parts.filter(part => part === 'npm run test:multimodel')
+    assert.equal(isolated.length, name === 'test:bun' ? 1 : 0,
+      `${name}: ChatGPT account tests must run exactly once in the isolated suite`)
+    const directCommands = parts.filter(part => part !== 'npm run test:multimodel')
+    if (name === 'test:node') assert.equal(directCommands.length, 1, 'Node tests require a single runner')
+    else assert.ok(directCommands.length >= 1, 'Bun tests require at least one direct runner')
+    const seen = new Set()
+    for (const direct of directCommands) {
+      assert.ok(direct.startsWith(runtime), `${name}: wrong runtime`)
+      const files = direct.slice(runtime.length).trim().split(/\s+/)
+      assert.ok(files.length > 0 && files.every(path => path.endsWith(suffix)), `${name}: wrong test format`)
+      for (const filePath of files) {
+        assert.equal(seen.has(filePath), false, `${name}: duplicate ${filePath}`)
+        seen.add(filePath)
+        assert.ok(existsSync(file(filePath)), `${name}: missing ${filePath}`)
+      }
     }
-    assert.equal(parts.length, 1, `${name}: unexpected command chaining`)
-    const direct = parts[0]
-    assert.ok(direct.startsWith(runtime), `${name}: wrong runtime`)
-    const files = direct.slice(runtime.length).trim().split(/\s+/)
-    assert.ok(files.length > 0 && files.every(path => path.endsWith(suffix)), `${name}: wrong test format`)
-    assert.equal(new Set(files).size, files.length, `${name}: duplicates`)
-    for (const path of files) assert.ok(existsSync(file(path)), `${name}: missing ${path}`)
   }
   const supplementary = readFileSync(file('build/run-unregistered-tests.mjs'), 'utf8')
   assert.match(supplementary, /discoverUnregisteredTests/)
