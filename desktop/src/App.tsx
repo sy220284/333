@@ -148,6 +148,8 @@ export function App(){
   const [teamGoalDraft,setTeamGoalDraft]=useState('')
   const [teamMemberDraft,setTeamMemberDraft]=useState('')
   const [teamMemberInstruction,setTeamMemberInstruction]=useState('')
+  const [newTeammateName,setNewTeammateName]=useState('')
+  const [newTeammateTask,setNewTeammateTask]=useState('')
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
   const [teamNotice,setTeamNotice]=useState('')
@@ -562,6 +564,24 @@ export function App(){
     if(selected?.status!=='active'){setError('请先选择并恢复有效的长期目标');return}
     const specification=JSON.stringify({name:teamNameDraft.trim(),goal:teamGoalDraft.trim()})
     await sendTeamInstruction(`用户授权在当前已选中的长期目标 ${selectedMission} 下创建团队。团队配置：${specification}。使用原生 TeamCreate 工具建队；创建前校验名称与项目归属，只创建团队，不启动新成员。请显示真实工具结果及最终团队名称。`)
+  }
+  async function requestTeammateSpawn(){
+    if(mode!=='super'||!selectedTeam||!newTeammateName.trim()||!newTeammateTask.trim())return
+    const name=newTeammateName.trim(),prompt=newTeammateTask.trim()
+    if(teamMembers.some(member=>member.name===name)){
+      setError('该团队已存在同名成员，请选用其他名称')
+      return
+    }
+    const team=(Array.isArray(overview.teams)?overview.teams as Item[]:[])
+      .find(item=>String(item.name||'')===selectedTeam)
+    const leadSessionId=String(team?.leadSessionId||'')
+    if(!leadSessionId){
+      setError('该团队缺少可恢复的负责人会话，无法执行原生成员创建')
+      return
+    }
+    if(!window.confirm(`确认在团队「${selectedTeam}」中启动成员「${name}」，执行任务「${prompt.slice(0,60)}」？此操作需要调用模型并产生实际费用。`))return
+    const assignment={team_name:selectedTeam,name,description:prompt.slice(0,100),prompt}
+    await sendTeamInstruction(`用户已明确批准在现有团队内启动一名成员。使用原生 Agent 工具创建团队成员，参数：${JSON.stringify(assignment)}。执行前核对团队名称和负责人身份；只创建这一名成员；保留 SDK 权限、团队成员生命周期和真实执行回执。若名称已存在或团队已失效，明确报错。`,leadSessionId)
   }
   async function requestTeamAction(action:'message'|'close'){
     if(action==='message'){
@@ -1101,6 +1121,13 @@ export function App(){
                       <Badge size="sm" tone={member.status==='running'?'success':'neutral'}>{member.status==='running'?'执行中':member.status==='idle'?'空闲':'状态未知'}</Badge>
                       <Button variant="secondary" size="sm" onClick={()=>setTeamMemberDraft(member.name)}>选为接收人</Button><Button variant="secondary" size="sm" onClick={()=>void inspectTeamInbox(member.name)}>查看信箱</Button>
                     </div>):<Empty icon={UsersRound} title="当前团队没有活动成员" detail="实际创建成员后将显示角色与运行状态。"/>}
+                    <div className="mt-4 space-y-3 border-t border-[var(--color-border)] pt-4">
+                      <h4 className="text-[12px] font-semibold">创建并分配新成员</h4>
+                      <p className="text-[11px] text-[var(--color-text-secondary)]">提交后由团队负责人会话调用原生 Agent 工具，等待工具回执确认；需要模型调用费用。</p>
+                      <input aria-label="新成员名称" value={newTeammateName} onChange={e=>setNewTeammateName(e.target.value)} placeholder="例如：验证工程师"/>
+                      <textarea aria-label="新成员执行任务" rows={2} value={newTeammateTask} onChange={e=>setNewTeammateTask(e.target.value)} placeholder="明确职责、工作范围和验收标准"/>
+                      <Button variant="secondary" size="sm" disabled={Boolean(busy)||mode!=='super'||!newTeammateName.trim()||!newTeammateTask.trim()} onClick={()=>void requestTeammateSpawn()}><Plus size={13}/>请求启动成员</Button>
+                    </div>
                     <div className="mt-4 space-y-3 border-t border-[var(--color-border)] pt-4">
                       <p className="text-[11px] text-[var(--color-text-secondary)]">任务直接写入原生团队信箱；成员读取和执行状态以真实运行记录为准。结束团队仍由原生 SDK 工具完成。</p>
                       <input aria-label="团队消息接收人" value={teamMemberDraft} onChange={e=>setTeamMemberDraft(e.target.value)} placeholder="接收成员名称"/>
