@@ -47,7 +47,7 @@ function validated(raw:unknown):BudgetDoc {
 export function getProjectBudgetFile(
   projectDir:string, root=join(homedir(),'.yaoyaoche','project-budgets'),
 ):string{
-  return join(resolve(root),`${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
+  return join(resolve(root),`project-budget-${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
 }
 export function createProjectBudget(
   projectDir:string, root=join(homedir(),'.yaoyaoche','project-budgets'),
