@@ -567,6 +567,10 @@ export function App(){
   }
   async function requestTeammateSpawn(){
     if(mode!=='super'||!selectedTeam||!newTeammateName.trim()||!newTeammateTask.trim())return
+    if(!selectedMission||missions.find(item=>missionId(item)===selectedMission)?.status!=='active'){
+      setError('请先选择并恢复有效的长期目标，再启动团队成员')
+      return
+    }
     const name=newTeammateName.trim(),prompt=newTeammateTask.trim()
     if(teamMembers.some(member=>member.name===name)){
       setError('该团队已存在同名成员，请选用其他名称')
