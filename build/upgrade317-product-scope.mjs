@@ -58,7 +58,7 @@ if(requestedId && selected.length===0)throw new Error(`当前范围找不到官�
 if(process.argv.includes('--check')){
   process.stdout.write(`392/392 官方来源已匹配；原版对齐 ${counts.RETAIN_OFFICIAL_PARITY}；本地适配 ${counts.ADAPT_TO_LOCAL_EQUIVALENT}；退役验证 ${counts.EXCLUDE_RETIRED_FEATURE}。\n`)
 } else if(process.argv.includes('--json')) {
-  process.stdout.write(JSON.stringify({total:scope.decisions.length,counts,mode,selected},null,2)+'\n')
+  process.stdout.write(`${JSON.stringify({total:scope.decisions.length,counts,mode,selected},null,2)}\n`)
 } else if(mode==='summary'&&!requestedId) {
   process.stdout.write(`官方更新 392：保留原版 ${counts.RETAIN_OFFICIAL_PARITY}，本地适配 ${counts.ADAPT_TO_LOCAL_EQUIVALENT}，官方退役 ${counts.EXCLUDE_RETIRED_FEATURE}。\n产品需实施与验收 ${scope.active_acceptance_count} 条，退役与隐私护栏检查 ${scope.excluded_count} 条。\n`)
 } else {
