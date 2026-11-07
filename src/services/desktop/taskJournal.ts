@@ -27,14 +27,18 @@ export type DesktopTaskJournal = {
   write(sessionId: string, tasks: DesktopTask[]): Promise<void>
 }
 
+export function getDesktopProjectStateDirectory(cwd: string, dataRoot: string = join(homedir(), '.yaoyaoche', 'desktop')): string {
+  const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
+  return join(resolve(dataRoot), workspace)
+}
+
 /** Per-workspace, private and crash-safe task index. It stores progress
  * metadata, not prompts, credentials or API transcripts. */
 export function createDesktopTaskJournal(
   cwd: string,
   dataRoot: string = join(homedir(), '.yaoyaoche', 'desktop'),
 ): DesktopTaskJournal {
-  const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
-  const directory = join(resolve(dataRoot), workspace)
+  const directory = getDesktopProjectStateDirectory(cwd, dataRoot)
   const pending = new Map<string, Promise<void>>()
   function pathFor(sessionId: string): string {
     if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(sessionId)) {

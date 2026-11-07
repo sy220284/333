@@ -7,6 +7,7 @@ import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { findGitRoot } from '../../utils/git.js'
 import { planPurge, executePurgeItem, type PurgeItem } from '../../utils/purgeProject.ts'
 import { getSmartExecutionJournalFile } from './smartExecutionJournal.js'
+import { getDesktopProjectStateDirectory } from './taskJournal.js'
 import { getProjectBudgetFile } from '../agentCenter/projectBudget.js'
 
 export type LocalPurgePlan = { workspace: string; items: PurgeItem[]; warnings: string[] }
@@ -27,6 +28,12 @@ export async function planLocalProjectPurge(workspace: string, smartJournalRoot?
       plan.items.push({path:file,kind:'file',reason:description})
     }catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
   }
+  const sessionDirectory=getDesktopProjectStateDirectory(project,smartJournalRoot)
+  try {
+    const info=await lstat(sessionDirectory)
+    if(!info.isDirectory())throw new Error('本地桌面任务与会话设置目录必须为独立目录')
+    plan.items.push({path:sessionDirectory,kind:'dir',reason:'当前工作区桌面任务记录、已恢复会话的模型及权限模式'})
+  }catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
   try {
     const info = await lstat(journalFile)
     if (!info.isFile() || info.nlink !== 1) throw new Error('智能执行记录必须是普通独立文件')

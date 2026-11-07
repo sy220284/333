@@ -1,9 +1,10 @@
 /** Per-workspace SDK session options: user-selected settings must survive desktop restarts.
  * An absent value means unknown for a pre-migration transcript; never guess a safe mode. */
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
+import { getDesktopProjectStateDirectory } from './taskJournal.js'
 import { z } from 'zod/v4'
 
 const permissionSchema = z.enum(['default','acceptEdits','bypassPermissions','plan','dontAsk'])
@@ -23,8 +24,7 @@ export function createDesktopSessionSettingsJournal(
   cwd: string,
   root: string = join(homedir(), '.yaoyaoche', 'desktop'),
 ) {
-  const workspace = createHash('sha256').update(resolve(cwd)).digest('hex')
-  const directory = join(resolve(root), workspace, 'session-settings')
+  const directory = join(getDesktopProjectStateDirectory(cwd, root), 'session-settings')
   const pending = new Map<string, Promise<void>>()
   function pathFor(id: string) {
     if (!validSession.test(id)) throw new TypeError('Invalid session settings ID')
