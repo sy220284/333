@@ -22,6 +22,7 @@ let suspendMcpRefresh=false
 let releaseMcpRefresh:(()=>void)|undefined
 let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
+let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
 let longHistory=false
 let manyFiles=false
@@ -33,7 +34,8 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
-    case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
+    case 'agents.overview':return {mode:activeAgentMode,teams:mockTeam?[mockTeam]:[],missions:[],activeSessions:0,activeTasks:0}
+    case 'agents.members':return mockTeam?[{agentId:'agent-test',name:'测试成员',agentType:'developer',model:'fixture-model',status:'idle'}]:[]
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
     case 'missions.create': {
       createdMission={id:'mission_0123456789abcdef',objective:String(args.objective),status:'active'}
@@ -87,7 +89,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTasks=[];longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -385,6 +387,61 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('credentials.set',{provider:'openai',key:'fake-testing-key-123'}))
     await waitFor(()=>expect(screen.getByLabelText('API Key')).toHaveValue(''))
   })
+  it('创建团队入口先验证用户目标，再将真实 TeamCreate 指令提交给 SDK，会话能接续执行',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.setMode',{mode:'super'}))
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'构建真实团队')
+    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+    await screen.findByRole('heading',{name:'构建真实团队'})
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await user.type(screen.getByRole('textbox',{name:'新团队名称'}),'代码验证组')
+    await user.type(screen.getByRole('textbox',{name:'新团队目标'}),'代码检查及自动化测试')
+    await user.click(screen.getByRole('button',{name:'请求建立团队'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({
+      sessionId:SID,message:expect.stringContaining('TeamCreate')
+    })))
+    expect(call).toHaveBeenCalledWith('sessions.open',expect.any(Object))
+    expect(screen.getByRole('textbox',{name:'输入任务'})).toBeInTheDocument()
+  })
+
+  it('成员任务通过团队负责人会话原生发送，不误建独立会话',async()=>{
+    mockTeam={name:'原团队',leadSessionId:SID,memberCount:1,runningCount:0}
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await screen.findByText('测试成员')
+    await user.click(screen.getByRole('button',{name:'选为接收人'}))
+    await user.type(screen.getByRole('textbox',{name:'团队成员工作指令'}),'验证当前代码并提交测试记录')
+    await user.click(screen.getByRole('button',{name:'发送成员任务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.ensureOpen',{sessionId:SID}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({
+      sessionId:SID,message:expect.stringContaining('SendMessage')
+    })))
+    expect(call).not.toHaveBeenCalledWith('sessions.open',expect.anything())
+  })
+
+  it('Mission 的其他 SDK 会话进度能在任务板显示，且与当前对话互不混淆',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'长期任务'}))
+    await user.type(screen.getByPlaceholderText('明确长期目标与交付要求…'),'多会话进度核验')
+    await user.click(screen.getByRole('button',{name:'创建并选中任务'}))
+    await screen.findByRole('heading',{name:'多会话进度核验'})
+    await act(async()=>listener({
+      event:'mission.activity',missionId:'mission_0123456789abcdef',sessionId:SID,
+      jobId:'job_0123456789abcdef',task:{taskId:'agent-1',status:'running',description:'并行检查权限边界'},
+    }))
+    expect(await screen.findByText('并行检查权限边界')).toBeInTheDocument()
+    expect(screen.getByText('多会话智能体实时进度')).toBeInTheDocument()
+  })
+
   it('切换智能体协作模式后发送消息必须启用新SDK会话，旧会话仍保留',async()=>{
     const user=userEvent.setup()
     render(<App/>)
