@@ -36,7 +36,6 @@
     "@testing-library/user-event": "^14.6.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@tailwindcss/vite": "^4.0.0",
-    "@tailwindcss/typography": "^0.5.19",
     "tailwindcss": "^4.0.0"
   },
   "build": {

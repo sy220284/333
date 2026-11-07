@@ -75,3 +75,25 @@ textarea {resize:vertical;}
 @media (prefers-reduced-motion: reduce) {
   .yy-app *, .yy-app *::before, .yy-app *::after {animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;}
 }
+
+
+/* 当前 333 自有 MarkdownMessage 组件使用的结构，不依赖来源项目的 ProseMirror/Shiki 样式。 */
+.markdown-message {min-width:0;overflow-wrap:anywhere;font-size:13px;line-height:1.8;color:var(--color-text-primary);}
+.markdown-message :where(p,ul,ol,blockquote,pre,h2,h3,h4){margin:0 0 12px;}
+.markdown-message :where(p,ul,ol,blockquote,pre,h2,h3,h4):last-child{margin-bottom:0;}
+.markdown-message :where(h2,h3,h4){font-weight:650;line-height:1.5;letter-spacing:-.01em;}
+.markdown-message h2{font-size:18px;margin-top:17px;}
+.markdown-message h3{font-size:16px;margin-top:14px;}
+.markdown-message h4{font-size:14px;margin-top:12px;}
+.markdown-message :where(ul,ol){padding-left:23px;}
+.markdown-message ul{list-style:disc;}
+.markdown-message ol{list-style:decimal;}
+.markdown-message li+li{margin-top:4px;}
+.markdown-message blockquote{padding:4px 0 4px 13px;border-left:3px solid var(--color-brand);color:var(--color-text-secondary);}
+.markdown-message a{color:var(--color-brand);text-decoration:underline;text-underline-offset:2px;}
+.markdown-message a:focus-visible{outline:2px solid var(--color-border-focus);outline-offset:2px;}
+.markdown-message :not(pre)>code{background:var(--color-code-bg);color:var(--color-code-fg);padding:2px 5px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-family:var(--font-mono,monospace);font-size:12px;}
+.markdown-code{max-width:100%;overflow:hidden;margin:12px 0;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-code-bg);color:var(--color-code-fg);}
+.markdown-code-header{display:flex;justify-content:space-between;gap:12px;padding:7px 12px;border-bottom:1px solid var(--color-border);background:var(--color-surface-container);font-size:11px;color:var(--color-text-tertiary);}
+.markdown-code pre{max-height:540px;overflow:auto;margin:0;padding:13px;font-size:12px;line-height:1.6;white-space:pre;}
+.markdown-code code{font-family:var(--font-mono,monospace);}
