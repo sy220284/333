@@ -151,6 +151,7 @@ export function App(){
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
   const [teamNotice,setTeamNotice]=useState('')
+  const pendingTeamDelivery=useRef<{key:string;messageId:string}|null>(null)
   const [missions,setMissions]=useState<Mission[]>([])
   const [selectedMission,setSelectedMission]=useState('')
   const [missionDraft,setMissionDraft]=useState('')
@@ -218,7 +219,7 @@ export function App(){
   },[])
 
   useEffect(()=>{viewRef.current=view},[view])
-  useEffect(()=>{setTeamInbox(null);setTeamNotice('')},[selectedTeam,workspace])
+  useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null},[selectedTeam,workspace])
   useEffect(()=>{sessionRef.current=sessionId},[sessionId])
   useEffect(()=>{selectedMissionRef.current=selectedMission},[selectedMission])
   const invoke=useCallback(async<T,>(method:string,args:Record<string,unknown>={}):Promise<T>=>{
@@ -565,13 +566,17 @@ export function App(){
   async function requestTeamAction(action:'message'|'close'){
     if(action==='message'){
       if(!selectedTeam||!teamMemberDraft.trim()||!teamMemberInstruction.trim())return
+      const deliveryKey=JSON.stringify([workspace,selectedTeam,teamMemberDraft.trim(),teamMemberInstruction.trim()])
+      const messageId=pendingTeamDelivery.current?.key===deliveryKey
+        ?pendingTeamDelivery.current.messageId:crypto.randomUUID()
+      pendingTeamDelivery.current={key:deliveryKey,messageId}
       await operation('投递团队成员任务',async()=>{
         const result=await invoke<{queued:boolean;recipient:string;messageId:string}>('agents.team.message',{
-          teamName:selectedTeam,to:teamMemberDraft.trim(),message:teamMemberInstruction.trim(),
-          messageId:crypto.randomUUID(),
+          teamName:selectedTeam,to:teamMemberDraft.trim(),message:teamMemberInstruction.trim(),messageId,
         })
         if(!result.queued)throw new Error('团队信箱没有确认写入')
         setTeamNotice(`已写入 ${result.recipient} 的团队信箱，等待成员读取和执行。`)
+        pendingTeamDelivery.current=null
         setTeamMemberInstruction('')
         setTeamInbox(null)
       })
