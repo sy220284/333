@@ -22,12 +22,14 @@
       "production_files": [
         "src/query.ts",
         "src/query/turnEffort317.ts",
-        "src/utils/attachments.ts"
+        "src/utils/attachments.ts",
+        "build/rebuild.mjs"
       ],
       "tests": [
-        "tests/m2-ultrathink-turn-effort-317.test.ts"
+        "tests/m2-ultrathink-turn-effort-317.test.ts",
+        "tests/m2-ultrathink-release-request-317.test.mjs"
       ],
-      "notes": "当前轮 ultrathink 写入真实模型 effortValue，尚需活跃输入场景的原版差分验收",
+      "notes": "正式构建现在包含 ULTRATHINK 功能位；已增加真实发行CLI经本地HTTP模型接口验证xhigh与显式关闭开关的专项，仍须以同SHA CI报告和原版差分确认",
       "runtime_evidence": null
     },
     {
