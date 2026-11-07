@@ -78,7 +78,7 @@ test('智能体名录可发现同项目多个独立团队但不暴露为可直�
   const tool=read('src/tools/ListAgentsTool/ListAgentsTool.ts')
   assert.match(listing,/kind: 'teams'/)
   assert.match(discovery,/listProjectTeams/)
-  assert.match(discovery,/resolve\(member.cwd\) === target/)
+  assert.match(discovery,/resolve\(team\.projectDir \?\? member\.cwd\) === target/)
   assert.match(tool,/unreachableFromHere: true/)
   assert.match(tool,/acceptsPeerMessages: false/)
 })

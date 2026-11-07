@@ -43,7 +43,7 @@ async function execute(input: Input): Promise<string> {
   const selected = input.mission_id ?? getSelectedMissionId()
   const id = required(selected, '任务 ID，请先由用户通过 /agents mission new 创建')
   const mission = await getMission(id)
-  if (resolve(mission.projectDir) !== resolve(getCwd())) throw new Error(`任务归属其他项目：${mission.projectDir}`)
+  if (resolve(mission.projectDir) !== getMissionExecutionProjectDir()) throw new Error(`任务归属其他项目：${mission.projectDir}`)
   if (input.action === 'jobs') {
     const jobs = await listMissionJobs(id, getMissionExecutionProjectDir())
     return jobs.length
