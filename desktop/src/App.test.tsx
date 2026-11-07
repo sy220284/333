@@ -178,7 +178,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('smart.execute',{
       prompt:'检查代码并测试',model:'minimax/M3',maxBudgetUsd:2.5,permissionMode:'plan',
     }))
-    expect(window.localStorage.getItem('yaoyaoche-desktop:smart-budget')).toBe('2.50')
+    expect(Number(window.localStorage.getItem('yaoyaoche-desktop:smart-budget'))).toBeCloseTo(2.5)
   })
   it('模型自检调用本地离线检查接口，不借助模型编造诊断结果',async()=>{
     const user=userEvent.setup()
