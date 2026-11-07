@@ -282,7 +282,7 @@ export function App(){
       .catch(reason=>{if(live)setError(presentError(reason))})
     return()=>{live=false}
   },[selectedTeam,workspace])
-  useEffect(()=>{if(view==='chat'&&followLatest&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
+  useEffect(()=>{if(view==='chat'&&followLatest&&messages.length>0&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
   useEffect(()=>{
     let valid=true
     if(!selectedMission){setMissionJobs([]);return}
@@ -598,7 +598,54 @@ export function App(){
           </div>}
           {view==='chat'&&<div className="chat-page">
             <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={historyOnly?'历史记录':statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" disabled={historyOnly} value={selectedModel} onChange={e=>{setSelectedModel(e.target.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:e.target.value}))}}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" disabled={historyOnly} value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&!historyOnly&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>
-            <div className="message-stream" ref={streamRef} onScroll={e=>{const el=e.currentTarget;setFollowLatest(el.scrollHeight-el.scrollTop-el.clientHeight<96)}}>{messages.length===0?<div className="chat-empty"><div className="chat-empty-icon"><Sparkles size={38}/></div><h2>今天想完成什么？</h2><p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p><div className="prompt-suggestions">{['分析当前工作区的项目结构','检查 PR19 最新代码问题','规划一个多智能体协作任务'].map(t=><button type="button" key={t} onClick={()=>setDraft(t)}>{t}<ArrowRight size={14}/></button>)}</div></div>:<>{messages.length>visibleMessageCount&&<button type="button" className="load-older" onClick={()=>{setVisibleMessageCount(count=>count+120);setFollowLatest(false)}}>加载更早的 {Math.min(120,messages.length-visibleMessageCount)} 条消息</button>}{messages.slice(-visibleMessageCount).map(m=><div className={`message ${m.kind}`} key={m.id}><div className="message-avatar">{m.kind==='user'?<span>我</span>:m.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}</div><div className="message-content"><div className="message-meta">{m.kind==='user'?'你':m.kind==='assistant'?'摇摇车':'工具'}<time>{dateTime(m.time)}</time></div><div className="message-text">{m.kind==='assistant'?<MarkdownMessage text={m.text}/>:m.text}</div></div></div> )}</>}<div ref={messagesEnd}/></div>{!followLatest&&messages.length>0&&<button type="button" className="jump-to-latest" onClick={()=>setFollowLatest(true)}>回到最新消息 <ArrowRight size={14}/></button>
+            <div className="message-stream" ref={streamRef} onScroll={event=>{
+              const element=event.currentTarget
+              setFollowLatest(element.scrollHeight-element.scrollTop-element.clientHeight<96)
+            }}>
+              {messages.length===0 ? (
+                <div className="chat-empty">
+                  <div className="chat-empty-icon"><Sparkles size={38}/></div>
+                  <h2>今天想完成什么？</h2>
+                  <p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p>
+                  <div className="prompt-suggestions">
+                    {['分析当前工作区的项目结构','检查 PR19 最新代码问题','规划一个多智能体协作任务'].map(text=>(
+                      <button type="button" key={text} onClick={()=>setDraft(text)}>{text}<ArrowRight size={14}/></button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {messages.length>visibleMessageCount&&(
+                    <button type="button" className="load-older" onClick={()=>{
+                      setVisibleMessageCount(count=>count+120)
+                      setFollowLatest(false)
+                    }}>加载更早的 {Math.min(120,messages.length-visibleMessageCount)} 条消息</button>
+                  )}
+                  {messages.slice(-visibleMessageCount).map(message=>(
+                    <div className={`message ${message.kind}`} key={message.id}>
+                      <div className="message-avatar">
+                        {message.kind==='user'?<span>我</span>:message.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}
+                      </div>
+                      <div className="message-content">
+                        <div className="message-meta">
+                          {message.kind==='user'?'你':message.kind==='assistant'?'摇摇车':'工具'}
+                          <time>{dateTime(message.time)}</time>
+                        </div>
+                        <div className="message-text">
+                          {message.kind==='assistant'?<MarkdownMessage text={message.text}/>:message.text}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              <div ref={messagesEnd}/>
+            </div>
+            {!followLatest&&messages.length>0&&(
+              <button type="button" className="jump-to-latest" onClick={()=>setFollowLatest(true)}>
+                回到最新消息 <ArrowRight size={14}/>
+              </button>
+            )}
             {permissions.length>0&&<div className="inline-approval"><ShieldCheck size={18}/><span>{permissions.length} 项工具操作等待批准</span><button type="button" onClick={()=>setView('settings')}>查看审批<ArrowRight size={14}/></button></div>}
             {historyOnly&&<div className="inline-approval"><History size={18}/><span>当前正在查看历史执行记录。发送新消息时将恢复原会话。</span></div>}
             <div className="composer"><textarea ref={inputRef} aria-label="输入任务" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="描述任务，支持使用文字引用项目文件与技能…" onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void send()}}}/><div className="composer-footer"><div className="composer-hints"><span><Bot size={15}/> {mode==='super'?'Super Agents':'主子智能体'}</span><span>⌘ / Ctrl + Enter 发送</span></div><button type="button" className="primary-button send-button" disabled={!draft.trim()||Boolean(busy)||!connected} onClick={()=>void send()}><Send size={16}/>发送</button></div></div>
@@ -656,7 +703,7 @@ export function App(){
           <button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</button>
         </div>
       </>:requestedDetails.subtype==='elicitation'?<><div className="host-fields">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value);const valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`}><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</button><button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</button></div></>:<div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</button></div>}</div></div>}
-      {paletteOpen&&<div className="command-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget){setPaletteOpen(false);setSearch('')}}}>
+      {paletteOpen&&<div className="command-backdrop" role="presentation"><button type="button" className="command-dismiss" aria-label="关闭快速操作" onClick={()=>{setPaletteOpen(false);setSearch('')}}/>
         <section className="command-dialog" role="dialog" aria-modal="true" aria-label="快速操作">
           <div className="command-input-row"><Search size={21}/><input autoFocus aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{
             if(e.key==='ArrowDown'){e.preventDefault();setPaletteIndex(index=>Math.min(index+1,Math.max(0,filteredCommands.length-1)))}
