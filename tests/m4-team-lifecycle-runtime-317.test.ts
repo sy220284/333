@@ -19,10 +19,10 @@ async function setup(teamName: string): Promise<TeamFile> {
   roots.push(root)
   process.env.YAOYAOCHE_CONFIG_DIR=root
   const file:TeamFile={
-    name:teamName,createdAt:Date.now(),leadAgentId:'team-lead@'+teamName,
-    members:[{agentId:'team-lead@'+teamName,name:'team-lead',
+    name:teamName,createdAt:Date.now(),leadAgentId:`team-lead@${teamName}`,
+    members:[{agentId:`team-lead@${teamName}`,name:'team-lead',
       joinedAt:Date.now(),tmuxPaneId:'',cwd:root,subscriptions:[]},
-    {agentId:'worker@'+teamName,name:'worker',joinedAt:Date.now(),
+    {agentId:`worker@${teamName}`,name:'worker',joinedAt:Date.now(),
       tmuxPaneId:'pane-worker',cwd:root,subscriptions:[],isActive:true}],
   }
   await writeTeamFileAsync(teamName,file,true)
@@ -35,7 +35,7 @@ async function missing(path: string): Promise<boolean> {
 }
 
 test('317#028 deleted teams reject late inbox writes and never recreate the team', async()=>{
-  const team='deleted-team-'+Date.now()
+  const team=`deleted-team-${Date.now()}`
   await setup(team)
   await writeToMailbox('worker',{from:'team-lead',text:'first',timestamp:new Date().toISOString()},team)
   await cleanupTeamDirectories(team)
@@ -46,7 +46,7 @@ test('317#028 deleted teams reject late inbox writes and never recreate the team
 })
 
 test('317#028 mailbox writes racing cleanup cannot resurrect deleted directories', async()=>{
-  const team='racing-team-'+Date.now()
+  const team=`racing-team-${Date.now()}`
   await setup(team)
   const done=await Promise.allSettled([
     writeToMailbox('worker',{from:'team-lead',text:'race',timestamp:new Date().toISOString()},team),
@@ -59,7 +59,7 @@ test('317#028 mailbox writes racing cleanup cannot resurrect deleted directories
 })
 
 test('317#029 stale team snapshots cannot overwrite a new team with the same name', async()=>{
-  const team='identity-team-'+Date.now()
+  const team=`identity-team-${Date.now()}`
   const old=await setup(team)
   await cleanupTeamDirectories(team)
   const replacement:TeamFile={...old,createdAt:old.createdAt+2000}
