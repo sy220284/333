@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 const methods = (code, pattern) => [...code.matchAll(pattern)].map(match => match[1])
 const protocol = read('src/services/desktop/protocol.ts')
 const gateway = read('src/services/desktop/gateway.ts')

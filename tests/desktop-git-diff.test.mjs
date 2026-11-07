@@ -31,7 +31,7 @@ test('桌面 Git 差异包含未跟踪文件，并明确区分仅文件名与真
 
 test('无变化时显示空状态，过多新文件只展开前200项', () => {
   assert.match(formatWorkspaceGitDiff('','',''),/无已暂存/)
-  const names=Array.from({length:204},(_,i)=>'new-'+i+'.md').join('\0')+'\0'
+  const names=[...Array.from({length:204},(_,i)=>`new-${i}.md`),''].join('\0')
   const actual=formatWorkspaceGitDiff('','',names)
   assert.match(actual,/另有 4 个未跟踪文件/)
   assert.doesNotMatch(actual,/new-203\.md/)

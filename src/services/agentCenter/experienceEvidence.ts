@@ -37,7 +37,7 @@ export async function inspectExperienceEvidence(
         throw error
       }
       const subpath = relative(project,file)
-      if (!subpath || subpath==='..' || subpath.startsWith('..'+sep) || isAbsolute(subpath))
+      if (!subpath || subpath==='..' || subpath.startsWith(`..${sep}`) || isAbsolute(subpath))
         return {ref,status:'missing',detail:'来源文件超出项目边界'} as ExperienceEvidenceCheck
       const details=await stat(file)
       if (!details.isFile() || details.size>16_000_000)
