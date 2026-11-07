@@ -14,13 +14,13 @@
   ],
   "original_ledger_unchanged": true,
   "scope_counts": {
-    "EXCLUDE_RETIRED_FEATURE": 95,
-    "RETAIN_OFFICIAL_PARITY": 221,
+    "EXCLUDE_RETIRED_FEATURE": 96,
+    "RETAIN_OFFICIAL_PARITY": 220,
     "ADAPT_TO_LOCAL_EQUIVALENT": 76
   },
   "scope_rules": {
     "OFFICIAL_SELF_HOSTED_RUNNER": 7,
-    "RETAINED_CORE": 221,
+    "RETAINED_CORE": 220,
     "REMOTE_CONTROL_CLOUD": 8,
     "MANUAL_CROSS_ENTRY_ADAPTATION": 51,
     "OFFICIAL_CLOUD_SCHEDULE": 6,
@@ -31,14 +31,14 @@
     "OFFICIAL_SLACK": 20,
     "INDEPENDENT_REVIEW": 2,
     "REMOTE_ACCOUNT_SYNC": 4,
-    "OFFICIAL_ENTERPRISE_GATEWAY": 16,
+    "OFFICIAL_ENTERPRISE_GATEWAY": 17,
     "REMOTE_OTLP_TELEMETRY": 6,
     "EXPLICIT_REMOTE_POLICY": 3
   },
-  "active_acceptance_count": 297,
-  "excluded_count": 95,
+  "active_acceptance_count": 296,
+  "excluded_count": 96,
   "local_adaptation_count": 76,
-  "retained_parity_count": 221,
+  "retained_parity_count": 220,
   "decisions": [
     {
       "id": "2.1.311#001",
@@ -6040,18 +6040,18 @@
     {
       "id": "2.1.317#071",
       "version": "2.1.317",
-      "disposition": "RETAIN_OFFICIAL_PARITY",
-      "policy_rule": "RETAINED_CORE",
-      "decision_reason": "产品保留该能力；按 2.1.317 源码、协议、边界条件及真实执行结果逐项复核",
+      "disposition": "EXCLUDE_RETIRED_FEATURE",
+      "policy_rule": "OFFICIAL_ENTERPRISE_GATEWAY",
+      "decision_reason": "官方 Gateway 组池预算及开发者 spend limit 属于已退出独立产品的企业云计费功能；独立模型用量和服务商账单按本地新架构验收",
       "official_update": "Gateway: Fixed the status line and `/usage` showing a developer's own spend limit as 100% used after their group's pooled budget ran out",
-      "local_contract": "本机任务服务、GitHub 通用工作流与模型 API",
+      "local_contract": "保留原厂发布记录；验证 CLI 不再注册官方 gateway、默认不会暴露成本接口和指标转发；独立模型本地用量统计继续有效",
       "candidate_entrypoints": [
-        "src/services/desktop/gateway.ts",
-        "tests/github-integration-flow.test.mjs"
+        "src/main.tsx",
+        "tests/independent-product-cleanup.test.mjs"
       ],
-      "acceptance": "在本产品仍支持的入口执行 2.1.317 正常/异常/中断/恢复差分测试",
-      "implementation_gate": "UPSTREAM_BEHAVIOR_PARITY_REQUIRED",
-      "validation_status": "PENDING_IMPLEMENTATION_AND_RUNTIME_VERIFICATION"
+      "acceptance": "代码级证明原厂Gateway未进入正式命令路由，且其企业组池接口不对外启动；本地独立用量能力另行验收",
+      "implementation_gate": "RETIRED_NO_IMPLEMENTATION",
+      "validation_status": "PENDING_RETIREMENT_GUARD"
     },
     {
       "id": "2.1.317#072",
@@ -6314,6 +6314,7 @@
     "所有 validation_status 保留为待验证；范围归类本身不视为代码已修复。",
     "与官方 366/392 源条目矩阵分离保存，原始 official_text、C01-C20 归属及历史状态不改。",
     "独立产品退役条目有安全性验收责任，不把删除官方服务当作删掉本地同等能力。",
-    "新增官方更新条目必须补充判定，否则 CI 覆盖测试失败。"
+    "新增官方更新条目必须补充判定，否则 CI 覆盖测试失败。",
+    "2.1.317#071 根据源码归属于官方企业Gateway，已从原版保留转退役检查，独立模型的本地用量继续单独验收"
   ]
 }
