@@ -112,7 +112,7 @@ export function createDesktopClient(input: Readable, output: Writable) {
     history: (sessionId: string, limit?: number, offset?: number) => invoke({ method: 'sessions.history', sessionId, limit, offset }),
     send: (sessionId: string, message: string | SDKUserMessage) => invoke<{ sessionId: string; turnId: string }>({ method: 'sessions.send', sessionId, message }),
     interrupt: (sessionId: string) => invoke<{ requested: boolean }>({ method: 'sessions.interrupt', sessionId }),
-    setModel: (sessionId: string, model: string) => invoke({ method: 'sessions.setModel', sessionId, model }),
+    setModel: (sessionId: string, model: string | null) => invoke({ method: 'sessions.setModel', sessionId, model }),
     setPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto') => invoke({ method: 'sessions.setPermissionMode', sessionId, mode }),
     listHostRequests: (sessionId: string) => invoke<PendingHostControl[]>({ method: 'host.list', sessionId }),
     respondToHost: (sessionId: string, requestId: string, response: Record<string, unknown>) =>

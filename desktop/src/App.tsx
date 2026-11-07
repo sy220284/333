@@ -956,7 +956,7 @@ export function App(){
   async function selectModel(next:string){
     const id=sessionRef.current,generation=sessionGeneration.current
     await operation('切换模型',async()=>{
-      if(id&&!historyOnly)await invoke('sessions.setModel',{sessionId:id,model:next})
+      if(id&&!historyOnly)await invoke('sessions.setModel',{sessionId:id,model:next||null})
       if(id&&(generation!==sessionGeneration.current||sessionRef.current!==id))return
       setSelectedModel(next);setModelVerified(true)
     })

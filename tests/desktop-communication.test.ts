@@ -162,6 +162,23 @@ test('desktop model discovery and multi-turn streaming use SDK initialization an
     expect(tasks[0]?.status).toBe('completed')
     await gateway.handle(request('sessions.setModel', { sessionId: opened.sessionId, model: 'fixture-model' }))
     expect(fixtureData.getControl()).toEqual({ subtype: 'set_model', model: 'fixture-model' })
+    // The visible 'default model' option must reach the official SDK's
+    // optional model contract, and the local session must reflect the reset.
+    expect(DesktopRequestSchema.safeParse({
+      id: randomUUID(), method:'sessions.setModel',sessionId:opened.sessionId,model:null,
+    }).success).toBe(true)
+    expect(DesktopRequestSchema.safeParse({
+      id: randomUUID(), method:'sessions.setModel',sessionId:opened.sessionId,model:'',
+    }).success).toBe(false)
+    const cleared=await gateway.handle(request('sessions.setModel',{
+      sessionId:opened.sessionId,model:null,
+    })) as {model:string|null}
+    expect(cleared.model).toBeNull()
+    expect(fixtureData.getControl()).toEqual({subtype:'set_model'})
+    const refreshed=await gateway.handle(request('sessions.status',{
+      sessionId:opened.sessionId,
+    })) as {model:string|null}
+    expect(refreshed.model).toBeNull()
     await gateway.handle(request('sessions.close', { sessionId: opened.sessionId }))
   } finally {
     stop()

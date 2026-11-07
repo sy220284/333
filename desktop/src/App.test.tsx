@@ -197,6 +197,20 @@ beforeEach(()=>{call.mockClear();listener=()=>{};failTeamDeliveryAck=false;showH
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
+  it('已打开会话选择默认模型会清除SDK模型覆盖，而非发送空模型名',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'新建会话'}))
+    const selector=await screen.findByRole('combobox',{name:'当前模型'})
+    await waitFor(()=>expect(selector).toHaveValue('minimax/M3'))
+    await user.selectOptions(selector,'')
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('sessions.setModel',{
+      sessionId:SID,model:null,
+    }))
+    expect(selector).toHaveValue('')
+  })
+
   it('模型切换失败时保持原选择，避免界面显示并未生效的模型',async()=>{
     failModelSelection=true
     const user=userEvent.setup()

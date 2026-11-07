@@ -870,7 +870,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'sessions.setModel': {
         const entry = requireSession(request.sessionId)
-        await entry.runtime.control({ subtype: 'set_model', model: request.model })
+        // The official SDK clears the session override when set_model omits
+        // its optional model. Persist null to retain that default selection.
+        await entry.runtime.control({ subtype: 'set_model',
+          ...(request.model === null ? {} : { model: request.model }),
+        })
         entry.model = request.model
         await sessionSettings.write(request.sessionId, { model: entry.model, permissionMode: entry.permissionMode })
         return { model: entry.model }
