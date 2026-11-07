@@ -2,6 +2,7 @@
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { enableConfigs } from '../utils/config.js'
 import { serveDesktopStdio } from '../services/desktop/stdio.js'
 import type { DesktopGatewayOptions } from '../services/desktop/gateway.js'
 
@@ -29,4 +30,9 @@ for (let index = 0; index < argv.length; index++) {
   if (key === '--cli') options.sessionOptions = { ...options.sessionOptions, pathToClaudeCodeExecutable: resolve(value) }
 }
 
+// The CLI bootstrap enables config reads before user operations. The
+// standalone desktop entrypoint has its own lifecycle and must do the same.
+// Without this, creating a mission fails only in the compiled production
+// binary even though the initial JSON protocol handshake succeeds.
+enableConfigs()
 await serveDesktopStdio(process.stdin, process.stdout, options)
