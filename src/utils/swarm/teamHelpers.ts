@@ -703,28 +703,33 @@ export async function cleanupTeamDirectories(teamName: string): Promise<void> {
       await destroyWorktree(worktreePath)
     }
 
-    // Clean up team directory (~/.claude/teams/{team-name}/)
+    const failures: Error[] = []
+    // Delete the team config first: any subsequent message/update sees it as
+    // retired. Both removals are attempted; failure is never reported as success.
     const teamDir = getTeamDir(teamName)
     try {
       await rm(teamDir, { recursive: true, force: true })
       logForDebugging(`[TeammateTool] Cleaned up team directory: ${teamDir}`)
     } catch (error) {
+      failures.push(new Error(`Cannot delete team directory: ${teamDir}`, { cause: error }))
       logForDebugging(
         `[TeammateTool] Failed to clean up team directory ${teamDir}: ${errorMessage(error)}`,
       )
     }
 
-    // Clean up tasks directory (~/.claude/tasks/{taskListId}/)
-    // The leader and teammates all store tasks under the sanitized team name.
     const tasksDir = getTasksDir(sanitizedName)
     try {
       await rm(tasksDir, { recursive: true, force: true })
       logForDebugging(`[TeammateTool] Cleaned up tasks directory: ${tasksDir}`)
       notifyTasksUpdated()
     } catch (error) {
+      failures.push(new Error(`Cannot delete task directory: ${tasksDir}`, { cause: error }))
       logForDebugging(
         `[TeammateTool] Failed to clean up tasks directory ${tasksDir}: ${errorMessage(error)}`,
       )
+    }
+    if (failures.length) {
+      throw new AggregateError(failures, `Team ${teamName} cleanup incomplete`)
     }
   })
 }
