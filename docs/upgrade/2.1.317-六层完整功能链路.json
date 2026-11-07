@@ -1303,8 +1303,7 @@
         "src/services/mcp/MCPConnectionManager.tsx",
         "src/services/mcp/config.ts",
         "src/commands/mcp/mcp.tsx",
-        "src/cli/handlers/mcpAuth.ts",
-        "src/services/mcp/claudeai.ts"
+        "src/cli/handlers/mcpAuth.ts"
       ],
       "required_semantics": [
         "入口注册与可达条件",
@@ -1333,7 +1332,7 @@
         "chunk-a33c5f4b.js:84（组织连接器加载）",
         "chunk-fsyfgpr7.js:9（MCP任务开关）"
       ],
-      "current_difference": "已有login/logout、回调、安全存储和默认stdio修正；组织连接器多账号/资格、会话级身份、design-login及云转接仍有差异。",
+      "current_difference": "已有login/logout、回调、安全存储和默认stdio修正；组织连接器多账号/资格、会话级身份、design-login及云转接仍有差异。；原厂 claude.ai 组织连接器模块已清退，个人 MCP（stdio/HTTP/SSE）和 OAuth 保留并独立验收。",
       "related_chains": [
         "C03",
         "C04",
