@@ -10,6 +10,12 @@ const taskSchema = z.object({
   description: z.string(),
   status: z.enum(['running', 'completed', 'failed', 'stopped', 'interrupted']),
   updatedAt: z.number(),
+  // Preserve the full SDK 2.1.317 task_updated/background snapshot across restarts.
+  runId: z.string().optional(),
+  isBackgrounded: z.boolean().optional(),
+  endTime: z.number().optional(),
+  totalPausedMs: z.number().optional(),
+  error: z.unknown().optional(),
   toolUseId: z.string().optional(),
   taskType: z.string().optional(),
   workflowName: z.string().optional(),

@@ -239,6 +239,45 @@ test('SDK task projector preserves terminal status and recovery journal persists
   } finally { await rm(cwd, { recursive: true, force: true }) }
 })
 
+test('SDK 2.1.317 task_updated and background metadata survive desktop restart', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-task-metadata-'))
+  try {
+    const journal = createDesktopTaskJournal(cwd, join(cwd, 'state'))
+    const sessionId = randomUUID()
+    const update = {
+      type: 'system', subtype: 'task_updated', task_id: 'agent-2',
+      run_id: 'run-2',
+      patch: {
+        status: 'running', description: 'Reviewing changes',
+        is_backgrounded: true, end_time: 310,
+        total_paused_ms: 24, error: { code: 'E_RETRY' },
+      },
+      uuid: randomUUID(), session_id: sessionId,
+    } as unknown as SDKMessage
+    expect(SDKMessageSchema().safeParse(update).success).toBe(true)
+    const task = requiredValue(projectTask(update, undefined, 300), 'task_updated projection')
+    await journal.write(sessionId, [task])
+    const [restored] = await journal.read(sessionId)
+    expect(restored).toMatchObject({
+      taskId: 'agent-2', description: 'Reviewing changes',
+      status: 'interrupted', runId: 'run-2', isBackgrounded: true,
+      endTime: 310, totalPausedMs: 24, error: { code: 'E_RETRY' },
+    })
+    const resumed = requiredValue(projectTask({
+      type: 'system', subtype: 'task_notification', task_id: 'agent-2',
+      status: 'completed', uuid: randomUUID(), session_id: sessionId,
+    } as SDKMessage, restored, 350), 'task completion projection')
+    expect(resumed.status).toBe('completed')
+    await journal.write(sessionId, [resumed])
+    expect((await journal.read(sessionId))[0]).toMatchObject({
+      status: 'completed', runId: 'run-2', isBackgrounded: true,
+      endTime: 310, totalPausedMs: 24,
+    })
+  } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
 test('a failed desktop journal write reports its error and later writes recover', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'desktop-journal-recover-'))
   try {
