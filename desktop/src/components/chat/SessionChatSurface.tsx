@@ -1,11 +1,7 @@
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import {useEffect,useState} from 'react'
 import {AlertTriangle,ArrowDown,Check,LoaderCircle,Send,ShieldCheck,Square} from 'lucide-react'
 import {Button} from '../ui/Button'
-import {MarkdownMessage} from './MarkdownMessage'
-
-const markdownComponents={table:({children,...props}:React.ComponentPropsWithoutRef<'table'>)=><div className="yy-table-scroll"><table {...props}>{children}</table></div>}
+import {MarkdownMessage} from '../../MarkdownMessage'
 
 function ToolOutput({text}:{text:string}){
   const lengthy=text.length>1200||text.split('\n').length>18
@@ -49,4 +45,4 @@ export function SessionChatSurface(p:SessionChatSurfaceProps){
   </section>
 }
 
-export function EventMessage({event}:{event:any}){return <div className="yy-system-event"><ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{event.text||event.kind||''}</ReactMarkdown></div>}
+export function EventMessage({event}:{event:any}){return <div className="yy-system-event"><MarkdownMessage text={String(event.text||event.kind||'')}/></div>}
