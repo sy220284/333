@@ -514,7 +514,7 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(within(dialog).getByText(/另有 1 项待审操作/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('permissions.decide',{
-      sessionId:SID,permissionId:'approval-1',decision:{behavior:'allow'}
+      sessionId:SID,permissionId:'approval-main',decision:{behavior:'allow'}
     }))
     await waitFor(()=>expect(within(dialog).getByText(/FileEdit/)).toBeInTheDocument())
     await user.click(within(dialog).getByRole('button',{name:'允许本次操作'}))
