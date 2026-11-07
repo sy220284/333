@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -12,8 +12,9 @@ import { test } from 'node:test'
  * separately compiled Bun binary over its public stdio protocol.
  * No real model token, cloud access, scheduled automation or agent execution.
  */
-function startHost(binary, cwd, configDir, dataDir) {
-  const child = spawn(binary, ['--cwd', cwd, '--data-dir', dataDir], {
+function startHost(binary, cwd, configDir, dataDir, sdkCli) {
+  const child = spawn(binary, ['--cwd', cwd, '--data-dir', dataDir,
+    ...(sdkCli ? ['--cli', sdkCli] : [])], {
     cwd,
     env: {
       ...process.env,
@@ -160,5 +161,92 @@ test('已编译发行宿主：启动、长期目标、排队、取消、归档�
   } finally {
     if (host) await host.close()
     await rm(root, { recursive: true, force: true })
+  }
+})
+
+
+// Minimal real stdio SDK child: same 2.1.317 control/stream-json wire shape as
+// the SDK contract tests. It returns a deterministic local result without
+// requiring network access or an API key.
+const offlineCli = String.raw\`
+import { createInterface } from 'node:readline'
+import { randomUUID } from 'node:crypto'
+const args=process.argv.slice(2)
+const pick=flag=>{const i=args.indexOf(flag);return i<0?undefined:args[i+1]}
+const sessionId=pick('--session-id')||pick('--resume')||randomUUID()
+const send=frame=>process.stdout.write(JSON.stringify(frame)+'\\n')
+const meta=()=>({session_id:sessionId,uuid:randomUUID()})
+const reply=(id,payload)=>send({type:'control_response',response:{subtype:'success',request_id:id,response:payload}})
+const reader=createInterface({input:process.stdin,crlfDelay:Infinity})
+reader.on('line',line=>{
+  try {
+    const frame=JSON.parse(line)
+    if(frame.type==='control_request'){
+      if(frame.request.subtype==='initialize')reply(frame.request_id,{
+        models:[{value:'offline-smoke-model',displayName:'离线验收模型',description:'本地SDK协议模拟'}],
+        agents:[{name:'Explore',description:'离线任务模拟'}],
+        commands:[],output_style:'default',available_output_styles:[],account:{},
+      })
+      else reply(frame.request_id,{})
+    }else if(frame.type==='user'){
+      send({type:'system',subtype:'task_started',task_id:'local-agent',
+        description:'执行离线任务验证',task_type:'local_agent',...meta()})
+      send({type:'system',subtype:'task_notification',task_id:'local-agent',
+        status:'completed',summary:'离线任务完成',output_file:'',...meta()})
+      send({type:'result',subtype:'success',is_error:false,terminal_reason:'completed',
+        result:'已完成离线执行并验证工具与工作项状态',
+        duration_ms:1,duration_api_ms:1,num_turns:1,
+        stop_reason:null,total_cost_usd:0,usage:{},modelUsage:{},
+        permission_denials:[],...meta()})
+    }
+  }catch(error){process.stderr.write(String(error)+'\\n');process.exitCode=1}
+})
+\`
+
+test('真实桌面发行宿主和SDK子进程：工作项进入审核、人工确认及重启持久化', {
+  timeout: 100000,
+}, async () => {
+  const binary=resolve(process.argv[2]??'dist/desktopHost')
+  const root=await mkdtemp(join(tmpdir(),'yaoyao-sdk-deployed-'))
+  const cwd=join(root,'workspace'),config=join(root,'config'),data=join(root,'journal')
+  const cli=join(root,'offline-sdk-cli.mjs')
+  await Promise.all([mkdir(cwd),mkdir(config),mkdir(data)])
+  await writeFile(cli,offlineCli)
+  let host
+  try {
+    host=startHost(binary,cwd,config,data,cli)
+    const created=await host.call('missions.create',{objective:'离线代理任务真实SDK调度及审核'})
+    assert.equal(created.ok,true,JSON.stringify(created))
+    const missionId=created.result.id
+    const queued=await host.call('missions.jobs.enqueue',{
+      missionId,title:'校验真实模型调用链',instruction:'离线模拟一个完整SDK流式任务'
+    })
+    assert.equal(queued.ok,true,JSON.stringify(queued))
+    const jobId=queued.result.id
+    const started=await host.call('missions.jobs.start',{missionId,jobId})
+    assert.equal(started.ok,true,JSON.stringify(started))
+    assert.match(started.result.sessionId,/^[a-f0-9-]{36}$/)
+    let found
+    for(let i=0;i<80;i++){
+      const response=await host.call('missions.jobs.list',{missionId})
+      assert.equal(response.ok,true,JSON.stringify(response))
+      found=response.result.find(job=>job.id===jobId)
+      if(found?.status==='review')break
+      await new Promise(resolve=>setTimeout(resolve,70))
+    }
+    assert.equal(found?.status,'review',JSON.stringify(found))
+    assert.equal(found.history.length,1)
+    const approved=await host.call('missions.jobs.approve',{missionId,jobId})
+    assert.equal(approved.ok,true,JSON.stringify(approved))
+    assert.equal(approved.result.status,'completed')
+    await host.close()
+    host=undefined
+    host=startHost(binary,cwd,config,data,cli)
+    const restored=await host.call('missions.jobs.list',{missionId})
+    assert.equal(restored.ok,true,JSON.stringify(restored))
+    assert.equal(restored.result.find(job=>job.id===jobId)?.status,'completed')
+  } finally {
+    if(host)await host.close()
+    await rm(root,{recursive:true,force:true})
   }
 })
