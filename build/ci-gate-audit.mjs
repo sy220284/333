@@ -17,7 +17,6 @@ const required = [
   'dev-quality.yml',
   'codeql.yml',
   'governance-security-probe.yml',
-  'm6-gateway-providers-317.yml',
 ]
 for (const name of required) {
   if (!existsSync(root(`.github/workflows/${name}`))) {
@@ -112,20 +111,14 @@ if (/contents:\s*write/.test(lockGate) || /git\s+push\s+origin/.test(lockGate))
   errors.push('依赖锁门禁不得在审查时自动改写 PR：m1-public-lock-sync.yml')
 if (!/node tools\/dev\/toolchain\.mjs check/.test(lockGate))
   errors.push('依赖锁缺失实际基准校验：m1-public-lock-sync.yml')
-const gatewayGate = yaml('m6-gateway-providers-317.yml')
-for (const requiredTest of [
-  'tests/m6-gateway-providers-317.test.mjs',
-  'tests/m6-gateway-cri-317.test.mjs',
-  'tests/m6-gateway-spend-integration-317.test.mjs',
-  'tests/m6-gateway-telemetry-policy-317.test.mjs',
-  'tests/m6-gateway-postgres-317.test.mjs',
-]) {
-  if (!gatewayGate.includes(requiredTest)) errors.push(`企业网关专项缺失真实验收：${requiredTest}`)
-}
-if (!dispatcher.includes('needs.plan.outputs.m6_gateway_providers_317'))
-  errors.push('企业网关未纳入 Draft 按需检查')
-if (!dispatcher.includes('m6-gateway-providers-317, m6-self-hosted-runner-317'))
-  errors.push('企业网关未纳入统一结果聚合')
+// Enterprise gateway is intentionally removed from the personal product.
+if (workflows.includes('m6-gateway-providers-317.yml'))
+  errors.push('已退役企业网关专项仍存在')
+if (existsSync(root('src/cli/gateway/')))
+  errors.push('企业网关源码目录仍存在，请完成全量清退')
+const retiredGatewayTests = readdirSync(root('tests/')).filter(name => /^m6-gateway-.*\\.test\\.mjs$/.test(name))
+if (retiredGatewayTests.length)
+  errors.push('企业网关测试已无对应业务入口：' + retiredGatewayTests.join(','))
 
 const matrix = yaml('ci-test-matrix.yml')
 if (!/needs:\s*\[inventory, build, core, supplemental, oracle\]/.test(matrix) ||
