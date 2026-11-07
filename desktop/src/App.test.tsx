@@ -413,6 +413,12 @@ describe('摇摇车真实桌面页面交互',()=>{
     expect(call).toHaveBeenCalledWith('sessions.open',expect.any(Object))
     expect(screen.getByRole('textbox',{name:'输入任务'})).toBeInTheDocument()
     expect(screen.getByText('已收到团队建队请求，等待工具确认')).toBeInTheDocument()
+    const prior=call.mock.calls.filter(entry=>entry[0]==='agents.overview').length
+    await act(async()=>listener({
+      event:'session.message',sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',
+      message:{type:'result',subtype:'success',result:'团队建队工具已返回'}
+    }))
+    await waitFor(()=>expect(call.mock.calls.filter(entry=>entry[0]==='agents.overview').length).toBeGreaterThan(prior))
   })
 
   it('成员任务通过团队负责人会话原生发送，不误建独立会话',async()=>{

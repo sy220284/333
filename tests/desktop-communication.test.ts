@@ -29,7 +29,7 @@ async function until(ready: () => boolean) {
 function request(method: DesktopRequest['method'], data: Record<string, unknown> = {}): DesktopRequest {
   return DesktopRequestSchema.parse({ id: randomUUID(), method, ...data })
 }
-function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
+function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRunning?: boolean } = {}) {
   let lastToolCallback: CanUseTool | undefined
   let lastHostCallback: HostControlRequestHandler | undefined
   let lastControl: Record<string, unknown> | undefined
@@ -81,7 +81,7 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
           tool_use_id: 'tool-1', parent_tool_use_id: null, elapsed_time_seconds: 1, ...base }
         yield { type: 'system', subtype: 'task_progress', task_id: 'agent-1',
           description: 'Search source', usage: { total_tokens: 42, tool_uses: 2, duration_ms: 90 }, ...base }
-        if (content !== 'incomplete') yield { type: 'system', subtype: 'task_notification',
+        if (content !== 'incomplete' && !fixtureOptions.leaveTaskRunning) yield { type: 'system', subtype: 'task_notification',
           task_id: 'agent-1', status: 'completed', output_file: '/tmp/out',
           summary: 'Done', ...base }
         yield { type: 'result', subtype: 'success', is_error: false,
@@ -401,6 +401,32 @@ test('超级智能体工作项从入队、真实 SDK 会话、人工审核到长
     else process.env.CLAUDE_CODE_COORDINATOR_MODE = beforeOverride
     await gateway.close()
     await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('主会话成功但后台智能体未结束时不能审核通过，保留需要检查的中断状态',async()=>{
+  const cwd=await mkdtemp(join(tmpdir(),'desktop-unfinished-worker-'))
+  const root=join(cwd,'private-store')
+  const data=fixture({leaveTaskRunning:true})
+  const gateway=createDesktopGateway({...data.options,cwd,missionRoot:root})
+  const events:DesktopEvent[]=[]
+  gateway.subscribe(event=>events.push(event))
+  try{
+    const mission=await gateway.handle(request('missions.create',{objective:'核对后台任务终态'})) as {id:string}
+    const job=await gateway.handle(request('missions.jobs.enqueue',{
+      missionId:mission.id,title:'后台执行中',instruction:'执行并报告工具完成通知',
+    })) as {id:string}
+    await gateway.handle(request('missions.jobs.start',{missionId:mission.id,jobId:job.id}))
+    await until(()=>events.some(event=>event.event==='mission.job.updated'&&
+      event.job.id===job.id&&event.job.status==='interrupted'))
+    const items=await gateway.handle(request('missions.jobs.list',{missionId:mission.id})) as Array<{status:string}>
+    expect(items[0]?.status).toBe('interrupted')
+    await expect(gateway.handle(request('missions.jobs.approve',{
+      missionId:mission.id,jobId:job.id,
+    }))).rejects.toThrow('待审核结果')
+  }finally{
+    await gateway.close()
+    await rm(cwd,{recursive:true,force:true})
   }
 })
 

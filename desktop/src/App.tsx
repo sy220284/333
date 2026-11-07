@@ -302,6 +302,7 @@ export function App(){
         setTasks(old=>[task,...old.filter(t=>t.taskId!==task.taskId)])
       }else if(event.event==='session.message'){
         const payload=obj(event.message)
+        if(payload.type==='result')syncMissionOverview()
         if(payload.type==='stream_event'){
           const streaming=obj(payload.event)
           const delta=obj(streaming.delta)
@@ -346,7 +347,7 @@ export function App(){
       }catch(e){if(alive){setConnected(false);setError(presentError(e))}}
     })()
     return ()=>{alive=false;unsub()}
-  },[refresh,resumeSession])
+  },[refresh,resumeSession,syncMissionOverview])
   useEffect(()=>{
     const available=Array.isArray(overview.teams)?overview.teams as Item[]:[]
     if(!available.some(team=>String(team.name||'')===selectedTeam))
@@ -359,7 +360,7 @@ export function App(){
       .then(members=>{if(live)setTeamMembers(members)})
       .catch(reason=>{if(live)setError(presentError(reason))})
     return()=>{live=false}
-  },[selectedTeam,workspace])
+  },[selectedTeam,workspace,overview])
   useEffect(()=>{if(view==='chat'&&followLatest&&messages.length>0&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
   useEffect(()=>{
     let valid=true

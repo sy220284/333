@@ -353,6 +353,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       throw error
     }
     const pump = async () => {
+      let pendingReviewSummary: string | undefined
       try {
         for await (const sdkMessage of entry.runtime.stream()) {
           emit({ event: 'session.message', sessionId, turnId, message: sdkMessage })
@@ -360,7 +361,14 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
             const success = !sdkMessage.is_error && sdkMessage.subtype === 'success'
             const summary = typeof sdkMessage.result === 'string' && sdkMessage.result.trim()
               ? sdkMessage.result : success ? '模型执行已结束，等待人工核查' : '模型执行返回失败'
-            await settleExecutingJob(sessionId, success ? 'review' : 'failed', summary)
+            if (success && [...entry.tasks.values()].some(task => task.status === 'running')) {
+              // The coordinator may finish while its background agents are
+              // still working. Wait for native task notifications before
+              // reporting an auditable result; an ended stream is interrupted.
+              pendingReviewSummary = summary
+            } else {
+              await settleExecutingJob(sessionId, success ? 'review' : 'failed', summary)
+            }
           }
           if (isAgentProgress(sdkMessage)) {
             const background = projectBackgroundTasks(sdkMessage, entry.tasks)
@@ -383,6 +391,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
               event: 'mission.activity', missionId: job.missionId, jobId: job.jobId,
               sessionId, task,
             })
+            if (pendingReviewSummary && executingMissionJobs.has(sessionId) &&
+                ![...entry.tasks.values()].some(item => item.status === 'running')) {
+              await settleExecutingJob(sessionId, 'review', pendingReviewSummary)
+              pendingReviewSummary = undefined
+            }
           }
         }
       } catch (error) {
@@ -393,7 +406,10 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       } finally {
         if (executingMissionJobs.has(sessionId)) {
           try {
-            await settleExecutingJob(sessionId, 'interrupted', '执行流结束前未取得完整结果；请核对实际改动后手动重试')
+            await settleExecutingJob(sessionId, 'interrupted',
+              pendingReviewSummary
+                ? '主会话已完成，但后台智能体仍有未确认的运行任务；请检查任务通知与文件改动后手动恢复'
+                : '执行流结束前未取得完整结果；请核对实际改动后手动重试')
           } catch (error) {
             emit({ event: 'session.error', sessionId, turnId,
               error: `长期任务恢复记录失败：${String(error)}` })
