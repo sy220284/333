@@ -48,6 +48,7 @@ type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:strin
 type CapabilityItem={id:string;name:string;kind:'tool'|'skill'|'workflow'|'plugin'|'mcp'|'command';source:string;scope:string;description:string;status:'available'|'configured'|'disabled';version?:string}
 type ExperienceItem={id:string;key:string;title:string;scenario:string;principle:string;procedure:string[];applicability:string;invalidWhen:string;verification:string;evidenceRefs:string[];tags:string[];status:'candidate'|'approved'|'retired';revision:number;verifiedBy?:string}
 type SkillDraft={id:string;slug:string;description:string;instructions:string;state:'candidate'|'published';createdAt:string;publishedAt?:string}
+type TeamHandoff={id:string;teamName:string;from:string;to:string;summary:string;instruction:string;status:'draft'|'queued'|'acknowledged'|'running'|'review'|'completed'|'cancelled';inputRefs:string[];outputRefs:string[];reviewSummary?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'dashboard',label:'工作台概览',icon:LayoutDashboard},
   {id:'chat',label:'AI 对话',icon:MessageSquare},
@@ -165,6 +166,9 @@ export function App(){
   const [newTeammateTask,setNewTeammateTask]=useState('')
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([])
   const [teamInbox,setTeamInbox]=useState<TeamInbox|null>(null)
+  const [teamHandoffs,setTeamHandoffs]=useState<TeamHandoff[]>([])
+  const [handoffRevision,setHandoffRevision]=useState(0)
+  const pendingHandoff=useRef<{key:string;requestId:string}|null>(null)
   const [teamNotice,setTeamNotice]=useState('')
   const pendingTeamDelivery=useRef<{key:string;messageId:string}|null>(null)
   const [missions,setMissions]=useState<Mission[]>([])
@@ -265,7 +269,15 @@ export function App(){
     return()=>{active=false}
   },[view,workspace,connected,catalogRevision])
   useEffect(()=>{viewRef.current=view},[view])
-  useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null},[selectedTeam,workspace])
+  useEffect(()=>{setTeamInbox(null);setTeamNotice('');pendingTeamDelivery.current=null;pendingHandoff.current=null},[selectedTeam,workspace])
+  useEffect(()=>{
+    if(view!=='agents'||!connected)return
+    let active=true
+    void api.call<{handoffs:TeamHandoff[]}>('handoffs.list').then(data=>{
+      if(active)setTeamHandoffs(data.handoffs??[])
+    }).catch(error=>{if(active)setError('交接记录读取失败：'+presentError(error))})
+    return()=>{active=false}
+  },[view,workspace,connected,handoffRevision])
   useEffect(()=>{sessionRef.current=sessionId},[sessionId])
   useEffect(()=>{selectedMissionRef.current=selectedMission},[selectedMission])
   const invoke=useCallback(async<T,>(method:string,args:Record<string,unknown>={}):Promise<T>=>{
@@ -382,6 +394,24 @@ export function App(){
       setBusy(remaining.at(-1)??'')
     }
   },[])
+  async function createTrackedHandoff(){
+    if(!selectedTeam||!teamMemberDraft.trim()||teamMemberInstruction.trim().length<12)return
+    const key=JSON.stringify([workspace,selectedTeam,teamMemberDraft.trim(),teamMemberInstruction.trim()])
+    const requestId=pendingHandoff.current?.key===key
+      ?pendingHandoff.current.requestId:crypto.randomUUID()
+    pendingHandoff.current={key,requestId}
+    await operation('创建跨成员交接',async()=>{
+      const result=await invoke<TeamHandoff>('handoffs.create',{
+        requestId,teamName:selectedTeam,to:teamMemberDraft.trim(),
+        summary:teamMemberInstruction.trim().slice(0,90),
+        instruction:teamMemberInstruction.trim(),
+        inputRefs:[],
+      })
+      setTeamNotice('已登记交接 '+result.id.slice(0,8)+'，状态：'+result.status+'；待成员读取、处理和返回证据。')
+      pendingHandoff.current=null
+      setHandoffRevision(v=>v+1)
+    })
+  }
   const resumeSession=useCallback(async(id:string)=>{
     const generation=++sessionGeneration.current,project=workspaceGeneration.current
     const valid=()=>generation===sessionGeneration.current&&project===workspaceGeneration.current
@@ -1210,6 +1240,7 @@ export function App(){
                       <textarea aria-label="团队成员工作指令" rows={2} value={teamMemberInstruction} onChange={e=>setTeamMemberInstruction(e.target.value)} placeholder="明确分工、交付和检查条件"/>
                       <div className="flex flex-wrap gap-2">
                         <Button variant="secondary" size="sm" disabled={Boolean(busy)||!teamMemberDraft.trim()||!teamMemberInstruction.trim()} onClick={()=>void requestTeamAction('message')}><MessageSquare size={13}/>发送成员任务</Button>
+                        <Button variant="secondary" size="sm" disabled={Boolean(busy)||!selectedTeam||!teamMemberDraft.trim()||teamMemberInstruction.trim().length<12} onClick={()=>void createTrackedHandoff()}><ClipboardList size={13}/>发送并追踪交接</Button>
                         <Button variant="danger-outline" size="sm" disabled={Boolean(busy)} onClick={()=>void requestTeamAction('close')}><X size={13}/>请求结束团队</Button>
                         <Button variant="secondary" size="sm" disabled={Boolean(busy)} onClick={()=>void inspectTeamInbox('team-lead')}><History size={13}/>查看团队回复</Button>
                       </div>
@@ -1225,6 +1256,18 @@ export function App(){
                   </Card>
                 </div>:
                 <Card radius="lg" surface="lowest"><Empty icon={UsersRound} title="当前项目暂无团队" detail="先创建长期目标，然后在 Super Agents 模式下建立团队。" action={<Button variant="secondary" size="base" onClick={()=>setView('missions')}>创建长期目标 <ArrowRight size={14}/></Button>}/></Card>}
+            </Section>
+            <Section title="团队交接记录" subtitle="显示原生信箱投递与任务交接状态；已排队仅证明消息写入，成员领取和完成需后续真实回执。" action={<Button variant="secondary" size="sm" onClick={()=>setHandoffRevision(v=>v+1)}><RefreshCw size={13}/>刷新交接</Button>}>
+              <Card radius="lg" surface="lowest" padding="md" shadow="card">
+                <div className="space-y-2">{teamHandoffs.filter(h=>!selectedTeam||h.teamName===selectedTeam).slice(-40).reverse().map(h=><div key={h.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[12px]">
+                  <div className="flex flex-wrap items-center gap-2"><strong className="flex-1">{h.summary}</strong><Badge size="xs" tone={h.status==='completed'?'success':h.status==='draft'?'warning':'neutral'}>{({draft:'待投递',queued:'已排队',acknowledged:'已确认收到',running:'执行中',review:'待审核',completed:'已验收',cancelled:'已取消'} as Record<string,string>)[h.status]}</Badge></div>
+                  <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{h.from} → {h.to} · {h.teamName}</p>
+                  <details className="mt-2 text-[11px]"><summary className="cursor-pointer">交接详情</summary><p className="whitespace-pre-wrap">{h.instruction}</p><p className="mt-1 break-all">编号：{h.id}</p>{h.outputRefs.length>0&&<p>产物：{h.outputRefs.join('、')}</p>}</details>
+                  {h.status==='draft'&&<Button variant="secondary" size="sm" className="mt-2" onClick={()=>void operation('重试交接投递',async()=>{await invoke('handoffs.retry',{handoffId:h.id});setHandoffRevision(v=>v+1)})}>重试投递</Button>}
+                </div>)}
+                {teamHandoffs.length===0&&<Empty icon={ClipboardList} title="尚无跨成员交接" detail="使用团队成员区的『发送并追踪交接』建立持久化工作交接记录。"/>}
+                </div>
+              </Card>
             </Section>
             <Section title="跨模式执行总览" subtitle={`主子任务、长期工作项和团队分工 · 已显示 ${agentActivities.length}/${agentActivityCount} 项`} action={<Button variant="secondary" size="sm" onClick={()=>void operation('刷新协作记录',refreshAgentActivities)} disabled={Boolean(busy)}><RefreshCw size={13}/>刷新记录</Button>}>
               <Card radius="lg" surface="lowest" padding="sm">
