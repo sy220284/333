@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
@@ -59,6 +59,34 @@ test('桌面原生接口贯通技能候选、人工发布、经验提炼与核�
     await gateway.handle(req('experience.approve',{experienceId:proposed.id,reviewer:'桌面用户',reviewNote:'已打开原始档案，逐条核对引用与研究结论'}))
     const approved=await gateway.handle(req('experience.search',{query:'研究'})) as {experiences:Array<{key:string}>}
     expect(approved.experiences[0]?.key).toBe('research-source-check')
+    await writeFile(join(project,'verified-report.md'),'报告版本 A：已逐条校验引用。')
+    const savedArtifact=await gateway.handle(req('artifacts.register',{
+      title:'已核对的研究报告',kind:'document',path:'verified-report.md',
+    })) as {id:string;status:string;sha256:string}
+    expect(savedArtifact.status).toBe('registered')
+    expect((await gateway.handle(req('artifacts.verify',{artifactId:savedArtifact.id})) as {matches:boolean}).matches).toBe(true)
+    const verifiedArtifact=await gateway.handle(req('artifacts.approve',{
+      artifactId:savedArtifact.id,reviewNote:'已逐项检查报告文件、引用条目及版本信息',
+    })) as {status:string}
+    expect(verifiedArtifact.status).toBe('approved')
+    const proven=await gateway.handle(req('experience.propose',{
+      draft:{...experience,key:'research-artifact-proof',evidenceRefs:['artifact:'+savedArtifact.id]},
+    })) as {id:string}
+    const proof=await gateway.handle(req('experience.evidence.preview',{
+      experienceId:proven.id,
+    })) as {mayApprove:boolean;checks:Array<{status:string}>}
+    expect(proof.checks[0]?.status).toBe('verified')
+    await gateway.handle(req('experience.approve',{
+      experienceId:proven.id,reviewer:'桌面用户',
+      reviewNote:'已根据真实项目成果文件核对内容指纹与报告引用',
+    }))
+    await writeFile(join(project,'verified-report.md'),'报告版本 B：原文已修改')
+    const invalidated=await gateway.handle(req('experience.evidence.preview',{
+      experienceId:proven.id,
+    })) as {mayApprove:boolean;checks:Array<{status:string}>}
+    expect(invalidated.mayApprove).toBe(false)
+    const found=await gateway.handle(req('experience.search',{query:'研究'})) as {experiences:Array<{key:string}>}
+    expect(found.experiences.some(item=>item.key==='research-artifact-proof')).toBe(false)
     const handoffId=randomUUID()
     await expect(gateway.handle(req('handoffs.create',{
       requestId:handoffId,teamName:'missing-team',to:'设计',
