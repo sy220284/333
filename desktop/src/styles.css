@@ -516,3 +516,6 @@ body{font-size:13px;letter-spacing:.004em}
 @media(max-width:880px){.mode-cards,.model-grid,.integration-grid{grid-template-columns:1fr}.dashboard-stats{grid-template-columns:repeat(2,1fr)}}
 @media(prefers-reduced-motion:reduce){.command-dialog,.command-backdrop{animation:none}}
 [data-motion=off] .command-dialog,[data-motion=off] .command-backdrop{animation:none}
+
+.command-dismiss{position:absolute;inset:0;width:100%;height:100%;padding:0;background:transparent;border:0;cursor:default}
+.command-dialog{position:relative;z-index:1}
