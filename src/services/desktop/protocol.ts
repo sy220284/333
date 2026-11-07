@@ -55,7 +55,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('sessions.send', { sessionId, message: z.union([z.string().min(1), SDKUserMessageSchema()]) }),
   request('sessions.interrupt', { sessionId }),
   request('sessions.setModel', { sessionId, model: z.string().min(1) }),
-  request('sessions.setPermissionMode', { sessionId, mode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk']) }),
+  request('sessions.setPermissionMode', { sessionId, mode: z.enum(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk', 'auto']) }),
   request('host.list', { sessionId }),
   request('host.respond', { sessionId, requestId: id, response: z.record(z.string(), z.unknown()) }),
   request('host.reject', { sessionId, requestId: id, reason: z.string().min(1).max(2000) }),
