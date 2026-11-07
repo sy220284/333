@@ -27,7 +27,7 @@ type Host = { child: ReturnType<typeof spawn>; client: ReturnType<typeof createD
 const hosts = new Map<string, Host>()
 const launchWorkspace=process.env.YAOYAO_INITIAL_WORKSPACE
 const hasLaunchWorkspace=Boolean(launchWorkspace&&existsSync(launchWorkspace)&&statSync(launchWorkspace).isDirectory())
-let active=hasLaunchWorkspace?realpathSync(launchWorkspace!):process.env.HOME||process.env.USERPROFILE||process.cwd()
+let active=launchWorkspace&&hasLaunchWorkspace?realpathSync(launchWorkspace):process.env.HOME||process.env.USERPROFILE||process.cwd()
 let window: BrowserWindow | null = null
 let quitting = false
 

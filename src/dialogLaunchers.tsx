@@ -6,7 +6,6 @@
  * Part of the main.tsx React/JSX extraction effort. See sibling PRs
  * perf/extract-interactive-helpers and perf/launch-repl.
  */
-import React from 'react';
 import type { StatsStore } from './context/stats.js';
 import type { Root } from './ink.js';
 import { showSetupDialog } from './interactiveHelpers.js';

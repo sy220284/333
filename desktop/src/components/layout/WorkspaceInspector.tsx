@@ -12,11 +12,11 @@ export function WorkspaceInspector({connected,phase,model,mode,approvals,tasks,a
     <div className="min-h-0 flex-1 overflow-y-auto">
       <section className="border-b border-[var(--color-border)] p-4">
         <h3 className="mb-4 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">运行状态</h3>
-        <div className="flex items-center gap-3"><span className={'flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] '+(connected?'bg-[var(--color-success-container)] text-[var(--color-on-success-container)]':'bg-[var(--color-surface-container)] text-[var(--color-error)]')}>{connected?<Activity size={18}/>:<AlertCircle size={18}/>}</span><div><strong className="block text-[12px]">{connected?'引擎已连接':'等待连接'}</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">{phase}</small></div></div>
+        <div className="flex items-center gap-3"><span className={`flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] ${(connected?'bg-[var(--color-success-container)] text-[var(--color-on-success-container)]':'bg-[var(--color-surface-container)] text-[var(--color-error)]')}`}>{connected?<Activity size={18}/>:<AlertCircle size={18}/>}</span><div><strong className="block text-[12px]">{connected?'引擎已连接':'等待连接'}</strong><small className="mt-1 block text-[11px] text-[var(--color-text-tertiary)]">{phase}</small></div></div>
       </section>
       <section className="space-y-3 border-b border-[var(--color-border)] p-4">
         <h3 className="text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">当前配置</h3>
-        {([{label:'智能体模式',value:mode==='super'?'Super Agents':'主子模式'},{label:'当前模型',value:model||'默认模型'},{label:'待审权限',value:String(approvals)+' 项'},{label:'活动任务',value:String(tasks)}]).map(item=><div className="flex items-start justify-between gap-2 text-[11px]" key={item.label}><span className="text-[var(--color-text-tertiary)]">{item.label}</span><strong title={item.value} className="max-w-[125px] truncate text-right font-semibold">{item.value}</strong></div>)}
+        {([{label:'智能体模式',value:mode==='super'?'Super Agents':'主子模式'},{label:'当前模型',value:model||'默认模型'},{label:'待审权限',value:`${approvals} 项`},{label:'活动任务',value:String(tasks)}]).map(item=><div className="flex items-start justify-between gap-2 text-[11px]" key={item.label}><span className="text-[var(--color-text-tertiary)]">{item.label}</span><strong title={item.value} className="max-w-[125px] truncate text-right font-semibold">{item.value}</strong></div>)}
       </section>
       <section className="space-y-1 border-b border-[var(--color-border)] p-4">
         <h3 className="mb-3 text-[10px] font-semibold tracking-[.13em] text-[var(--color-text-tertiary)]">快捷操作</h3>
