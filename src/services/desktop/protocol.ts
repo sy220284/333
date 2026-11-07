@@ -25,8 +25,8 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('data.purge.apply', { token: z.string().uuid() }),
   request('mcp.list', {}),
   request('mcp.add', { name: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), scope: z.enum(['project', 'user', 'local']), config: z.union([
-    z.object({ type: z.literal('http'), url: z.string().url().max(2048) }).strict(),
-    z.object({ type: z.literal('sse'), url: z.string().url().max(2048) }).strict(),
+    z.object({ type: z.literal('http'), url: z.string().url().max(2048), headers: z.record(z.string().max(120), z.string().max(8192)).optional(), headersHelper: z.string().min(1).max(1024).optional() }).strict(),
+    z.object({ type: z.literal('sse'), url: z.string().url().max(2048), headers: z.record(z.string().max(120), z.string().max(8192)).optional(), headersHelper: z.string().min(1).max(1024).optional() }).strict(),
     z.object({ type: z.literal('stdio'), command: z.string().trim().min(1).max(1024), args: z.array(z.string().max(1000)).max(80), env: z.record(z.string().max(120), z.string().max(8192)).optional() }).strict()
   ]) }),
   request('mcp.remove', { name: z.string().min(1), scope: z.enum(['project','user','local']) }),
