@@ -95,6 +95,8 @@
           "to": "bin/yaoyaoche"
         }
       ]
-    }
-  }
+    },
+    "executableName": "yaoyaoche"
+  },
+  "description": "摇摇车本地智能体开发工作台，支持主子智能体与 Super Agents 团队协作。"
 }
