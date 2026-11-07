@@ -130,7 +130,7 @@ export function App(){
   const [gitStatus,setGitStatus]=useState('')
   const [gitDiff,setGitDiff]=useState('')
   const [themeVariant,setThemeVariant]=useState<ThemeVariant>(()=>{
-    const stored=window.localStorage.getItem(PREF+'theme')
+    const stored=window.localStorage.getItem(`${PREF}theme`)
     return THEME_VARIANTS.some(theme=>theme===stored)?stored as ThemeVariant:loadPreference('dark',false)?'dark':'white'
   })
   const isDark=themeVariant==='dark'||themeVariant==='ink-blue'
@@ -313,8 +313,8 @@ export function App(){
   useEffect(()=>{
     document.documentElement.dataset.theme=isDark?'dark':'light'
     document.documentElement.dataset.ccTheme=themeVariant
-    window.localStorage.setItem(PREF+'dark',String(isDark))
-    window.localStorage.setItem(PREF+'theme',themeVariant)
+    window.localStorage.setItem(`${PREF}dark`,String(isDark))
+    window.localStorage.setItem(`${PREF}theme`,themeVariant)
   },[isDark,themeVariant])
   useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
   useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
@@ -595,11 +595,11 @@ export function App(){
       <div className="cc-sidebar-scroll">
         <div className="cc-sidebar-section-head"><span>最近会话</span><button type="button" aria-label="查看全部历史会话" title="查看全部历史会话" onClick={()=>setView('history')}><History size={15}/></button></div>
         <div className="cc-sidebar-history">
-          {sessions.length===0?<p className="cc-sidebar-empty">尚无本地会话</p>:sessions.slice(0,5).map((item,index)=>{
+          {sessions.length===0?<p className="cc-sidebar-empty">尚无本地会话</p>:sessions.slice(0,5).map(item=>{
             const id=String(item.sessionId||item.id||'')
             if(!id)return null
             const label=String(item.summary||item.title||id.slice(0,8))
-            return <button key={id+index} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
+            return <button key={id} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
           })}
         </div>
         <nav className="nav-links cc-grouped-nav" aria-label="主要导航">
@@ -623,15 +623,16 @@ export function App(){
           {([
             ...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),
             ...sessions
-          ]).slice(0,6).map((item,index)=>{
+          ]).slice(0,6).map(item=>{
             const id=String(item.sessionId||item.id||'')
             if(!id)return null
             const label=String(item.summary||item.title||id.slice(0,8))
             const active=view==='chat'&&sessionId===id
-            return <button type="button" role="tab" key={id+index} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`cc-tab ${active?'active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={15}/><span>会话 · {label}</span>{active&&<span className="cc-tab-active-mark"/>}</button>
+            return <button type="button" role="tab" key={id} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`cc-tab ${active?'active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={15}/><span>会话 · {label}</span>{active&&<span className="cc-tab-active-mark"/>}</button>
           })}
           {view!=='chat'&&(()=>{
-            const current=NAV.find(item=>item.id===view)!
+            const current=NAV.find(item=>item.id===view)
+            if(!current)return null
             const Icon=current.icon
             return <button type="button" role="tab" aria-selected={true} aria-label={`标签页：${current.label}`} className="cc-tab active" onClick={()=>setView(view)}><Icon size={15}/><span>{current.label}</span><span className="cc-tab-active-mark"/></button>
           })()}
