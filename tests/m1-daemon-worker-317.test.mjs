@@ -157,8 +157,11 @@ test('317 daemon refuses invalid proxy before parsing worker kind or stdin', {
   }
   try {
     for (const [name, binary, prefix] of bins) {
+      // Source-mode Bun can reject the proxy before the CLI worker starts.
+      // Exercise the CLI's own proxy validation in this regression.
+      const workerEnv = name === 'rebuilt' ? { ...env, NODE_USE_ENV_PROXY: '0' } : env
       const result = await launch(binary, [...prefix, '--daemon-worker', 'invalid'],
-        '{}', false, env)
+        '{}', false, workerEnv)
       assert.equal(result.code, 78, name + JSON.stringify(result))
       assert.equal(result.stdout, '', name)
       assert.equal(result.stderr.trim(), [

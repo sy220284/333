@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { api, type AppEvent, type Item } from './api'
 import { MarkdownMessage } from './MarkdownMessage'
+import brandIconUrl from '../build/icon.svg'
 import { asObject, itemFromMessage, statusName, type ConversationItem } from './projection'
 
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
@@ -35,6 +36,12 @@ const NAV:{id:View;label:string;icon:LucideIcon}[]=[
   {id:'github',label:'GitHub',icon:GitPullRequest},
   {id:'history',label:'历史记录',icon:History},
   {id:'settings',label:'设置与权限',icon:Settings2}
+]
+const NAV_GROUPS:{label:string;views:View[]}[]=[
+  {label:'工作',views:['dashboard','chat','history']},
+  {label:'智能体与任务',views:['agents','missions']},
+  {label:'开发工作区',views:['files','github']},
+  {label:'扩展与设置',views:['models','integrations','settings']},
 ]
 const TITLES:Record<View,[string,string]>={
   dashboard:['工作台概览','从这里继续你的 AI 工作，让每项进展都清晰可见。'],
@@ -120,11 +127,12 @@ export function App(){
   const [savedContent,setSavedContent]=useState('')
   const [gitStatus,setGitStatus]=useState('')
   const [gitDiff,setGitDiff]=useState('')
-  const [isDark,setIsDark]=useState(()=>loadPreference('dark',true))
+  const [isDark,setIsDark]=useState(()=>loadPreference('dark',false))
   const [animate,setAnimate]=useState(()=>loadPreference('motion',true))
   const [permissionMode,setPermissionMode]=useState('default')
   const [activity,setActivity]=useState<string[]>([])
   const inputRef=useRef<HTMLTextAreaElement>(null)
+  const paletteInputRef=useRef<HTMLInputElement>(null)
   const messagesEnd=useRef<HTMLDivElement>(null)
   const streamRef=useRef<HTMLDivElement>(null)
   const sessionRef=useRef('')
@@ -140,6 +148,7 @@ export function App(){
     try{return await api.call<T>(method,args)}
     catch(e){const reason=presentError(e);setError(reason);throw e}
   },[])
+  const openChatLink=useCallback((url:string)=>{void invoke('external.open',{url}).catch(reason=>setError(presentError(reason)))},[invoke])
   const refresh=useCallback(async()=>{
     const queries=await Promise.allSettled([
       api.call<{models:Model[]}>('models.list'),
@@ -282,7 +291,7 @@ export function App(){
       .catch(reason=>{if(live)setError(presentError(reason))})
     return()=>{live=false}
   },[selectedTeam,workspace])
-  useEffect(()=>{if(view==='chat'&&followLatest&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
+  useEffect(()=>{if(view==='chat'&&followLatest&&messages.length>0&&streamRef.current){streamRef.current.scrollTop=streamRef.current.scrollHeight}},[messages,view,followLatest])
   useEffect(()=>{
     let valid=true
     if(!selectedMission){setMissionJobs([]);return}
@@ -294,9 +303,10 @@ export function App(){
       .catch(err=>{if(valid)setError(presentError(err))})
     return ()=>{valid=false}
   },[selectedMission])
-  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';window.localStorage.setItem(PREF+'dark',String(isDark))},[isDark])
-  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(PREF+'motion',String(animate))},[animate])
-  useEffect(()=>{window.localStorage.setItem(PREF+'inspector',String(rightOpen))},[rightOpen])
+  useEffect(()=>{document.documentElement.dataset.theme=isDark?'dark':'light';window.localStorage.setItem(`${PREF}dark`,String(isDark))},[isDark])
+  useEffect(()=>{document.documentElement.dataset.motion=animate?'on':'off';window.localStorage.setItem(`${PREF}motion`,String(animate))},[animate])
+  useEffect(()=>{window.localStorage.setItem(`${PREF}inspector`,String(rightOpen))},[rightOpen])
+  useEffect(()=>{if(paletteOpen)paletteInputRef.current?.focus()},[paletteOpen])
   useEffect(()=>{
     const onKey=(event:KeyboardEvent)=>{
       const mod=event.ctrlKey||event.metaKey
@@ -560,35 +570,73 @@ export function App(){
     {id:'refresh',title:'刷新工作区数据',detail:'重新读取任务、模型与服务',icon:RefreshCw,run:()=>void operation('刷新',refresh)},
     {id:'inspector',title:rightOpen?'收起上下文面板':'展开上下文面板',detail:'调整工作台布局',icon:PanelRightOpen,run:()=>setRightOpen(value=>!value)}
   ]
-  const filteredCommands=paletteCommands.filter(item=>(item.title+' '+item.detail).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+  const filteredCommands=paletteCommands.filter(item=>`${item.title} ${item.detail}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   function runCommand(command:typeof paletteCommands[number]){setPaletteOpen(false);setSearch('');command.run()}
   const heading=TITLES[view]
-    return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Sparkles size={21}/></div><div><strong>摇摇车</strong><small>AGENT WORKSPACE</small></div></div>
-      <button type="button" className="workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
-        <div className="workspace-icon"><HardDrive size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'选择工作区'}</strong><small>{workspace?'本地工作区':'选择本地项目'}</small></div><ChevronDown size={14}/>
+    return <div className="app-shell cc-workspace-shell">
+    <aside className="sidebar cc-sidebar">
+      <div className="brand cc-brand"><div className="brand-mark"><img src={brandIconUrl} alt="" width={36} height={36}/></div><div><strong>摇摇车</strong><small>LOCAL AI WORKSPACE</small></div></div>
+      <button type="button" className="workspace-picker cc-workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
+        <div className="workspace-icon"><Folder size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'打开本地项目'}</strong><small>{workspace||'本机项目目录'}</small></div><ChevronDown size={15}/>
       </button>
-      <div className="sidebar-top-label">工作区导航</div>
-      <nav className="nav-links" aria-label="主要导航">{NAV.map(({id,label,icon:Icon})=><button type="button" key={id} className={`nav-item ${view===id?'active':''}`} onClick={()=>setView(id)}><Icon size={17} strokeWidth={1.75}/><span>{label}</span>{id==='settings'&&permissions.length>0&&<b className="nav-counter">{permissions.length}</b>}</button>)}</nav>
-      <div className="sidebar-footer">
+      <button type="button" className="cc-sidebar-action" onClick={()=>void createSession()} disabled={Boolean(busy)}><SquareTerminal size={17}/><span>发起新会话</span><Plus size={16}/></button>
+      <div className="cc-sidebar-scroll">
+        <div className="cc-sidebar-section-head"><span>最近会话</span><button type="button" aria-label="查看全部历史会话" title="查看全部历史会话" onClick={()=>setView('history')}><History size={15}/></button></div>
+        <div className="cc-sidebar-history">
+          {sessions.length===0?<p className="cc-sidebar-empty">尚无本地会话</p>:sessions.slice(0,5).map((item,index)=>{
+            const id=String(item.sessionId||item.id||'')
+            if(!id)return null
+            const label=String(item.summary||item.title||id.slice(0,8))
+            return <button key={id+index} type="button" className={`cc-session-row ${id===sessionId?'selected':''}`} title={label} aria-label={`恢复会话：${label}`} onClick={()=>void resumeSession(id)}><MessageSquare size={14}/><span>会话 · {label}</span>{id===sessionId&&<span className="cc-active-dot"/>}</button>
+          })}
+        </div>
+        <nav className="nav-links cc-grouped-nav" aria-label="主要导航">
+          {NAV_GROUPS.map(group=><section className="cc-nav-group" key={group.label}><div className="cc-nav-title">{group.label}</div>{group.views.map(id=>{
+            const item=NAV.find(entry=>entry.id===id)
+            if(!item)return null
+            const Icon=item.icon
+            return <button type="button" key={id} className={`nav-item ${view===id?'active':''}`} onClick={()=>setView(id)} aria-current={view===id?'page':undefined}><Icon size={16} strokeWidth={1.8}/><span>{item.label}</span>{id==='settings'&&permissions.length>0&&<b className="nav-counter">{permissions.length}</b>}</button>
+          })}</section>)}
+        </nav>
+      </div>
+      <div className="sidebar-footer cc-sidebar-footer">
         <div className="connection-line"><span className={`connection-light ${connected?'online':'offline'}`}/><span>{connected?'本地后台已连接':'后台未连接'}</span></div>
-        <span className="muted tiny">摇摇车 Desktop · 本地运行</span>
+        <span className="muted tiny">本地运行 · 数据留在当前设备</span>
       </div>
     </aside>
     <div className="workspace-body">
-      <header className="topbar"><div className="breadcrumbs"><span>工作区</span><ChevronRight size={14}/><strong>{heading[0]}</strong></div><div className="topbar-actions">
-        <button type="button" className="searchbar search-launcher" aria-label="搜索页面与操作" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={15}/><span>搜索页面或操作</span><kbd>Ctrl K</kbd></button>
-        <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
-        <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
-      </div></header>
+      <header className="topbar cc-tabbar">
+        <div className="cc-tabs" role="tablist" aria-label="会话与工作区标签">
+          <button type="button" role="tab" aria-selected={view==='chat'&&!sessionId} aria-label="标签页：新会话" className={`cc-tab cc-new-tab ${view==='chat'&&!sessionId?'active':''}`} onClick={()=>void createSession()}><Plus size={15}/><span>新会话</span></button>
+          {([
+            ...(sessionId&&!sessions.some(item=>String(item.sessionId||item.id||'')===sessionId)?[{sessionId,title:'当前会话'}]:[]),
+            ...sessions
+          ]).slice(0,6).map((item,index)=>{
+            const id=String(item.sessionId||item.id||'')
+            if(!id)return null
+            const label=String(item.summary||item.title||id.slice(0,8))
+            const active=view==='chat'&&sessionId===id
+            return <button type="button" role="tab" key={id+index} aria-selected={active} aria-label={`标签页：会话 · ${label}`} title={label} className={`cc-tab ${active?'active':''}`} onClick={()=>id===sessionId?setView('chat'):void resumeSession(id)}><MessageSquare size={15}/><span>会话 · {label}</span>{active&&<span className="cc-tab-active-mark"/>}</button>
+          })}
+          {view!=='chat'&&(()=>{
+            const current=NAV.find(item=>item.id===view)!
+            const Icon=current.icon
+            return <button type="button" role="tab" aria-selected={true} aria-label={`标签页：${current.label}`} className="cc-tab active" onClick={()=>setView(view)}><Icon size={15}/><span>{current.label}</span><span className="cc-tab-active-mark"/></button>
+          })()}
+        </div>
+        <div className="topbar-actions">
+          <button type="button" className="searchbar search-launcher cc-search" aria-label="搜索页面与操作" onClick={()=>{setPaletteOpen(true);setSearch('');setPaletteIndex(0)}}><Search size={15}/><span>搜索操作</span><kbd>Ctrl K</kbd></button>
+          <IconButton label="刷新数据" onClick={()=>void operation('刷新',refresh)}><RefreshCw size={17}/></IconButton>
+          <IconButton label={rightOpen?'隐藏详情面板':'打开详情面板'} onClick={()=>setRightOpen(v=>!v)}>{rightOpen?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</IconButton>
+        </div>
+      </header>
       <div className="content-region">
         <main className="main-content" key={view}>
           <div className="page-header"><div><span className="eyebrow">YAOYAO / WORKSPACE</span><h1>{heading[0]}</h1><p>{heading[1]}</p></div><div className="header-action">{view==='dashboard'||view==='chat'?<button type="button" className="primary-button" onClick={()=>void createSession()} disabled={Boolean(busy)}><Plus size={16}/>新建会话</button>:null}</div></div>
           {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><IconButton label="关闭错误" onClick={()=>setError('')}><X size={16}/></IconButton></div>}
           {!connected&&<div className="offline-banner"><AlertCircle size={19}/><div><strong>本地执行引擎尚未连接</strong><p>请确认桌面 Host 已构建并可启动，或选择有效工作区。页面保留可访问，执行操作需要后台连接。</p></div><button type="button" className="secondary-button" onClick={()=>void operation('重连',async()=>{await invoke('hello');setConnected(true);await refresh()})}>重新连接</button></div>}
           {view==='dashboard'&&<div className="dashboard-page">
-            <div className="welcome-gradient"><span className="eyebrow">GOOD TO SEE YOU AGAIN</span><h2>让想法持续向前。</h2><p>从一次对话出发，组织智能体、工具与长期任务，把复杂工作变得有条理。</p><div className="welcome-actions"><button type="button" onClick={()=>void createSession()} className="primary-button"><Plus size={16}/>开始新任务</button><button type="button" onClick={()=>setView('missions')} className="ghost-button">查看任务中心<ArrowRight size={16}/></button></div><div className="hero-orb"><Bot size={86} strokeWidth={1}/></div></div>
+            <div className="welcome-gradient cc-welcome"><div className="cc-welcome-copy"><span className="eyebrow">LOCAL · CREATE · CONTINUE</span><h2>从这里，开始新的工作。</h2><p>选择项目，打开会话。代码、文件、模型和智能体在同一个工作区中协同推进。</p><div className="welcome-actions"><button type="button" onClick={()=>void createSession()} className="primary-button"><Plus size={16}/>开始新任务</button><button type="button" onClick={()=>setView('missions')} className="ghost-button">继续已有任务<ArrowRight size={16}/></button></div></div><div className="cc-welcome-graphic" aria-hidden="true"><span>摇</span><span>摇</span><span>车</span></div></div>
             <div className="dashboard-stats"><Panel><div className="stat-icon blue"><MessageSquare/></div><span className="stat-label">历史会话</span><strong>{sessions.length}</strong></Panel><Panel><div className="stat-icon purple"><UsersRound/></div><span className="stat-label">协作模式</span><strong>{mode==='super'?'Super':'主子智能体'}</strong></Panel><Panel><div className="stat-icon mint"><ClipboardList/></div><span className="stat-label">长期任务</span><strong>{missions.length}</strong></Panel><Panel><div className="stat-icon amber"><Cpu/></div><span className="stat-label">可用模型</span><strong>{models.length}</strong></Panel></div>
             <Section title="继续工作" action={<button type="button" className="text-button" onClick={()=>setView('history')}>全部会话<ArrowRight size={15}/></button>}>
               {sessions.length===0?<Empty icon={MessageSquare} title="开始第一段对话" detail="选择模型并创建会话，AI 执行进度将同步到工作台。" action={<button type="button" className="secondary-button" onClick={()=>void createSession()}>创建会话</button>}/>:<div className="item-list">{sessions.slice(0,5).map((s,i)=><button type="button" key={String(s.sessionId||s.id||i)} className="list-row" onClick={()=>void resumeSession(String(s.sessionId||s.id||''))}><div className="row-icon"><MessageSquare size={18}/></div><div className="row-main"><strong>{String(s.summary||s.title||s.sessionId||'历史会话')}</strong><span>点击恢复会话</span></div><ChevronRight size={17}/></button>)}</div>}
@@ -598,7 +646,54 @@ export function App(){
           </div>}
           {view==='chat'&&<div className="chat-page">
             <div className="chat-toolbar"><div className="toolbar-left"><StatusTag text={historyOnly?'历史记录':statusName(sessionPhase)} tone={sessionPhase==='running'?'warn':'good'}/>{sessionId&&<span className="session-id" title={sessionId}>会话 {sessionId.slice(0,8)}</span>}</div><div className="toolbar-right"><select aria-label="当前模型" disabled={historyOnly} value={selectedModel} onChange={e=>{setSelectedModel(e.target.value);if(sessionId)void operation('切换模型',()=>invoke('sessions.setModel',{sessionId,model:e.target.value}))}}><option value="">默认模型</option>{models.map(m=><option value={m.value} key={m.value}>{m.displayName||m.value}</option>)}</select><select aria-label="权限模式" disabled={historyOnly} value={permissionMode} onChange={e=>{const next=e.target.value;void operation('修改权限模式',async()=>{if(!sessionId)throw new Error('请先创建会话');await invoke('sessions.setPermissionMode',{sessionId,mode:next});setPermissionMode(next)})}}><option value="default">默认权限</option><option value="acceptEdits">允许编辑</option><option value="plan">规划模式</option><option value="dontAsk">拒绝后继续</option><option value="bypassPermissions">跳过确认（危险）</option></select>{sessionId&&!historyOnly&&<IconButton label="停止当前执行" onClick={()=>void operation('中断执行',()=>invoke('sessions.interrupt',{sessionId}))}><CircleStop size={18}/></IconButton>}</div></div>
-            <div className="message-stream" ref={streamRef} onScroll={e=>{const el=e.currentTarget;setFollowLatest(el.scrollHeight-el.scrollTop-el.clientHeight<96)}}>{messages.length===0?<div className="chat-empty"><div className="chat-empty-icon"><Sparkles size={38}/></div><h2>今天想完成什么？</h2><p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p><div className="prompt-suggestions">{['分析当前工作区的项目结构','检查 PR19 最新代码问题','规划一个多智能体协作任务'].map(t=><button type="button" key={t} onClick={()=>setDraft(t)}>{t}<ArrowRight size={14}/></button>)}</div></div>:<>{messages.length>visibleMessageCount&&<button type="button" className="load-older" onClick={()=>{setVisibleMessageCount(count=>count+120);setFollowLatest(false)}}>加载更早的 {Math.min(120,messages.length-visibleMessageCount)} 条消息</button>}{messages.slice(-visibleMessageCount).map(m=><div className={`message ${m.kind}`} key={m.id}><div className="message-avatar">{m.kind==='user'?<span>我</span>:m.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}</div><div className="message-content"><div className="message-meta">{m.kind==='user'?'你':m.kind==='assistant'?'摇摇车':'工具'}<time>{dateTime(m.time)}</time></div><div className="message-text">{m.kind==='assistant'?<MarkdownMessage text={m.text}/>:m.text}</div></div></div> )}</>}<div ref={messagesEnd}/></div>{!followLatest&&messages.length>0&&<button type="button" className="jump-to-latest" onClick={()=>setFollowLatest(true)}>回到最新消息 <ArrowRight size={14}/></button>
+            <div className="message-stream" ref={streamRef} onScroll={event=>{
+              const element=event.currentTarget
+              setFollowLatest(element.scrollHeight-element.scrollTop-element.clientHeight<96)
+            }}>
+              {messages.length===0 ? (
+                <div className="chat-empty">
+                  <div className="chat-empty-icon"><Sparkles size={38}/></div>
+                  <h2>今天想完成什么？</h2>
+                  <p>分析项目、编写代码、管理任务，或者邀请智能体协作。</p>
+                  <div className="prompt-suggestions">
+                    {['分析当前工作区的项目结构','检查 PR19 最新代码问题','规划一个多智能体协作任务'].map(text=>(
+                      <button type="button" key={text} onClick={()=>setDraft(text)}>{text}<ArrowRight size={14}/></button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {messages.length>visibleMessageCount&&(
+                    <button type="button" className="load-older" onClick={()=>{
+                      setVisibleMessageCount(count=>count+120)
+                      setFollowLatest(false)
+                    }}>加载更早的 {Math.min(120,messages.length-visibleMessageCount)} 条消息</button>
+                  )}
+                  {messages.slice(-visibleMessageCount).map(message=>(
+                    <div className={`message ${message.kind}`} key={message.id}>
+                      <div className="message-avatar">
+                        {message.kind==='user'?<span>我</span>:message.kind==='assistant'?<Sparkles size={17}/>:<SquareTerminal size={16}/>}
+                      </div>
+                      <div className="message-content">
+                        <div className="message-meta">
+                          {message.kind==='user'?'你':message.kind==='assistant'?'摇摇车':'工具'}
+                          <time>{dateTime(message.time)}</time>
+                        </div>
+                        <div className="message-text">
+                          {message.kind==='assistant'?<MarkdownMessage text={message.text} onOpenLink={openChatLink}/>:message.text}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              <div ref={messagesEnd}/>
+            </div>
+            {!followLatest&&messages.length>0&&(
+              <button type="button" className="jump-to-latest" onClick={()=>setFollowLatest(true)}>
+                回到最新消息 <ArrowRight size={14}/>
+              </button>
+            )}
             {permissions.length>0&&<div className="inline-approval"><ShieldCheck size={18}/><span>{permissions.length} 项工具操作等待批准</span><button type="button" onClick={()=>setView('settings')}>查看审批<ArrowRight size={14}/></button></div>}
             {historyOnly&&<div className="inline-approval"><History size={18}/><span>当前正在查看历史执行记录。发送新消息时将恢复原会话。</span></div>}
             <div className="composer"><textarea ref={inputRef} aria-label="输入任务" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="描述任务，支持使用文字引用项目文件与技能…" onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void send()}}}/><div className="composer-footer"><div className="composer-hints"><span><Bot size={15}/> {mode==='super'?'Super Agents':'主子智能体'}</span><span>⌘ / Ctrl + Enter 发送</span></div><button type="button" className="primary-button send-button" disabled={!draft.trim()||Boolean(busy)||!connected} onClick={()=>void send()}><Send size={16}/>发送</button></div></div>
@@ -656,9 +751,9 @@ export function App(){
           <button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')} disabled={Boolean(busy)}>已完成，继续</button>
         </div>
       </>:requestedDetails.subtype==='elicitation'?<><div className="host-fields">{Object.entries(requestedProperties).map(([key,value])=>{const field=obj(value);const valueType=String(field.type||'string');return <label key={key} htmlFor={`host-field-${key}`}><span>{String(field.title||key)}{Array.isArray(requestedSchema.required)&&requestedSchema.required.includes(key)?' *':''}</span>{Array.isArray(field.enum)?<select id={`host-field-${key}`} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:e.target.value}))}><option value="">请选择</option>{field.enum.map((item:unknown)=><option key={String(item)} value={String(item)}>{String(item)}</option>)}</select>:valueType==='boolean'?<input id={`host-field-${key}`} type="checkbox" checked={Boolean(hostForm[key])} onChange={e=>setHostForm(old=>({...old,[key]:e.target.checked}))}/>:<input id={`host-field-${key}`} type={valueType==='number'||valueType==='integer'?'number':'text'} value={String(hostForm[key]??'')} onChange={e=>setHostForm(old=>({...old,[key]:valueType==='number'||valueType==='integer'?Number(e.target.value):e.target.value}))}/>}</label>})}</div><div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void respondHost(requested.id,'decline')}>拒绝</button><button type="button" className="primary-button" onClick={()=>void respondHost(requested.id,'accept')}>提交输入</button></div></>:<div className="modal-actions"><button type="button" className="secondary-button" onClick={()=>void operation('取消主机请求',async()=>{await invoke('host.reject',{sessionId:requested.sessionId,requestId:requested.id,reason:'桌面端未支持该主机交互类型'});setHostRequests(old=>old.filter(r=>r.id!==requested.id||r.sessionId!==requested.sessionId))})}>取消此请求</button></div>}</div></div>}
-      {paletteOpen&&<div className="command-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget){setPaletteOpen(false);setSearch('')}}}>
+      {paletteOpen&&<div className="command-backdrop" role="presentation"><button type="button" className="command-dismiss" aria-label="关闭快速操作" onClick={()=>{setPaletteOpen(false);setSearch('')}}/>
         <section className="command-dialog" role="dialog" aria-modal="true" aria-label="快速操作">
-          <div className="command-input-row"><Search size={21}/><input autoFocus aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{
+          <div className="command-input-row"><Search size={21}/><input ref={paletteInputRef} aria-label="搜索命令" placeholder="搜索页面、任务与操作…" value={search} onChange={e=>{setSearch(e.target.value);setPaletteIndex(0)}} onKeyDown={e=>{
             if(e.key==='ArrowDown'){e.preventDefault();setPaletteIndex(index=>Math.min(index+1,Math.max(0,filteredCommands.length-1)))}
             if(e.key==='ArrowUp'){e.preventDefault();setPaletteIndex(index=>Math.max(0,index-1))}
             if(e.key==='Enter'&&filteredCommands[paletteIndex]){e.preventDefault();runCommand(filteredCommands[paletteIndex])}

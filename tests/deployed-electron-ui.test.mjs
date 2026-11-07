@@ -58,6 +58,34 @@ async function screenshot(pageUrl, path) {
   await writeFile(path, Buffer.from(data, 'base64'))
 }
 
+async function insertText(pageUrl, text) {
+  // Use Chromium's real keyboard input pipeline. React controlled inputs
+  // should receive user input events, not synthetic DOM setters.
+  const socket = new WebSocket(pageUrl)
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => {
+      socket.close()
+      reject(new Error('发行版真实键盘输入超时'))
+    }, 7000)
+    socket.addEventListener('open', () => {
+      socket.send(JSON.stringify({ id: 3, method: 'Input.insertText', params: { text } }))
+    })
+    socket.addEventListener('message', event => {
+      const frame = JSON.parse(event.data)
+      if (frame.id !== 3) return
+      clearTimeout(deadline)
+      socket.close()
+      if (frame.error) reject(new Error(JSON.stringify(frame.error)))
+      else resolve()
+    })
+    socket.addEventListener('error', error => {
+      clearTimeout(deadline)
+      socket.close()
+      reject(new Error(`Electron 键盘输入失败：${String(error.message)}`))
+    })
+  })
+}
+
 async function evaluate(pageUrl, expression) {
   const socket = new WebSocket(pageUrl)
   return new Promise((resolve, reject) => {
@@ -68,7 +96,7 @@ async function evaluate(pageUrl, expression) {
     socket.addEventListener('open', () => {
       socket.send(JSON.stringify({
         id: 1, method: 'Runtime.evaluate',
-        params: { expression, returnByValue: true },
+        params: { expression, returnByValue: true, awaitPromise: true },
       }))
     })
     socket.addEventListener('message', event => {
@@ -161,10 +189,14 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
         // Exercise the installed renderer -> Electron IPC -> compiled native
         // Host -> durable on-disk Mission/Job flow, entirely offline.
         async function fill(selector, value) {
-          const changed = await evaluate(page.webSocketDebuggerUrl,
-            `(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return false;const klass=el.tagName==='TEXTAREA'?HTMLTextAreaElement:HTMLInputElement;const setter=Object.getOwnPropertyDescriptor(klass.prototype,'value')?.set;if(!setter)return false;setter.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));return true})()`)
-          assert.equal(changed, true, `发行界面缺少输入框 ${selector}`)
+          const focused = await evaluate(page.webSocketDebuggerUrl,
+            `(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return false;el.focus();if('select' in el)el.select();return true})()`)
+          assert.equal(focused, true, `发行界面缺少输入框 ${selector}`)
+          await insertText(page.webSocketDebuggerUrl, value)
           await sleep(120)
+          const current = await evaluate(page.webSocketDebuggerUrl,
+            `document.querySelector(${JSON.stringify(selector)})?.value`)
+          assert.equal(current, value, `发行界面未接收用户输入：${selector}`)
         }
         async function click(label) {
           const found = await evaluate(page.webSocketDebuggerUrl,
@@ -178,7 +210,9 @@ test('真实 Linux 安装版启动 Electron 界面并完成本地 Host 连接', 
             if (body.includes(text)) return
             await sleep(140)
           }
-          throw new Error(`真实安装版未完成用户操作 ${text}，页面：${body.slice(0,1500)}`)
+          const diagnostic = await evaluate(page.webSocketDebuggerUrl,
+            '(async()=>{let backend;try{backend=await window.yaoyao.call("missions.list")}catch(error){backend={error:String(error)}}return {backend,input:document.querySelector(".mission-list-column textarea")?.value,disabled:document.querySelector(".mission-list-column button.primary-button")?.disabled}})()')
+          throw new Error(`真实安装版未完成用户操作 ${text}；任务状态：${JSON.stringify(diagnostic)}；页面：${body.slice(0,1500)}`)
         }
 
         await fill('.mission-list-column textarea','部署用户路径验收：离线检查长期目标与任务记录')

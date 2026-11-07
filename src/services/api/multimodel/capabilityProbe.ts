@@ -8,7 +8,7 @@ import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { getIndependentApiKey, resolveIndependentModel } from './registry.js'
 import { getChatGPTAuthorization } from '../../auth/chatgptOAuth.js'
-import { makeIndependentFetch } from './transport.js'
+import { INDEPENDENT_BRIDGE_ORIGIN, makeIndependentFetch } from './transport.js'
 import { getModelStorageRoot } from './storage.js'
 type CapabilityReport = {
   model: string
@@ -144,7 +144,7 @@ export async function verifyIndependentModel(model: string): Promise<CapabilityR
   // another ChatGPT account/workspace boundary.
   const http = makeIndependentFetch(route, bearer, fetch, undefined, authorization?.account ?? bearer)
   const send = async (body: Record<string, unknown>): Promise<string> => {
-    const request = new Request('https://yaoyaoche-model-bridge.invalid/v1/messages', {
+    const request = new Request(`${INDEPENDENT_BRIDGE_ORIGIN}/v1/messages`, {
       method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' },
     })
     const response = await http(request, { signal: AbortSignal.timeout(30000) })

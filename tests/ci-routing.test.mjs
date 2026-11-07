@@ -137,3 +137,26 @@ test('SDK 源码变更覆盖协议与桌面专项，桌面窗口变更也走桌�
   assert.equal(desktop['desktop-communication'], true)
   assert.equal(desktop['ci-test-matrix'], false)
 })
+
+test('317升级链路运行门禁按变更自动选择真实专项，基础门禁不漏392证据',()=>{
+  for(const file of ['src/query.ts','src/query/turnEffort317.ts','tests/m2-ultrathink-turn-effort-317.test.ts','tests/m2-ultrathink-release-request-317.test.mjs','build/rebuild.mjs']){
+    const planned=routeChanges([file])
+    assert.equal(planned['m2-prompt-functional-integration-317'],true,file)
+    assert.equal(planned['ci-test-matrix'],false,file)
+  }
+  for(const file of ['src/utils/swarm/teamLifecycleLock.ts','src/utils/swarm/teammatePermissionMode317.ts',
+    'src/utils/teammateMailbox.ts','src/hooks/useInboxPoller.ts',
+    'tests/m4-team-lifecycle-runtime-317.test.ts','tests/m4-teammate-permission-inheritance-317.test.mjs']){
+    const planned=routeChanges([file])
+    assert.equal(planned['local-feature-promotion'],true,file)
+    assert.equal(planned['ci-test-matrix'],false,file)
+  }
+  const local=readFileSync(new URL('../.github/workflows/local-feature-promotion.yml',import.meta.url),'utf8')
+  const m2=readFileSync(new URL('../.github/workflows/m2-prompt-functional-integration-317.yml',import.meta.url),'utf8')
+  const dispatcher=readFileSync(new URL('../.github/workflows/ci-on-demand.yml',import.meta.url),'utf8')
+  assert.match(local,/bun test tests\/m4-team-lifecycle-runtime-317\.test\.ts/)
+  assert.match(local,/node --test tests\/m4-teammate-permission-inheritance-317\.test\.mjs/)
+  assert.match(m2,/bun test tests\/m2-ultrathink-turn-effort-317\.test\.ts/)
+  assert.match(m2,/node --test tests\/m2-ultrathink-release-request-317\.test\.mjs/)
+  assert.match(dispatcher,/tests\/upgrade317-evidence-report\.test\.mjs/)
+})

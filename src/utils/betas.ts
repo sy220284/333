@@ -3,6 +3,7 @@ import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
 } from 'src/services/analytics/growthbook.js'
+import { isRemovedIndependentModel, resolveIndependentModel } from '../services/api/multimodel/registry.js'
 import { getIsNonInteractiveSession, getSdkBetas } from '../bootstrap/state.js'
 import {
   BEDROCK_EXTRA_PARAMS_HEADERS,
@@ -158,6 +159,14 @@ export function modelSupportsStructuredOutputs(model: string): boolean {
 
 // @[MODEL LAUNCH]: Add the new model if it supports auto mode (specifically PI probes) — ask in #proj-claude-code-safety-research.
 export function modelSupportsAutoMode(model: string): boolean {
+  if (feature('TRANSCRIPT_CLASSIFIER')) {
+    return model.trim().length > 0 && !isRemovedIndependentModel(model)
+  }
+  return false
+}
+
+export function usesNativeAutoModeClassifier(model: string): boolean {
+  if (resolveIndependentModel(model)) return false
   if (feature('TRANSCRIPT_CLASSIFIER')) {
     const m = getCanonicalName(model)
     // External: firstParty-only at launch (PI probes not wired for

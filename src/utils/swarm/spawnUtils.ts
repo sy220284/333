@@ -14,6 +14,7 @@ import { isInBundledMode } from '../bundledMode.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getTeammateModeFromSnapshot } from './backends/teammateModeSnapshot.js'
 import { TEAMMATE_COMMAND_ENV_VAR } from './constants.js'
+import { teammatePermissionCliFlags317 } from './teammatePermissionMode317.js'
 
 /**
  * Gets the command to use for spawning teammate processes.
@@ -42,18 +43,7 @@ export function buildInheritedCliFlags(options?: {
   const flags: string[] = []
   const { planModeRequired, permissionMode } = options || {}
 
-  // Explicitly carry the leader's effective mode. Omitting a manual-mode
-  // flag lets startup config enable auto mode in the teammate accidentally.
-  if (planModeRequired || permissionMode === 'plan') {
-    flags.push('--permission-mode plan')
-  } else if (
-    permissionMode === 'bypassPermissions' ||
-    (permissionMode === undefined && getSessionBypassPermissionsMode())
-  ) {
-    flags.push('--dangerously-skip-permissions')
-  } else {
-    flags.push(`--permission-mode ${permissionMode ?? 'default'}`)
-  }
+  flags.push(teammatePermissionCliFlags317(permissionMode, Boolean(planModeRequired), getSessionBypassPermissionsMode()))
 
   // Propagate --model if explicitly set via CLI
   const modelOverride = getMainLoopModelOverride()

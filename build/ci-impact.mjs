@@ -55,6 +55,10 @@ export const SPECIALISTS = Object.freeze({
     /^src\/utils\/(?:agent|localCapabilities|crossSessionMessaging|livePeerSessions)/,
     /^src\/hooks\/(?:useScheduledTasks|useMergedTools|useVoice)/,
     /^tests\/(?:agent-|mission-jobs|local-feature|local-mcp|local-voice|proactive)/,
+    /^src\/utils\/swarm\//,
+    /^src\/utils\/teammateMailbox\.ts$/,
+    /^src\/hooks\/useInboxPoller\.ts$/,
+    /^tests\/m4-(?:team|teammate|stale)/,
   ],
   'personal-retirement-boundary': [
     /^src\/cli\/(gateway|selfHostedRunner)\//,
@@ -96,6 +100,11 @@ export const SPECIALISTS = Object.freeze({
     /^src\/(prompts|systemPrompt)\//,
     /^src\/utils\/systemPrompt\.ts$/, /^src\/QueryEngine\.ts$/,
     /^tests\/.*(?:prompt|system-prompt)/,
+    /^src\/query(?:\.ts|\/turnEffort317\.ts)$/,
+    /^src\/utils\/(?:thinking|effort|attachments)\.ts$/,
+    /^tests\/m2-ultrathink-turn-effort-317\.test\.ts$/,
+    /^tests\/m2-ultrathink-release-request-317\.test\.mjs$/,
+    /^build\/rebuild\.mjs$/,
   ],
   rebuild: [
     /^build\/(?:rebuild|compile-standalone|package-release|verify-bundled-assets)\.mjs$/,

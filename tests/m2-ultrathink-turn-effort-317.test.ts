@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import type { Message } from '../src/types/message.js'
-import { turnRequestsUltrathink } from '../src/query/turnEffort317.js'
+import { turnRequestsUltrathink, queuedTurnRequestsUltrathink } from '../src/query/turnEffort317.js'
 
 const prompt=(text:string,meta=false):Message=>({
   type:'user',uuid:randomUUID(),timestamp:new Date().toISOString(),
@@ -35,4 +35,28 @@ test('2.1.311#065 actual query model API receives turn-scoped xhigh; attachments
   expect(query).toContain("params.toolUseContext.agentId === undefined")
   expect(query).toContain("effortValue: ultrathinkForTurn ? 'xhigh' : appState.effortValue")
   expect(attachments).toContain("modelSupportsXHighEffort(model) ? 'xhigh' : 'high'")
+})
+
+test('2.1.311#065 an active user-queued ultrathink can lift subsequent model requests',()=>{
+  expect(queuedTurnRequestsUltrathink([{mode:'prompt',value:'请 ultrathink 余下内容'}])).toBe(true)
+  expect(queuedTurnRequestsUltrathink([{mode:'prompt',value:'ultrathink pasted data',preExpansionValue:'请整理贴入内容'}])).toBe(false)
+  expect(queuedTurnRequestsUltrathink([{mode:'prompt',value:'仅需普通回答'}, {mode:'prompt',value:'ultrathink this'}])).toBe(true)
+})
+test('2.1.311#065 system-generated, unapproved and shell queued commands cannot lift effort',()=>{
+  for(const entry of [
+    {mode:'bash',value:'echo ultrathink'},
+    {mode:'prompt',value:'ultrathink',isMeta:true},
+    {mode:'prompt',value:'ultrathink',screeningPending:true},
+    {mode:'prompt',value:'ultrathink',origin:{kind:'task-notification'}},
+    {mode:'prompt',value:'参考 `ultrathink` 关键词'}
+  ] as const) {
+    expect(queuedTurnRequestsUltrathink([entry])).toBe(false)
+  }
+})
+test('2.1.311#065 query latches mid-turn effort both before API calls and queue draining',()=>{
+  const query=readFileSync(new URL('../src/query.ts',import.meta.url),'utf8')
+  expect(query).toContain("ultrathinkForTurn = queuedTurnRequestsUltrathink(")
+  expect(query).toContain("getCommandsByMaxPriority('next')")
+  expect(query).toContain('queuedTurnRequestsUltrathink(queuedCommandsSnapshot)')
+  expect(query).toContain("effortValue: ultrathinkForTurn ? 'xhigh' : appState.effortValue")
 })

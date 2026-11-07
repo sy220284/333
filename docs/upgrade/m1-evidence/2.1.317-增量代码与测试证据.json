@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "target_version": "2.1.317",
+  "description": "392项逐条代码复核增量证据。此文件只登记源码与测试候选；CI未在相同SHA执行并且未做原版差分时不得计入正式完成。历史冻结审计作为基线不篡改。",
+  "last_revision": "2026-11-07",
+  "items": [
+    {
+      "id": "2.1.311#001",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/entrypoints/cli.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "移除官方云自建Runner CLI分发",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.311#065",
+      "stage": "IMPLEMENTED_PENDING_RUNTIME",
+      "production_files": [
+        "src/query.ts",
+        "src/query/turnEffort317.ts",
+        "src/utils/attachments.ts",
+        "build/rebuild.mjs"
+      ],
+      "tests": [
+        "tests/m2-ultrathink-turn-effort-317.test.ts",
+        "tests/m2-ultrathink-release-request-317.test.mjs"
+      ],
+      "notes": "正式构建现在包含 ULTRATHINK 功能位；已增加真实发行CLI经本地HTTP模型接口验证xhigh与显式关闭开关的专项，仍须以同SHA CI报告和原版差分确认",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.312#001",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "移除官方企业Gateway的CLI启动入口",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.314#002",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "官方企业Gateway从产品入口下线",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.314#003",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "官方企业Gateway从产品入口下线",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.316#002",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "保留独立模型计费能力；官方企业Gateway组池不再可启动",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.316#005",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "官方企业Gateway托管策略入口退役",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#007",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "官方企业Gateway成本接口不再可通过CLI启动",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#028",
+      "stage": "IMPLEMENTED_PENDING_RUNTIME",
+      "production_files": [
+        "src/utils/teammateMailbox.ts",
+        "src/utils/swarm/teamLifecycleLock.ts",
+        "src/utils/swarm/teamHelpers.ts"
+      ],
+      "tests": [
+        "tests/m4-team-lifecycle-runtime-317.test.ts"
+      ],
+      "notes": "团队删除和消息写入共用生命周期锁，拒绝迟到消息复活目录",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#029",
+      "stage": "IMPLEMENTED_PENDING_RUNTIME",
+      "production_files": [
+        "src/hooks/useInboxPoller.ts",
+        "src/utils/swarm/shutdownEpoch.ts",
+        "src/utils/swarm/teamHelpers.ts"
+      ],
+      "tests": [
+        "tests/m4-stale-teammate-approval-317.test.mjs",
+        "tests/m4-team-lifecycle-runtime-317.test.ts"
+      ],
+      "notes": "关停确认必须匹配当前成员实例及加入时间",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#046",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/cli/gateway/gatewayServer317.ts",
+        "src/cli/gateway/gatewayConfig317.ts"
+      ],
+      "tests": [
+        "tests/m6-gateway-telemetry-policy-317.test.mjs"
+      ],
+      "notes": "移除Gateway指标/日志/追踪外发路由，拒绝forward_to配置",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#050",
+      "stage": "IMPLEMENTED_PENDING_RUNTIME",
+      "production_files": [
+        "src/utils/swarm/teammatePermissionMode317.ts",
+        "src/utils/swarm/spawnUtils.ts",
+        "src/tools/shared/spawnMultiAgent.ts"
+      ],
+      "tests": [
+        "tests/m4-teammate-permission-inheritance-317.test.mjs"
+      ],
+      "notes": "pane及独立成员使用单一权限继承规则；覆盖manual/auto/plan/bypass",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#071",
+      "stage": "RETIREMENT_BOUNDARY_CODE_TEST_PRESENT",
+      "production_files": [
+        "src/main.tsx",
+        "src/entrypoints/cli.tsx"
+      ],
+      "tests": [
+        "tests/independent-product-cleanup.test.mjs"
+      ],
+      "notes": "校正原版企业组池用量能力的产品归属并移除启动入口",
+      "runtime_evidence": null
+    },
+    {
+      "id": "2.1.317#082",
+      "stage": "IMPLEMENTED_PENDING_RUNTIME",
+      "production_files": [
+        "desktop/src/App.tsx",
+        "desktop/electron/main.ts"
+      ],
+      "tests": [
+        "desktop/src/App.test.tsx"
+      ],
+      "notes": "MCP URL请求链接可安全访问、明确拒绝，并反馈SDK请求者",
+      "runtime_evidence": null
+    }
+  ]
+}

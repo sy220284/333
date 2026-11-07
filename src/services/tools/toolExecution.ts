@@ -1,3 +1,4 @@
+import { getCwd } from '../../utils/cwd.js'
 import { feature } from 'bun:bundle'
 import { getStrictCommandScopeError } from '../../utils/permissions/strictCommandScope.js'
 import type {
@@ -85,7 +86,7 @@ import {
   stopSessionActivity,
 } from '../../utils/sessionActivity.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
-import { countRecentPermissionDenials, permissionDenialLoopGuidance } from './permissionDenialLoop.js'
+import { countRecentPermissionDenials, permissionDenialKey, permissionDenialLoopGuidance } from './permissionDenialLoop.js'
 import { Stream } from '../../utils/stream.js'
 import { logOTelEvent } from '../../utils/telemetry/events.js'
 import {
@@ -1033,12 +1034,9 @@ async function checkPermissionsAndCallTool(
     if (shouldPreventContinuation && !errorMessage) {
       errorMessage = `Execution stopped by PreToolUse hook${stopReason ? `: ${stopReason}` : ''}`
     }
-    // The existing auto-mode denial counter only covers classifier decisions.
-    // Rule, hook and dontAsk refusals are also hard boundaries; detect an
-    // uninterrupted series from the transcript so retries across a session
-    // restore receive explicit stop guidance without altering permissions.
+    const denialKey = permissionDenialKey(tool.name, getCwd(), callInput)
     const repeatWarning = permissionDenialLoopGuidance(
-      countRecentPermissionDenials(toolUseContext.messages),
+      countRecentPermissionDenials(toolUseContext.messages, denialKey),
     )
     if (repeatWarning) errorMessage = [errorMessage, repeatWarning].filter(Boolean).join('\n')
 
@@ -1078,12 +1076,12 @@ async function checkPermissionsAndCallTool(
     }
 
     resultingMessages.push({
-      message: createUserMessage({
+      message: { ...createUserMessage({
         content: messageContent,
         imagePasteIds: rejectImageIds,
         toolUseResult: `Error: ${errorMessage}`,
         sourceToolAssistantUUID: assistantMessage.uuid,
-      }),
+      }), permissionDenialKey: denialKey },
     })
 
     // Run PermissionDenied hooks for auto mode classifier denials.

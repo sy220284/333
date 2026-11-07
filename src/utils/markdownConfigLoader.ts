@@ -559,6 +559,9 @@ async function loadMarkdownFiles(dir: string): Promise<
   const signal = AbortSignal.timeout(3000)
   let files: string[]
   try {
+    // Fresh profiles commonly have no optional settings directories. ripgrep
+    // converts an absent root into an incomplete search without an errno.
+    if (!useNative) await stat(dir)
     files = useNative
       ? await findMarkdownFilesNative(dir, signal)
       : await ripGrep(

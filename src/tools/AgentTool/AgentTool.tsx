@@ -969,6 +969,7 @@ export const AgentTool = buildTool({
                       const backgroundedAppState = toolUseContext.getAppState();
                       const handoffWarning = await classifyHandoffIfNeeded({
                         agentMessages,
+                        receivingModel: toolUseContext.options.mainLoopModel,
                         tools: toolUseContext.options.tools,
                         toolPermissionContext: backgroundedAppState.toolPermissionContext,
                         abortSignal: task.abortController!.signal,
@@ -1248,6 +1249,7 @@ export const AgentTool = buildTool({
           const currentAppState = toolUseContext.getAppState();
           const handoffWarning = await classifyHandoffIfNeeded({
             agentMessages,
+            receivingModel: toolUseContext.options.mainLoopModel,
             tools: toolUseContext.options.tools,
             toolPermissionContext: currentAppState.toolPermissionContext,
             abortSignal: toolUseContext.abortController.signal,

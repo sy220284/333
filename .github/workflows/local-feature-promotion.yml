@@ -29,5 +29,9 @@ jobs:
         run: bun test tests/local-mcp-skill-discovery.test.ts
       - name: 验证高级功能本地设置和用户交互
         run: bun test tests/local-feature-preferences.test.ts tests/agent-collaboration-mode.test.ts tests/agent-missions.test.ts tests/agent-mission-scope.test.ts
+      - name: 核验317团队权限、迟到关停回执及实际收件箱删除竞争
+        run: |
+          node --test tests/m4-teammate-permission-inheritance-317.test.mjs tests/m4-stale-teammate-approval-317.test.mjs
+          bun test tests/m4-team-lifecycle-runtime-317.test.ts
       - name: 验证本地 Whisper 转写进程与取消处理
         run: bun test tests/local-voice-stt-317.test.ts

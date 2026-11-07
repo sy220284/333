@@ -7,6 +7,8 @@ import { logForDebugging } from '../../../utils/debug.js'
 // biome-ignore lint/suspicious/noExplicitAny: Provider wire events have different shapes and are normalized here.
 type ObjectValue = Record<string, any>
 
+export const INDEPENDENT_BRIDGE_ORIGIN = 'https://yaoyaoche-model-bridge.invalid'
+
 function asError(status: number, message: string, upstream?: Headers, credential?: string): Response {
   const headers = new Headers({ 'content-type': 'application/json' })
   for (const key of ['retry-after', 'retry-after-ms', 'x-request-id', 'request-id']) {
@@ -354,7 +356,7 @@ export function makeIndependentFetch(
   return async (input, init) => {
     const request = new Request(input, init)
     const url = new URL(request.url)
-    if (url.origin !== 'https://yaoyaoche-model-bridge.invalid' || url.pathname !== '/v1/messages' || request.method !== 'POST') {
+    if (url.origin !== INDEPENDENT_BRIDGE_ORIGIN || url.pathname !== '/v1/messages' || request.method !== 'POST') {
       throw new Error('Independent model bridge received an unexpected SDK endpoint')
     }
     const body = await request.json() as AnthropicRequest
@@ -412,9 +414,13 @@ export function makeIndependentFetch(
     const cancellation = new AbortController()
     const signal = AbortSignal.any([init?.signal ?? request.signal, cancellation.signal])
     signal.throwIfAborted()
+    const isMiniMax = route.provider === 'minimax'
+    if (isMiniMax) logForDebugging(`[multimodel] MiniMax POST ${route.endpoint}`)
     const response = await upstream(route.endpoint, {
       method: 'POST', headers, body: JSON.stringify(payload), signal,
+      ...(isMiniMax ? { redirect: 'error' } : {}),
     })
+    if (isMiniMax) logForDebugging(`[multimodel] MiniMax HTTP ${response.status}`)
     if (!response.ok) {
       const detail = redact(await response.text())
       return asError(response.status, `${route.provider} HTTP ${response.status}: ${detail.slice(0, 1500)}`, response.headers, bearer)
