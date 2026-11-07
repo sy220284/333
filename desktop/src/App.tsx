@@ -710,7 +710,7 @@ export function App(){
       const cost=Number(raw)
       if(!Number.isFinite(cost)||cost<0||cost>100000)throw new Error('请填写有效的费用金额')
       if(!window.confirm(`确认已在服务商账单中核对费用 USD ${cost.toFixed(4)}？此操作将记入已结算账本并释放预占额度。`))return
-      const snapshot=await invoke<ProjectBudget>('budget.project.resolveUnknown',{id,costUsd:cost})
+      const snapshot=await invoke<ProjectBudget>('budget.project.resolveUnknown',{unknownId:id,costUsd:cost})
       setProjectBudget(snapshot)
       setUnknownCosts(old=>{const next={...old};delete next[id];return next})
     })

@@ -7,6 +7,7 @@ import type { PendingHostControl } from '../conversation/hostControlBroker.js'
 import type { DesktopTask } from './taskProjection.js'
 import type { AgentMission, AgentMissionStatus } from '../../utils/agentMissions.js'
 import type { MissionJob } from '../agentCenter/missionJobs.js'
+import type { ProjectBudgetSnapshot } from '../agentCenter/projectBudget.js'
 import type { AgentMode } from '../../utils/agentMode.js'
 import type { TeamSummary, TeammateStatus } from '../../utils/teamDiscovery.js'
 import { DesktopRequestSchema, type DesktopEvent, type DesktopReply, type DesktopRequest } from './protocol.js'
@@ -93,6 +94,8 @@ export function createDesktopClient(input: Readable, output: Writable) {
     invoke,
     onEvent,
     hello: () => invoke<{ protocolVersion: number; capabilities: string[] }>({ method: 'hello' }),
+    resolveUnknownProjectBudget: (unknownId: string, costUsd: number) =>
+      invoke<ProjectBudgetSnapshot>({ method: 'budget.project.resolveUnknown', unknownId, costUsd }),
     listMcpServers: () => invoke({method:'mcp.list'}),
     addMcpServer: (name:string,scope:'project'|'user'|'local',config:Extract<DesktopRequest,{method:'mcp.add'}>['config']) => invoke({method:'mcp.add',name,scope,config}),
     removeMcpServer: (name:string,scope:'project'|'user'|'local') => invoke({method:'mcp.remove',name,scope}),
@@ -105,7 +108,7 @@ export function createDesktopClient(input: Readable, output: Writable) {
     send: (sessionId: string, message: string | SDKUserMessage) => invoke<{ sessionId: string; turnId: string }>({ method: 'sessions.send', sessionId, message }),
     interrupt: (sessionId: string) => invoke<{ requested: boolean }>({ method: 'sessions.interrupt', sessionId }),
     setModel: (sessionId: string, model: string) => invoke({ method: 'sessions.setModel', sessionId, model }),
-    setPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk') => invoke({ method: 'sessions.setPermissionMode', sessionId, mode }),
+    setPermissionMode: (sessionId: string, mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto') => invoke({ method: 'sessions.setPermissionMode', sessionId, mode }),
     listHostRequests: (sessionId: string) => invoke<PendingHostControl[]>({ method: 'host.list', sessionId }),
     respondToHost: (sessionId: string, requestId: string, response: Record<string, unknown>) =>
       invoke({ method: 'host.respond', sessionId, requestId, response }),

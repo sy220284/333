@@ -636,7 +636,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
         }
       case 'budget.project.get': return projectBudget.reconcile()
       case 'budget.project.resolveUnknown':
-        return projectBudget.resolveUnknown(request.id,request.costUsd)
+        return projectBudget.resolveUnknown(request.unknownId,request.costUsd)
       case 'budget.project.set':
         if (opening.size || sessions.size || executingMissionJobs.size || activeMissionQueues.size)
           throw new Error('修改项目共享预算前，请关闭当前工作区的会话和任务执行')

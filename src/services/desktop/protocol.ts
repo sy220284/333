@@ -12,8 +12,14 @@ const sessionId = z.string().uuid()
 const taskId = z.string().min(1).max(256)
 const missionId = z.string().regex(/^mission_[a-f0-9]{16}$/)
 const jobId = z.string().regex(/^job_[a-f0-9]{16}$/)
-const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S) =>
-  z.object({ id, method: z.literal(method), ...shape }).strict()
+const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S) => {
+  // The envelope owns "id". Reusing it for a business ID silently overwrites
+  // the caller's value when createDesktopClient assigns a correlation ID.
+  if (Object.prototype.hasOwnProperty.call(shape, 'id')) {
+    throw new Error(`Desktop request "${method}" conflicts with transport request ID`)
+  }
+  return z.object({ id, method: z.literal(method), ...shape }).strict()
+}
 
 /** The desktop wire protocol is a local, versioned envelope. SDK payloads
  * stay in their canonical stream-json shapes. */
@@ -35,7 +41,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('experience.retire', { experienceId: z.string().uuid(), reason: z.string().trim().min(8).max(1000) }),
   request('models.list', { sessionId: sessionId.optional() }),
   request('budget.project.get', {}),
-  request('budget.project.resolveUnknown', { id: z.string().uuid(), costUsd: z.number().nonnegative().finite().max(100000) }),
+  request('budget.project.resolveUnknown', { unknownId: z.string().uuid(), costUsd: z.number().nonnegative().finite().max(100000) }),
   request('budget.project.set', { limitUsd: z.number().positive().finite().max(100000).nullable() }),
   request('smart.inspect', { model: z.string().min(1).max(300).optional() }),
   request('smart.history', {}),

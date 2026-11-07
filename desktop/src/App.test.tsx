@@ -55,6 +55,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'smart.history':return smartRecord?[smartRecord]:[]
     case 'budget.project.get':return budgetState
     case 'budget.project.resolveUnknown':
+      if(!budgetState.uncertain.some(record=>record.id===args.unknownId))throw new Error('未知费用记录 ID 与请求 ID 不一致')
       budgetState={...budgetState,uncertain:[],uncertainReservations:0,
         reservedUsd:0,spentUsd:budgetState.spentUsd+Number(args.costUsd)}
       return budgetState
@@ -315,6 +316,23 @@ describe('摇摇车真实桌面页面交互',()=>{
     await user.click(screen.getByRole('button',{name:'保存项目预算'}))
     await waitFor(()=>expect(call).toHaveBeenCalledWith('budget.project.set',{limitUsd:5}))
     expect(await screen.findByText(/可用 USD 5.0000/)).toBeInTheDocument()
+  })
+
+  it('未知费用核销沿桌面 UI 到 IPC 保持真实账单 ID，而不是通信请求 ID',async()=>{
+    const unknownId='7b4c910e-3f59-47da-8f42-4c2d3c8fe175'
+    budgetState={limitUsd:1,spentUsd:0,reservedUsd:0.4,availableUsd:0.6,
+      uncertainReservations:1,activeReservations:0,
+      uncertain:[{id:unknownId,reservedUsd:0.4,startedAt:'2026-11-07T00:00:00Z'}]}
+    const user=userEvent.setup()
+    const confirm=vi.spyOn(window,'confirm').mockReturnValue(true)
+    try{
+      render(<App/>)
+      await screen.findByText('本地后台已连接')
+      await user.type(await screen.findByRole('spinbutton',{name:`核实费用 ${unknownId.slice(0,8)}`}), '0.25')
+      await user.click(screen.getByRole('button',{name:'确认实际账单并释放预占'}))
+      await waitFor(()=>expect(call).toHaveBeenCalledWith('budget.project.resolveUnknown',{unknownId,costUsd:0.25}))
+      expect(budgetState.uncertainReservations).toBe(0)
+    }finally{confirm.mockRestore()}
   })
 
   it('模型离线自检提供实际档案，无需在线模型请求',async()=>{
