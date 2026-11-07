@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { getDesktopProjectStateDirectory } from './taskJournal.js'
 import { z } from 'zod/v4'
 
-const permissionSchema = z.enum(['default','acceptEdits','bypassPermissions','plan','dontAsk'])
+const permissionSchema = z.enum(['default','acceptEdits','bypassPermissions','plan','dontAsk','auto'])
 export type DesktopPermissionMode = z.infer<typeof permissionSchema>
 export type DesktopSessionSettings = {
   model: string | null
