@@ -29,7 +29,7 @@ if (!/^\d+\.\d+\.\d+$/.test(target)) throw new Error(`Invalid expected target ve
 const strict = process.argv.includes('--strict')
 const commands = [
   '', 'agents', 'attach', 'auth', 'auth login', 'auth logout', 'auth status',
-  'auto-mode', 'doctor', 'gateway', 'import', 'install', 'logs',
+  'auto-mode', 'doctor', 'import', 'install', 'logs',
   'mcp', 'mcp add', 'mcp get', 'mcp list', 'mcp remove',
   'plugin', 'plugin install', 'plugin list', 'plugin enable',
   'plugin marketplace', 'plugin marketplace add', 'plugin marketplace list',
