@@ -32,7 +32,7 @@ test('长期任务从创建、选中、状态切换到检查点均有完整桌�
   assert.match(app, /setMissions\(/)
   assert.match(app, /setSelectedMission\(/)
   assert.match(app, /setMissionDraft\(/)
-  assert.match(app, /mission\.status/)
+  assert.match(app, /missionAction\(missionId\(selected\),'active'\)/)
 })
 test('工作项完整经历入队、执行、暂停分发、审核、重试、取消和集成', () => {
   for (const name of jobCalls) {
