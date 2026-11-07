@@ -17,6 +17,8 @@ test('桌面使用原生UI的新页面并不存在旧UI回退入口',()=>{
   assert.equal(app.includes('className="command-backdrop"'),false)
   assert.equal(app.includes('className="inspector"'),false)
   assert.ok(layout.includes('.yy-nav-link'))
+  assert.equal(layout.includes('.text-button {'),false)
+  assert.equal(layout.includes('.git-output,'),false)
   assert.ok(layout.includes('.yy-tab'))
 })
 test('新 UI 业务入口对应实际回调，重要危险操作仍保留确认',()=>{

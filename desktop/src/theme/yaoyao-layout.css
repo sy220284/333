@@ -36,18 +36,13 @@ button:disabled {cursor:not-allowed;}
 .panel h2 {font-size:15px;font-weight:700;}
 .panel h3 {font-size:13px;font-weight:700;margin:9px 0;}
 .panel p {font-size:12px;line-height:1.7;color:var(--color-text-secondary);}
-.muted {color:var(--color-text-tertiary)!important;}
 .small {font-size:12px!important;}
-.tiny {font-size:10px!important;}
 .primary-button,.secondary-button,.text-button {display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius-sm);min-height:34px;padding:0 13px;font-size:12px;font-weight:600;transition:background .15s,box-shadow .15s,transform .15s;}
 .primary-button {background:var(--color-btn-primary-bg);color:var(--color-btn-primary-fg);box-shadow:var(--shadow-button-primary);}
 .primary-button:hover {background:var(--color-btn-primary-hover);}
 .secondary-button {background:var(--color-surface);color:var(--color-text-primary);border:1px solid var(--color-border);}
 .secondary-button:hover {background:var(--color-surface-hover);border-color:var(--color-outline);}
-.text-button {background:transparent;color:var(--color-brand);padding:0 6px;}
-.text-button:hover {text-decoration:underline;}
 .primary-button:active,.secondary-button:active {transform:scale(.98);}
-.button-row {display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:12px;}
 input:not([type=checkbox]),textarea,select {max-width:100%;background:var(--color-surface-container-lowest);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:8px 11px;font-size:12px;color:var(--color-text-primary);outline:none;}
 input:focus-visible,textarea:focus-visible,select:focus-visible {border-color:var(--color-brand);box-shadow:0 0 0 2px var(--color-brand-soft);}
 textarea {resize:vertical;}
@@ -59,11 +54,7 @@ textarea {resize:vertical;}
 .yy-page .mode-cards,.integration-grid,.model-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
 .yy-page .mode-card,.model-card,.provider-item {display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-container-lowest);padding:15px;transition:border-color .15s,background .15s;}
 .team-picker,.list-row,.mcp-row,.compact-row,.mission-list-item,.job-card {display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--color-border);background:var(--color-surface-container-lowest);border-radius:var(--radius-md);font-size:12px;text-align:left;}
-.row-main,.mcp-info {flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
-.row-main span,.mcp-info p {font-size:11px;color:var(--color-text-tertiary);overflow-wrap:anywhere;}
 .checkpoint {border-left:2px solid var(--color-brand);padding:10px;margin:8px 0;background:var(--color-surface-container-low);}
-.git-output,.approval-target pre,.approval-card pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;background:var(--color-surface-container-low);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:11px;color:var(--color-text-secondary);font-size:11px;font-family:var(--font-mono,monospace);}
-.divider {height:1px;width:100%;background:var(--color-border);margin:13px 0;}
 .yy-legal-note {position:fixed;bottom:33px;right:15px;z-index:var(--z-popover);max-width:430px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:7px 10px;background:var(--color-surface-container-lowest);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:9px;color:var(--color-text-tertiary);}
 .yy-legal-note button {color:var(--color-brand);text-decoration:underline;}
 [data-motion=off] *,[data-motion=off] *:before,[data-motion=off] *:after {animation-duration:.01ms!important;transition-duration:.01ms!important;}
