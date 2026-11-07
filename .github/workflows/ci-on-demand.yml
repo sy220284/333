@@ -38,6 +38,7 @@ jobs:
       m1_sed_preview_parity: ${{ steps.route.outputs.m1_sed_preview_parity }}
       m1_spinner_parity: ${{ steps.route.outputs.m1_spinner_parity }}
       m2_prompt_functional_integration_317: ${{ steps.route.outputs.m2_prompt_functional_integration_317 }}
+      m6_gateway_providers_317: ${{ steps.route.outputs.m6_gateway_providers_317 }}
       m6_self_hosted_runner_317: ${{ steps.route.outputs.m6_self_hosted_runner_317 }}
       rebuild: ${{ steps.route.outputs.rebuild }}
       sdk_stream_parity: ${{ steps.route.outputs.sdk_stream_parity }}
@@ -205,6 +206,12 @@ jobs:
     if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m2_prompt_functional_integration_317 == 'true'
     uses: ./.github/workflows/m2-prompt-functional-integration-317.yml
 
+  m6-gateway-providers-317:
+    name: m6-gateway-providers-317 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
+    needs: plan
+    if: needs.plan.outputs.full == 'true' || needs.plan.outputs.m6_gateway_providers_317 == 'true'
+    uses: ./.github/workflows/m6-gateway-providers-317.yml
+
   m6-self-hosted-runner-317:
     name: m6-self-hosted-runner-317 ${{ needs.plan.outputs.full == 'true' && '(待审全量)' || '(按需专项)' }}
     needs: plan
@@ -244,7 +251,7 @@ jobs:
   complete:
     name: 统一验收结果
     if: ${{ !cancelled() }}
-    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, local-privacy, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, m6-self-hosted-runner-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
+    needs: [plan, basic, chinese-only-ui, ci-test-matrix, codeql, desktop-communication, dev-quality, dev-toolchain, governance-audit, governance-security-probe, independent-models, independent-product-cleanup, latest-stable-six-host, local-feature-promotion, local-privacy, m1-317-bootstrap-security, m1-317-official-reference, m1-evidence, m1-official-x64-installed-parity, m1-public-lock-sync, m1-screen-reader-real-pty, m1-sed-preview-parity, m1-spinner-parity, m2-prompt-functional-integration-317, m6-gateway-providers-317, m6-self-hosted-runner-317, rebuild, sdk-stream-parity, type-migration-pr7, upgrade-direct-alignment, upgrade-protection]
     runs-on: ubuntu-latest
     steps:
       - name: 校验必需检查和所有实际运行的专项
