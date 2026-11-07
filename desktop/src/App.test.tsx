@@ -8,13 +8,15 @@ const SID='9b0c188a-66fd-4b30-82e0-f52f2f8dfc35'
 let listener:(event:AppEvent)=>void=()=>{}
 let showHistoricalJob=false
 let failMcpRefresh=false
+let activeAgentMode:'master'|'super'='master'
 const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
   switch(method){
     case 'app.info': return {workspace:'/projects/example',platform:'linux',version:'0.1.0'}
     case 'hello':return {protocolVersion:1,capabilities:['sessions','missions','agents']}
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
     case 'sessions.list':return []
-    case 'agents.overview':return {mode:'master',teams:[],missions:[],activeSessions:0,activeTasks:0}
+    case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
+    case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
     case 'missions.list':return showHistoricalJob
       ? {missions:[{missionId:'mission-fixture',objective:'历史任务',status:'active'}],selectedMissionId:'mission-fixture'}
       : {missions:[],selectedMissionId:null}
@@ -51,7 +53,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master'})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -181,4 +183,25 @@ describe('摇摇车真实桌面页面交互',()=>{
     await waitFor(()=>expect(call).toHaveBeenCalledWith('credentials.set',{provider:'openai',key:'fake-testing-key-123'}))
     await waitFor(()=>expect(screen.getByLabelText('API Key')).toHaveValue(''))
   })
+  it('切换智能体协作模式后发送消息必须启用新SDK会话，旧会话仍保留',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'AI 对话'}))
+    await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第一次分析')
+    await user.click(screen.getByRole('button',{name:'发送'}))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(1))
+
+    await user.click(screen.getByRole('button',{name:'智能体团队'}))
+    await user.click(screen.getByRole('button',{name:/Super Agents 团队模式/}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('agents.setMode',{mode:'super'}))
+    await user.click(screen.getByRole('button',{name:'AI 对话'}))
+    await waitFor(()=>expect(screen.queryByText('第一次分析')).not.toBeInTheDocument())
+    await user.type(screen.getByRole('textbox',{name:'输入任务'}),'第二次分析')
+    await user.click(screen.getByRole('button',{name:'发送'}))
+    await waitFor(()=>expect(call.mock.calls.filter(args=>args[0]==='sessions.open')).toHaveLength(2))
+    expect(call).toHaveBeenCalledWith('sessions.send',expect.objectContaining({message:'第二次分析'}))
+    expect(call).not.toHaveBeenCalledWith('sessions.close',expect.anything())
+  })
+
 })
