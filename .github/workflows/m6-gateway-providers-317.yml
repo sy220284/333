@@ -30,6 +30,7 @@ jobs:
             tests/m6-gateway-providers-317.test.mjs \
             tests/m6-gateway-ttfb-sse-317.test.mjs \
             tests/m6-gateway-user-id-claim-317.test.mjs \
+            tests/m6-gateway-managed-settings-317.test.mjs \
             tests/m6-gateway-jsonb-317.test.mjs \
             tests/m6-gateway-device-rate-317.test.mjs \
             tests/m6-gateway-admin-317.test.mjs \
@@ -37,7 +38,7 @@ jobs:
             tests/m6-gateway-cri-317.test.mjs \
             tests/m6-gateway-telemetry-policy-317.test.mjs
       - name: 验证真实 Bun 网关服务、设备授权与 SSE
-        run: bun test tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-device-317.test.mjs
+        run: bun test tests/m6-gateway-runtime-317.test.mjs tests/m6-gateway-device-317.test.mjs tests/m6-gateway-client-ip-317.test.mjs
 
   gateway-postgres:
     name: PostgreSQL 真实设备授权、令牌和审计事务
