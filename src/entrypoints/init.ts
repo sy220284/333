@@ -36,7 +36,6 @@ import {
 // ~400KB of OpenTelemetry + protobuf modules until telemetry is actually initialized.
 // gRPC exporters (~700KB via @grpc/grpc-js) are further lazy-loaded within instrumentation.ts.
 import { configureGlobalAgents } from '../utils/proxy.js'
-import { isBetaTracingEnabled } from '../utils/telemetry/betaSessionTracing.js'
 import { getTelemetryAttributes } from '../utils/telemetryAttributes.js'
 import { setShellIfWindows } from '../utils/windowsPaths.js'
 
@@ -219,7 +218,8 @@ export const init = memoize(async (): Promise<void> => {
 
 /**
  * Initialize telemetry after trust has been granted.
- * Uses only locally configured privacy settings; no enterprise server wait.\n * This should only be called once, after the trust dialog has been accepted.
+ * Uses only locally configured privacy settings; no enterprise server wait.
+ * This should only be called once, after the trust dialog has been accepted.
  */
 export function initializeTelemetryAfterTrust(): void {
   void doInitializeTelemetry().catch(error => {
