@@ -128,7 +128,8 @@ export async function proposeProjectExperience(
     const existing = doc.experiences.find(item => item.key === data.key && item.status !== 'retired')
     if (existing) {
       const { id: _id, status: _status, revision: _rev, createdAt: _created,
-        updatedAt: _updated, verifiedBy: _verified, retiredReason: _reason, ...original } = existing
+        updatedAt: _updated, verifiedBy: _verified, reviewNote: _reviewNote,
+        evidenceSnapshot: _snapshot, retiredReason: _reason, ...original } = existing
       if (JSON.stringify(original) === JSON.stringify(data)) return { doc, item: existing }
       throw new Error('同一经验规范已存在；请先审核或废弃旧版本，再提出新版')
     }
