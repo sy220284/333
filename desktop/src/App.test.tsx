@@ -35,6 +35,7 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'smart.history':return []
     case 'smart.inspect':return {model:args.model||'默认模型',status:'native',message:'沿用本地配置',checkedOffline:true}
     case 'smart.execute':return {sessionId:SID,turnId:'11afef34-e0a6-4c38-a743-1c451993fdb8',model:args.model||'默认模型'}
+    case 'mcp.add':return {added:true}
     case 'sessions.list':return longHistory?[{sessionId:SID,title:'长历史会话'}]:[]
     case 'agents.overview':return {mode:activeAgentMode,teams:[],missions:[],activeSessions:0,activeTasks:0}
     case 'agents.setMode': activeAgentMode=args.mode==='super'?'super':'master'; return {mode:activeAgentMode}
@@ -501,6 +502,21 @@ describe('摇摇车真实桌面页面交互',()=>{
     await screen.findByText('本地后台已连接')
     expect(document.documentElement.dataset.theme).toBe(expectedDark?'dark':'white')
     expect(screen.getByRole('button',{name:'打开详情面板'})).toBeInTheDocument()
+  })
+
+
+  it('MCP 本地命令手工添加支持环境变量并且不把敏感值写进界面偏好',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'技能与 MCP'}))
+    await user.type(screen.getByPlaceholderText('例如 github-mcp'),'test-mcp')
+    await user.selectOptions(screen.getByRole('combobox',{name:/连接方式/}),'stdio')
+    await user.type(screen.getByPlaceholderText('例如 npx'),'npx')
+    await user.type(screen.getByPlaceholderText('API_TOKEN=在本机输入密钥'),'API_TOKEN=test-secret')
+    await user.click(screen.getByRole('button',{name:'添加服务'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('mcp.add',{name:'test-mcp',scope:'project',config:{type:'stdio',command:'npx',args:[],env:{API_TOKEN:'test-secret'}}}))
+    expect([...preferenceStore.values()].join(' ')).not.toContain('test-secret')
   })
 
 })
