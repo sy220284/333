@@ -19,6 +19,12 @@ const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S)
  * stay in their canonical stream-json shapes. */
 export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
+  request('capabilities.list', {}),
+  request('experience.list', { includeCandidates: z.boolean().optional() }),
+  request('experience.search', { query: z.string().trim().min(1).max(400) }),
+  request('experience.propose', { draft: z.unknown() }),
+  request('experience.approve', { experienceId: z.string().uuid(), reviewer: z.string().trim().min(1).max(128) }),
+  request('experience.retire', { experienceId: z.string().uuid(), reason: z.string().trim().min(8).max(1000) }),
   request('models.list', { sessionId: sessionId.optional() }),
   request('budget.project.get', {}),
   request('budget.project.resolveUnknown', { id: z.string().uuid(), costUsd: z.number().nonnegative().finite().max(100000) }),
