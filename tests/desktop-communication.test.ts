@@ -43,7 +43,7 @@ async function until(ready: () => boolean) {
 function request(method: DesktopRequest['method'], data: Record<string, unknown> = {}): DesktopRequest {
   return DesktopRequestSchema.parse({ id: randomUUID(), method, ...data })
 }
-function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRunning?: boolean } = {}) {
+function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRunning?: boolean; resultCostUsd?: number } = {}) {
   let lastToolCallback: CanUseTool | undefined
   let lastHostCallback: HostControlRequestHandler | undefined
   let lastControl: Record<string, unknown> | undefined
@@ -99,7 +99,9 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void>; leaveTaskRu
           task_id: 'agent-1', status: 'completed', output_file: '/tmp/out',
           summary: 'Done', ...base }
         yield { type: 'result', subtype: 'success', is_error: false,
-          terminal_reason: 'completed', result: 'done', ...base }
+          terminal_reason: 'completed', result: 'done',
+          ...(fixtureOptions.resultCostUsd === undefined ? {} : { total_cost_usd: fixtureOptions.resultCostUsd }),
+          ...base }
       },
       async control(req: Record<string, unknown>) { lastControl = req; return {} },
       close() {},
@@ -506,6 +508,44 @@ test('session settings preserve committed model and permissions through failed w
       model: 'new-model', permissionMode: 'default',
     })
   } finally {
+    await rm(cwd, { recursive: true, force: true })
+  }
+})
+
+test('budget ledger I/O failure leaves SDK completion intact and blocks another paid turn', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'desktop-budget-failure-'))
+  const budget = createProjectBudget(cwd, join(cwd, 'state'))
+  let uncertainAtClose: boolean | undefined
+  const failingBudget: typeof budget = {
+    ...budget,
+    async get() {
+      return { ...(await budget.get()), limitUsd: null }
+    },
+    async reserve() { return { id: 'simulated-lease', maxBudgetUsd: 2 } },
+    async remaining() { return 2 },
+    async charge() { throw new Error('injected ledger disk failure') },
+    async finish(_id, uncertain) { uncertainAtClose = uncertain },
+  }
+  const data = fixture({ resultCostUsd: 0.19 })
+  const gateway = createDesktopGateway({ ...data.options, cwd, projectBudget: failingBudget })
+  const events: DesktopEvent[] = []
+  gateway.subscribe(event => events.push(event))
+  try {
+    const session = await gateway.handle(request('sessions.open')) as { sessionId: string }
+    await gateway.handle(request('sessions.send', { sessionId: session.sessionId, message: 'run once' }))
+    await until(() => events.some(event =>
+      event.event === 'session.error' && event.error.includes('预算记账失败')))
+    expect(events.some(event => event.event === 'session.message' &&
+      event.message.type === 'result' && event.message.subtype === 'success')).toBe(true)
+    await until(() => events.some(event => event.event === 'session.state' &&
+      event.state.phase === 'completed'))
+    await expect(gateway.handle(request('sessions.send', {
+      sessionId: session.sessionId, message: 'bill another turn',
+    }))).rejects.toThrow('预算记账失败')
+    await gateway.close()
+    expect(uncertainAtClose).toBe(true)
+  } finally {
+    await gateway.close()
     await rm(cwd, { recursive: true, force: true })
   }
 })
