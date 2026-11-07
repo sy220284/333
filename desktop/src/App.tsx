@@ -145,6 +145,7 @@ export function App(){
   const sessionRef=useRef('')
   const createSessionRef=useRef<()=>Promise<void>>(async()=>{})
   const selectedMissionRef=useRef('')
+  const refreshGeneration=useRef(0)
   const viewRef=useRef<View>('dashboard')
 
   useEffect(()=>{viewRef.current=view},[view])
@@ -157,32 +158,34 @@ export function App(){
   },[])
   const openChatLink=useCallback((url:string)=>{void invoke('external.open',{url}).catch(reason=>setError(presentError(reason)))},[invoke])
   const refresh=useCallback(async()=>{
-    const queries=await Promise.allSettled([
-      api.call<{models:Model[]}>('models.list'),
-      api.call<Item[]>('sessions.list',{limit:50,offset:0}),
-      api.call<Item>('agents.overview'),
-      api.call<{missions:Mission[];selectedMissionId:string|null}>('missions.list'),
-      api.call<{providers:string[]}>('credentials.list'),
-      api.call<{servers:McpServer[];errors:string[]}>('mcp.list')
-    ])
-    if(queries[0].status==='fulfilled')setModels(queries[0].value.models??[])
-    if(queries[1].status==='fulfilled')setSessions(Array.isArray(queries[1].value)?queries[1].value:[])
-    if(queries[2].status==='fulfilled'){
-      setOverview(queries[2].value)
-      setMode(queries[2].value.mode==='super'?'super':'master')
-    }
-    if(queries[3].status==='fulfilled'){
-      setMissions(queries[3].value.missions??[])
-      setSelectedMission(queries[3].value.selectedMissionId??'')
-    }
-    if(queries[4].status==='fulfilled')setSavedProviders(queries[4].value.providers??[])
-    if(queries[5].status==='fulfilled'){
-      setMcpServers(queries[5].value.servers??[])
-      setMcpErrors(queries[5].value.errors??[])
-    }
+    // Services update independently: a slow model or MCP lookup must not
+    // hold the mission board hostage after an operation succeeds.
+    const generation=++refreshGeneration.current
+    const current=()=>generation===refreshGeneration.current
+    const queries=[
+      api.call<{models:Model[]}>('models.list').then(data=>{if(current())setModels(data.models??[])}),
+      api.call<Item[]>('sessions.list',{limit:50,offset:0})
+        .then(data=>{if(current())setSessions(Array.isArray(data)?data:[])}),
+      api.call<Item>('agents.overview').then(data=>{
+        if(!current())return
+        setOverview(data);setMode(data.mode==='super'?'super':'master')
+      }),
+      api.call<{missions:Mission[];selectedMissionId:string|null}>('missions.list').then(data=>{
+        if(!current())return
+        setMissions(data.missions??[]);setSelectedMission(data.selectedMissionId??'')
+      }),
+      api.call<{providers:string[]}>('credentials.list')
+        .then(data=>{if(current())setSavedProviders(data.providers??[])}),
+      api.call<{servers:McpServer[];errors:string[]}>('mcp.list').then(data=>{
+        if(!current())return
+        setMcpServers(data.servers??[]);setMcpErrors(data.errors??[])
+      })
+    ]
+    const results=await Promise.allSettled(queries)
+    if(!current())return
     const names=['模型列表','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
-    const failed=queries.flatMap((item,index)=>item.status==='rejected'
-      ? [`${names[index]}：${presentError(item.reason)}`] : [])
+    const failed=results.flatMap((result,index)=>result.status==='rejected'
+      ? [`${names[index]}：${presentError(result.reason)}`] : [])
     if(failed.length)setError(`刷新部分失败：${failed.join('；')}`)
   },[])
   const refreshSession=useCallback(async(id:string)=>{
@@ -441,8 +444,12 @@ export function App(){
     if(!missionDraft.trim())return
     await operation('创建长期任务',async()=>{
       const mission=await invoke<Mission>('missions.create',{objective:missionDraft.trim()})
-      setMissionDraft('');setSelectedMission(missionId(mission))
-      await refresh()
+      const id=missionId(mission)
+      if(!id)throw new Error('任务创建成功但后台未返回有效任务编号')
+      setMissions(previous=>[mission,...previous.filter(item=>missionId(item)!==id)])
+      selectedMissionRef.current=id
+      setSelectedMission(id);setMissionDraft('')
+      void refresh().catch(error=>setError(presentError(error)))
     })
   }
   async function missionAction(id:string,status:'active'|'paused'|'completed'){
