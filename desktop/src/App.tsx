@@ -25,6 +25,9 @@ type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'
 type ThemeVariant='white'|'paper'|'warm-classic'|'celadon'|'dark'|'ink-blue'
 const THEME_VARIANTS:readonly ThemeVariant[]=['white','paper','warm-classic','celadon','dark','ink-blue']
 type Model={value:string;displayName:string;description?:string}
+type SessionConfiguration={model?:string|null;permissionMode?:string|null}
+type SessionOpen=SessionConfiguration&{sessionId:string;tasks?:Task[]}
+type HistoryPage={messages:unknown[];total:number;offset:number}
 const PROVIDERS=[{id:'openai',name:'OpenAI API'},{id:'deepseek',name:'DeepSeek'},{id:'qwen',name:'Qwen'},{id:'kimi',name:'Kimi'},{id:'zhipu',name:'智谱 GLM'},{id:'minimax',name:'MiniMax'}] as const
 type Mission={id?:string;missionId?:string;objective?:string;status?:string;checkpoint?:string;checkpoints?:unknown[];[key:string]:unknown}
 type FileEntry={name:string;path:string;directory:boolean}
@@ -110,6 +113,7 @@ export function App(){
   const [mcpScope,setMcpScope]=useState<'project'|'user'|'local'>('project')
   const [messages,setMessages]=useState<ConversationItem[]>([])
   const [visibleMessageCount,setVisibleMessageCount]=useState(120)
+  const [historyOffset,setHistoryOffset]=useState(0)
   const [followLatest,setFollowLatest]=useState(true)
   const [draft,setDraft]=useState('')
   const [smartBudget,setSmartBudget]=useState(()=>window.localStorage.getItem(`${PREF}smart-budget`)??'')
@@ -167,6 +171,8 @@ export function App(){
   const setIsDark=(checked:boolean)=>setThemeVariant(checked?'dark':'white')
   const [animate,setAnimate]=useState(()=>loadPreference('motion',true))
   const [permissionMode,setPermissionMode]=useState('default')
+  const [modelVerified,setModelVerified]=useState(false)
+  const [permissionVerified,setPermissionVerified]=useState(false)
   const [activity,setActivity]=useState<string[]>([])
   const inputRef=useRef<HTMLTextAreaElement>(null)
   const paletteInputRef=useRef<HTMLInputElement>(null)
@@ -176,7 +182,19 @@ export function App(){
   const createSessionRef=useRef<()=>Promise<void>>(async()=>{})
   const selectedMissionRef=useRef('')
   const refreshGeneration=useRef(0)
+  const workspaceGeneration=useRef(0)
+  const sessionGeneration=useRef(0)
+  const directoryGeneration=useRef(0)
+  const fileGeneration=useRef(0)
+  const gitGeneration=useRef(0)
+  const currentFileRef=useRef('')
   const viewRef=useRef<View>('dashboard')
+  const applySessionConfiguration=useCallback((value:SessionConfiguration)=>{
+    setSelectedModel(value.model??'')
+    setPermissionMode(value.permissionMode??'unknown')
+    setModelVerified(value.model!==undefined&&value.model!==null)
+    setPermissionVerified(value.permissionMode!==undefined&&value.permissionMode!==null)
+  },[])
 
   useEffect(()=>{viewRef.current=view},[view])
   useEffect(()=>{sessionRef.current=sessionId},[sessionId])
@@ -190,8 +208,8 @@ export function App(){
   const refresh=useCallback(async()=>{
     // Services update independently: a slow model or MCP lookup must not
     // hold the mission board hostage after an operation succeeds.
-    const generation=++refreshGeneration.current
-    const current=()=>generation===refreshGeneration.current
+    const generation=++refreshGeneration.current,project=workspaceGeneration.current
+    const current=()=>generation===refreshGeneration.current&&project===workspaceGeneration.current
     const queries=[
       api.call<{models:Model[]}>('models.list').then(data=>{if(current())setModels(data.models??[])}),
       api.call<SmartRecord[]>('smart.history').then(data=>{if(current())setSmartHistory(data??[])}),
@@ -236,20 +254,22 @@ export function App(){
   const syncMissionOverview=useCallback(()=>{
     // A later workspace refresh invalidates earlier responses, so data from
     // an old project can never overwrite the currently selected project.
-    const generation=refreshGeneration.current
+    const generation=refreshGeneration.current,project=workspaceGeneration.current
     void api.call<Item>('agents.overview')
-      .then(data=>{if(generation===refreshGeneration.current)setOverview(data)})
+      .then(data=>{if(generation===refreshGeneration.current&&project===workspaceGeneration.current)setOverview(data)})
       .catch(error=>{
-        if(generation===refreshGeneration.current)
+        if(generation===refreshGeneration.current&&project===workspaceGeneration.current)
           setError(`智能体概览刷新失败：${presentError(error)}`)
       })
   },[])
   const refreshSession=useCallback(async(id:string)=>{
+    const project=workspaceGeneration.current,generation=sessionGeneration.current
     const [p,h,t]=await Promise.allSettled([
       api.call<Permission[]>('permissions.list',{sessionId:id}),
       api.call<HostRequest[]>('host.list',{sessionId:id}),
       api.call<Task[]>('tasks.list',{sessionId:id})
     ])
+    if(project!==workspaceGeneration.current)return
     if(p.status==='fulfilled')setPermissions(old=>[
       ...old.filter(item=>item.sessionId!==id),
       ...(p.value??[]).map(item=>({...item,sessionId:id}))
@@ -258,7 +278,7 @@ export function App(){
       ...old.filter(item=>item.sessionId!==id),
       ...(h.value??[]).map(item=>({...item,sessionId:id}))
     ])
-    if(t.status==='fulfilled')setTasks(t.value??[])
+    if(t.status==='fulfilled'&&id===sessionRef.current&&generation===sessionGeneration.current)setTasks(t.value??[])
     const names=['权限请求','宿主请求','后台任务']
     const failed=[p,h,t].flatMap((item,index)=>item.status==='rejected'
       ? [`${names[index]}：${presentError(item.reason)}`] : [])
@@ -269,17 +289,37 @@ export function App(){
     try{await action()}catch(error){setError(presentError(error))}finally{setBusy('')}
   },[])
   const resumeSession=useCallback(async(id:string)=>{
+    const generation=++sessionGeneration.current,project=workspaceGeneration.current
+    const valid=()=>generation===sessionGeneration.current&&project===workspaceGeneration.current
     await operation('恢复会话',async()=>{
-      const response=await invoke<{sessionId:string;tasks?:Task[]}>('sessions.ensureOpen',{sessionId:id})
-      setSessionId(response.sessionId);sessionRef.current=response.sessionId;setHistoryOnly(false);setTasks(response.tasks??[])
-      const history=await invoke<unknown>('sessions.history',{sessionId:id,limit:200,offset:0})
-      const rows=Array.isArray(history)?history:asObject(history)?.messages??[]
-      const next=(Array.isArray(rows)?rows:[]).map((item,index)=>itemFromMessage(item,index)).filter(Boolean) as ConversationItem[]
-      setMessages(next);setVisibleMessageCount(120);setFollowLatest(true);setView('chat');await refreshSession(id)
-      const status=await invoke<Item>('sessions.status',{sessionId:id})
+      const opened=await invoke<SessionOpen>('sessions.ensureOpen',{sessionId:id})
+      if(!valid())return
+      const [history,status]=await Promise.all([
+        invoke<HistoryPage>('sessions.history',{sessionId:id,limit:200,offset:0,tail:true}),
+        invoke<Item&SessionConfiguration>('sessions.status',{sessionId:id}),
+      ])
+      if(!valid())return
+      const next=history.messages.map((item,index)=>itemFromMessage(item,history.offset+index)).filter(Boolean) as ConversationItem[]
+      sessionRef.current=opened.sessionId
+      setSessionId(opened.sessionId);setHistoryOnly(false);setTasks(opened.tasks??[])
+      setMessages(next);setHistoryOffset(history.offset);setVisibleMessageCount(120);setFollowLatest(true)
       setSessionPhase(String(status.phase??status.status??'idle'))
+      applySessionConfiguration(status);setView('chat')
+      await refreshSession(id)
     })
-  },[invoke,operation,refreshSession])
+  },[invoke,operation,refreshSession,applySessionConfiguration])
+  const loadEarlierHistory=useCallback(async()=>{
+    if(!sessionRef.current||historyOffset<=0)return
+    const id=sessionRef.current,generation=sessionGeneration.current,project=workspaceGeneration.current
+    const start=Math.max(0,historyOffset-200)
+    await operation('加载更早历史',async()=>{
+      const rows=await invoke<unknown[]>('sessions.history',{sessionId:id,offset:start,limit:historyOffset-start})
+      if(generation!==sessionGeneration.current||project!==workspaceGeneration.current||sessionRef.current!==id)return
+      const previous=rows.map((item,index)=>itemFromMessage(item,start+index)).filter(Boolean) as ConversationItem[]
+      setMessages(old=>[...previous,...old]);setVisibleMessageCount(old=>old+previous.length)
+      setHistoryOffset(start);setFollowLatest(false)
+    })
+  },[historyOffset,invoke,operation])
   useEffect(()=>{
     let alive=true
     const unsub=api.subscribe((event:AppEvent)=>{
@@ -549,52 +589,67 @@ export function App(){
     await operation('切换工作区',async()=>{
       const data=await invoke<{workspace:string;changed:boolean;connected?:boolean;error?:string}>('workspace.pick')
       if(!data.changed)return
+      ++workspaceGeneration.current;++refreshGeneration.current;++sessionGeneration.current
+      ++directoryGeneration.current;++fileGeneration.current;++gitGeneration.current
+      currentFileRef.current=''
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setTasks([]);setFiles([]);setFileTotal(0)
       setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setMissionActivity([]);setJobEvidence({});setOverview({});setTeamMembers([])
       setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
-      setCurrentFile('');setGitStatus('');setGitDiff('')
+      setSelectedModel('');setPermissionMode('default');setModelVerified(false);setPermissionVerified(false)
+      setHistoryOffset(0);setSmartHistory([]);setProjectBudget(null);projectBudgetInitialized.current=false
+      setCurrentFile('');setFileContent('');setSavedContent('');setGitStatus('');setGitDiff('')
       setConnected(Boolean(data.connected))
       if(data.error)setError(data.error)
       if(data.connected)await refresh()
     })
   }
   async function directory(path:string,offset=0){
+    const generation=++directoryGeneration.current,project=workspaceGeneration.current
     await operation('读取目录',async()=>{
       const data=await invoke<{path:string;entries:FileEntry[];total?:number}>('workspace.list',{path,offset,limit:200})
+      if(generation!==directoryGeneration.current||project!==workspaceGeneration.current)return
       const entries=data.entries??[]
-      setFolder(data.path)
-      setFiles(old=>offset>0?[...old,...entries]:entries)
+      setFolder(data.path);setFiles(old=>offset>0?[...old,...entries]:entries)
       setFileTotal(data.total??offset+entries.length)
     })
   }
   async function openFile(path:string){
     if(currentFile&&currentFile!==path&&fileContent!==savedContent&&!window.confirm('当前文件存在未保存的修改。打开其他文件会丢失这些修改，仍要继续吗？'))return
+    const generation=++fileGeneration.current,project=workspaceGeneration.current
     await operation('读取文件',async()=>{
       const data=await invoke<{path:string;content:string}>('workspace.read',{path})
+      if(generation!==fileGeneration.current||project!==workspaceGeneration.current)return
+      currentFileRef.current=data.path
       setCurrentFile(data.path);setFileContent(data.content);setSavedContent(data.content)
     })
   }
   async function saveFile(){
     if(!currentFile||fileContent===savedContent)return
+    const path=currentFile,content=fileContent,generation=fileGeneration.current,project=workspaceGeneration.current
     await operation('保存文件',async()=>{
-      const response=await invoke<{saved:boolean}>('workspace.write',{path:currentFile,content:fileContent})
-      if(response.saved)setSavedContent(fileContent)
+      const response=await invoke<{saved:boolean}>('workspace.write',{path,content})
+      if(response.saved&&generation===fileGeneration.current&&project===workspaceGeneration.current&&currentFileRef.current===path)
+        setSavedContent(content)
     })
   }
   async function refreshGit(){
+    const generation=++gitGeneration.current,project=workspaceGeneration.current
     await operation('读取 Git',async()=>{
       const [s,d]=await Promise.all([
         invoke<{text:string}>('workspace.gitStatus'),
         invoke<{text:string}>('workspace.gitDiff')
       ])
+      if(generation!==gitGeneration.current||project!==workspaceGeneration.current)return
       setGitStatus(s.text);setGitDiff(d.text)
     })
   }
   async function selectModel(next:string){
+    const id=sessionRef.current,generation=sessionGeneration.current
     await operation('切换模型',async()=>{
-      if(sessionId&&!historyOnly)await invoke('sessions.setModel',{sessionId,model:next})
-      setSelectedModel(next)
+      if(id&&!historyOnly)await invoke('sessions.setModel',{sessionId:id,model:next})
+      if(id&&(generation!==sessionGeneration.current||sessionRef.current!==id))return
+      setSelectedModel(next);setModelVerified(true)
     })
   }
   async function agentMode(next:'master'|'super'){
@@ -606,9 +661,10 @@ export function App(){
       // conversation must be opened for the new mode; the old transcript and
       // executing tasks remain available in history.
       if(sessionRef.current){
+        ++sessionGeneration.current
         setSessionId('');sessionRef.current=''
-        setHistoryOnly(false);setMessages([]);setTasks([]);setSessionPhase('idle')
-        setPermissionMode('default')
+        setHistoryOnly(false);setMessages([]);setHistoryOffset(0);setTasks([]);setSessionPhase('idle')
+        setPermissionMode('default');setModelVerified(false);setPermissionVerified(false)
         setActivity(old=>['已切换协作模式；发送下一条消息会新建会话，原会话与执行历史仍保留。',...old].slice(0,20))
       }
       setMode(next);await refresh()
