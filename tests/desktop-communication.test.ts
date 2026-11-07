@@ -96,6 +96,8 @@ function fixture(fixtureOptions: { beforeSend?: () => Promise<void> } = {}) {
     options: {
       model: 'fixture-model', history, journal,
       createSession: (options, resume) => createHeadlessConversationSession(options, resume, launch),
+      // The fixture has no Git repo; production uses the original worktree creator.
+      prepareMissionJobWorkspace: async (_job, cwd) => ({ cwd }),
     } satisfies DesktopGatewayOptions,
     getToolCallback: () => lastToolCallback,
     getHostCallback: () => lastHostCallback,
@@ -425,6 +427,36 @@ test('宿主重启时从已写入的 Job 终态恢复 Mission 关联，不重复
     await gateway.close()
     await rm(cwd,{recursive:true,force:true})
   }
+})
+
+test('独立工作树贯穿执行和恢复，目录消失时不能回退项目根目录',async()=>{
+  const cwd=await mkdtemp(join(tmpdir(),'desktop-job-worktree-'))
+  const isolated=join(cwd,'isolated-job')
+  await mkdir(isolated)
+  const missionRoot=join(cwd,'mission-data')
+  const data=fixture()
+  const gateway=createDesktopGateway({
+    ...data.options,cwd,missionRoot,
+    prepareMissionJobWorkspace:async()=>({cwd:isolated,worktreePath:isolated,worktreeBranch:'test-isolated'}),
+  })
+  try{
+    const mission=await gateway.handle(request('missions.create',{objective:'验证隔离和恢复'})) as {id:string}
+    const job=await gateway.handle(request('missions.jobs.enqueue',{
+      missionId:mission.id,title:'隔离开发',instruction:'仅在隔离工作树里修改代码',
+    })) as {id:string}
+    const run=await gateway.handle(request('missions.jobs.start',{
+      missionId:mission.id,jobId:job.id,
+    })) as {sessionId:string;job:{worktreePath:string}}
+    expect(run.job.worktreePath).toBe(isolated)
+    const tasks=await gateway.handle(request('missions.jobs.list',{missionId:mission.id})) as Array<{worktreePath:string}>
+    expect(tasks[0]?.worktreePath).toBe(isolated)
+    await gateway.handle(request('sessions.close',{sessionId:run.sessionId}))
+    await rm(isolated,{recursive:true,force:true})
+    await expect(gateway.handle(request('sessions.history',{sessionId:run.sessionId})))
+      .rejects.toThrow('工作树已被删除')
+    await expect(gateway.handle(request('sessions.ensureOpen',{sessionId:run.sessionId})))
+      .rejects.toThrow('工作树已被删除')
+  }finally{await gateway.close();await rm(cwd,{recursive:true,force:true})}
 })
 
 test('一键并行分工只启动明确授权的工作项，并保留剩余队列', async () => {

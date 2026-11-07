@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
+import { execFileNoThrowWithCwd } from '../../utils/execFileNoThrow.js'
 import { getActiveAgentMode, setAgentMode } from '../../utils/agentMode.js'
 import {
   createMission, getMission, getSelectedMissionId, listMissions,
@@ -9,7 +10,7 @@ import {
 import { getTeammateStatuses, listProjectTeams } from '../../utils/teamDiscovery.js'
 import {
   missionJobAssignmentId, listMissionJobs, enqueueMissionJob, claimMissionJob,
-  bindMissionJobTurn, settleMissionJob, approveMissionJob, retryMissionJob,
+  bindMissionJobTurn, bindMissionJobWorkspace, settleMissionJob, approveMissionJob, retryMissionJob,
   cancelMissionJob, recoverMissionJob, type MissionJob,
 } from '../agentCenter/missionJobs.js'
 import { reconcileMissionTerminalJobs } from '../agentCenter/missionReconciliation.js'
@@ -51,6 +52,10 @@ export type DesktopGatewayOptions = {
   journal?: DesktopTaskJournal
   createSession?: SessionFactory
   history?: HistoryService
+  /** Test seam; production uses the original AgentTool worktree creator. */
+  prepareMissionJobWorkspace?: (
+    job: MissionJob, projectDir: string,
+  ) => Promise<{ cwd: string; worktreePath?: string; worktreeBranch?: string; worktreeHead?: string }>
 }
 const modelListSchema = z.array(ModelInfoSchema())
 const agentListSchema = z.array(AgentInfoSchema())
@@ -115,11 +120,11 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     if (!entry) throw new Error(`Desktop session is not open: ${sessionId}`)
     return entry
   }
-  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>): InternalOptions {
+  function sdkOptions(selectedModel?: string, sessionEnv?: Record<string, string | undefined>, sessionCwd = cwd): InternalOptions {
     return {
       ...options.sessionOptions,
       ...(sessionEnv ? { env: { ...options.sessionOptions?.env, ...sessionEnv } } : {}),
-      cwd,
+      cwd: sessionCwd,
       ...(selectedModel || model ? { model: selectedModel ?? model } : {}),
       includePartialMessages: true,
       forwardSubagentText: true,
@@ -132,7 +137,42 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }))
   }
 
-  async function openSession(selectedModel?: string, resume?: string, sessionEnv?: Record<string, string | undefined>) {
+  async function sessionWorktree(sessionId: string): Promise<string | undefined> {
+    const missions = (await listMissions(options.missionRoot))
+      .filter(mission => resolve(mission.projectDir) === cwd)
+    for (const mission of missions) {
+      const jobs = await listMissionJobs(mission.id, cwd, options.missionRoot)
+      const job = jobs.find(item => item.sessionId === sessionId ||
+        item.history.some(record => record.sessionId === sessionId))
+      if (!job?.worktreePath) continue
+      const { verifyResumedAgentWorktree } = await import('../../tools/AgentTool/resumeWorktree.js')
+      return verifyResumedAgentWorktree(job.worktreePath)
+    }
+    return undefined
+  }
+
+  async function prepareMissionWorkspace(job: MissionJob) {
+    if (options.prepareMissionJobWorkspace)
+      return options.prepareMissionJobWorkspace(job, cwd)
+    if (job.worktreePath) {
+      const { verifyResumedAgentWorktree } = await import('../../tools/AgentTool/resumeWorktree.js')
+      const verified = await verifyResumedAgentWorktree(job.worktreePath)
+      if (!verified) throw new Error('原工作项工作树路径丢失')
+      return { cwd: verified, worktreePath: verified, worktreeBranch: job.worktreeBranch, worktreeHead: job.worktreeHead }
+    }
+    // Preserve native worktree hooks, setup and namespacing.
+    const { createAgentWorktree } = await import('../../utils/worktree.js')
+    const created = await createAgentWorktree(`mission-${job.id.slice(4)}`)
+    return {
+      cwd: created.worktreePath, worktreePath: created.worktreePath,
+      worktreeBranch: created.worktreeBranch, worktreeHead: created.headCommit,
+    }
+  }
+
+  async function openSession(
+    selectedModel?: string, resume?: string,
+    sessionEnv?: Record<string, string | undefined>, requestedCwd?: string,
+  ) {
     if (closed) throw new Error('Desktop gateway is closed')
     if (resume) {
       if (sessions.has(resume) || opening.has(resume)) throw new Error(`Session is already open: ${resume}`)
@@ -140,19 +180,20 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
     }
     let runtime: Headless | undefined
     try {
+      const sessionCwd = requestedCwd ?? (resume ? await sessionWorktree(resume) : undefined) ?? cwd
       // A resume ID must be tied to a real transcript in this workspace.
       if (resume) {
         const known = options.sessionOptions?.sessionStore
           ? (await options.sessionOptions.sessionStore.listSessions(
               (await import('../../utils/sessionStoragePortable.js')).sanitizePath(
-                await (await import('../../utils/sessionStoragePortable.js')).canonicalizePath(cwd),
+                await (await import('../../utils/sessionStoragePortable.js')).canonicalizePath(sessionCwd),
               ),
             )).some(entry => entry.sessionId === resume)
-          : !!await history.getSessionInfo(resume, { dir: cwd })
+          : !!await history.getSessionInfo(resume, { dir: sessionCwd })
         if (!known) throw new Error(`No stored session in this workspace: ${resume}`)
       }
       const tasks = resume ? await journal.read(resume) : []
-      runtime = launch(sdkOptions(selectedModel, sessionEnv), resume)
+      runtime = launch(sdkOptions(selectedModel, sessionEnv, sessionCwd), resume)
       const info = await initializeModels(runtime)
       if (closed) throw new Error('Desktop gateway closed during session initialization')
       const id = runtime.sessionId
@@ -497,7 +538,8 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
       }
       case 'sessions.list': return history.listSessions({ dir: cwd, limit: request.limit, offset: request.offset })
       case 'sessions.history': return history.getSessionMessages(request.sessionId, {
-        dir: cwd, limit: request.limit, offset: request.offset, includeSystemMessages: true,
+        dir: await sessionWorktree(request.sessionId) ?? cwd,
+        limit: request.limit, offset: request.offset, includeSystemMessages: true,
       })
       case 'sessions.close': return closeSession(request.sessionId)
       case 'sessions.status': return requireSession(request.sessionId).runtime.state.getState()
@@ -626,9 +668,17 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           // Worker/tool permissions are still checked by the SDK broker.
           // Scope Coordinator Mode to this SDK child process only. Other
           // desktop sessions keep the user's chosen master/super mode.
+          const workspace = await prepareMissionWorkspace(claimed)
+          const stored = await bindMissionJobWorkspace(
+            mission.id, cwd, claimed.id, runId, {
+              worktreePath: workspace.worktreePath, worktreeBranch: workspace.worktreeBranch,
+              worktreeHead: workspace.worktreeHead,
+            }, options.missionRoot,
+          )
+          notifyJob(mission.id, stored)
           const opened = await openSession(undefined, undefined, {
             CLAUDE_CODE_COORDINATOR_MODE: '1',
-          })
+          }, workspace.cwd)
           openedSession = opened.sessionId
           await bindMissionJobTurn(
             mission.id, cwd, claimed.id, runId, openedSession,
@@ -646,6 +696,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
               .join('；') || '暂无')}`,
             `工作项：${claimed.title}。执行尝试：${claimed.attempt}`,
             claimed.instruction,
+            `本次 SDK 独立工作目录：${workspace.cwd}。所有文件修改限定在此工作树中。`,
             '执行前核对已有文件和提交，禁止重复已产生的外部副作用。',
             '交付时报告实际文件/提交、测试证据及仍需人工审核的事项。',
           ].join('\n')
@@ -665,6 +716,31 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           notifyJob(mission.id, job)
           if (openedSession && sessions.has(openedSession)) await closeSessionInternal(openedSession)
           throw error
+        }
+      }
+      case 'missions.jobs.evidence': {
+        const mission = await getScopedMission(request.missionId)
+        const jobs = await listMissionJobs(mission.id, cwd, options.missionRoot)
+        const job = jobs.find(item => item.id === request.jobId)
+        if (!job) throw new Error('工作项不属于当前长期任务')
+        if (!job.worktreePath) return { isolated: false, message: '此工作项没有独立工作树记录' }
+        const { verifyResumedAgentWorktree } = await import('../../tools/AgentTool/resumeWorktree.js')
+        const path = await verifyResumedAgentWorktree(job.worktreePath)
+        if (!path) throw new Error('隔离工作树路径缺失')
+        const status = await execFileNoThrowWithCwd('git', ['status', '--short'], { cwd: path })
+        const diff = await execFileNoThrowWithCwd('git', ['diff', '--stat', 'HEAD'], { cwd: path })
+        if (status.code !== 0 || diff.code !== 0)
+          throw new Error('隔离工作树 Git 状态读取失败，请核对执行目录与版本库')
+        let commits = ''
+        if (job.worktreeHead) {
+          const recent = await execFileNoThrowWithCwd('git', ['log', '--oneline', `${job.worktreeHead}..HEAD`], { cwd: path })
+          if (recent.code !== 0) throw new Error('隔离工作树提交历史读取失败')
+          commits = recent.stdout
+        }
+        return {
+          isolated: true, worktreePath: path, branch: job.worktreeBranch,
+          status: status.stdout, diffStat: diff.stdout, commits,
+          sessionId: job.sessionId, jobStatus: job.status,
         }
       }
       case 'missions.jobs.runBatch': {

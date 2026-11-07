@@ -32,7 +32,7 @@ type Permission={id:string;sessionId:string;toolName:string;input?:Item;descript
 type HostRequest={id:string;sessionId:string;type?:string;request?:unknown;[key:string]:unknown}
 type Task={taskId:string;status?:string;description?:string;[key:string]:unknown}
 type JobStatus='queued'|'running'|'review'|'completed'|'failed'|'interrupted'|'cancelled'
-type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
+type MissionJob={id:string;title:string;instruction:string;status:JobStatus;attempt:number;summary?:string;sessionId?:string;worktreePath?:string;worktreeBranch?:string;history?:Array<{attempt:number;status:string;summary:string;finishedAt:string;sessionId?:string}>}
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
@@ -116,6 +116,7 @@ export function App(){
   const [missionDraft,setMissionDraft]=useState('')
   const [checkpointDraft,setCheckpointDraft]=useState('')
   const [missionJobs,setMissionJobs]=useState<MissionJob[]>([])
+  const [jobEvidence,setJobEvidence]=useState<Record<string,Item>>({})
   const [missionQueueActive,setMissionQueueActive]=useState(false)
   const [jobTitle,setJobTitle]=useState('')
   const [jobInstruction,setJobInstruction]=useState('')
@@ -415,7 +416,7 @@ export function App(){
       if(!data.changed)return
       setWorkspace(data.workspace);setFolder(data.workspace);setSessionId('');sessionRef.current='';setHistoryOnly(false);setMessages([])
       setPermissions([]);setHostRequests([]);setTasks([]);setFiles([]);setFileTotal(0)
-      setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setOverview({});setTeamMembers([])
+      setSessions([]);setMissions([]);setSelectedMission('');setMissionJobs([]);setJobEvidence({});setOverview({});setTeamMembers([])
       setSessionPhase('idle');setActivity([]);setDraft('');setMissionQueueActive(false)
       setCurrentFile('');setGitStatus('');setGitDiff('')
       setConnected(Boolean(data.connected))
@@ -507,6 +508,13 @@ export function App(){
     await operation('添加工作项',async()=>{
       await invoke('missions.jobs.enqueue',{missionId:selectedMission,title:jobTitle.trim(),instruction:jobInstruction.trim()})
       setJobTitle('');setJobInstruction('');await refreshJobs()
+    })
+  }
+  async function inspectJobEvidence(jobId:string){
+    if(!selectedMission)return
+    await operation('检查工作树变更',async()=>{
+      const result=await invoke<Item>('missions.jobs.evidence',{missionId:selectedMission,jobId})
+      setJobEvidence(old=>({...old,[jobId]:result}))
     })
   }
   async function jobAction(method:string,jobId:string){
@@ -812,6 +820,11 @@ export function App(){
                     </div>
                     <p className="mt-2 whitespace-pre-wrap text-[12px] leading-5 text-[var(--color-text-secondary)]">{job.instruction}</p>
                     {job.summary&&<div className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-surface-container-low)] p-3 text-[12px] leading-6">{job.summary}</div>}
+                    {job.worktreePath&&<div className="mt-3 space-y-2 border-l-2 border-[var(--color-brand)] pl-3 text-[11px]">
+                      <p>独立工作树：<code className="break-all">{job.worktreePath}</code></p>
+                      <Button variant="secondary" size="sm" onClick={()=>void inspectJobEvidence(job.id)}><GitBranch size={13}/>检查代码变更</Button>
+                      {jobEvidence[job.id]&&<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px]">{String(jobEvidence[job.id].status||'无未提交文件')}{'\n'}{String(jobEvidence[job.id].diffStat||'')}{'\n'}{String(jobEvidence[job.id].commits||'')}</pre>}
+                    </div>
                     <div className="mt-2 text-[11px] text-[var(--color-text-tertiary)]">执行次数：{job.attempt}{job.history?.length?` · 保留 ${job.history.length} 次执行记录`:''}</div>
                     {job.history?.length?<details className="mt-3 text-[11px]"><summary className="cursor-pointer text-[var(--color-brand)]">查看历史执行详情</summary>{job.history.map(rec=><div key={`${rec.attempt}-${rec.finishedAt}`} className="mt-2 border-l-2 border-[var(--color-brand)] p-2"><strong>第 {rec.attempt} 次 · {rec.status}</strong><span className="ml-2 text-[var(--color-text-tertiary)]">{new Date(rec.finishedAt).toLocaleString('zh-CN')}</span><p className="mt-1">{rec.summary}</p></div>)}</details>:null}
                     <div className="mt-3 flex flex-wrap gap-2">

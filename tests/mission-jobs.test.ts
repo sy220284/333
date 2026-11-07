@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  enqueueMissionJob, listMissionJobs, claimMissionJob, bindMissionJobTurn,
+  enqueueMissionJob, listMissionJobs, claimMissionJob, bindMissionJobWorkspace, bindMissionJobTurn,
   settleMissionJob, approveMissionJob, retryMissionJob, cancelMissionJob,
   recoverMissionJob, missionJobAssignmentId,
 } from '../src/services/agentCenter/missionJobs.js'
@@ -56,6 +56,21 @@ test('任务队列持久化、双宿主并发抢占与审核闭环', async () =>
     expect((await listMissionJobs(mission, project, root))[0]?.history).toHaveLength(1)
     await expect(listMissionJobs(mission, join(root, 'another-project'), root))
       .rejects.toThrow('另一项目')
+  })
+})
+
+test('工作树绑定原执行轮次，不允许改用其他隔离目录',async()=>{
+  await fixture(async(root,mission,project)=>{
+    const job=await enqueueMissionJob(mission,project,'隔离任务','在独立工作树检查',root)
+    const first=await claimMissionJob(mission,project,job.id,randomUUID(),process.pid,root)
+    const run=requiredRunId(first)
+    const prepared=await bindMissionJobWorkspace(mission,project,job.id,run,{
+      worktreePath:'/tmp/worktree-A',worktreeBranch:'worktree-A',
+    },root)
+    expect(prepared.worktreePath).toBe('/tmp/worktree-A')
+    await expect(bindMissionJobWorkspace(mission,project,job.id,run,{
+      worktreePath:'/tmp/worktree-B',
+    },root)).rejects.toThrow('不能改用其他目录')
   })
 })
 

@@ -33,6 +33,10 @@ const jobSchema = z.object({
   ownerKey: z.string().uuid().optional(),
   sessionId: z.string().uuid().optional(),
   turnId: z.string().uuid().optional(),
+  /** Stable original AgentTool worktree across retries and session resume. */
+  worktreePath: z.string().min(1).max(4096).optional(),
+  worktreeBranch: z.string().min(1).max(256).optional(),
+  worktreeHead: z.string().min(1).max(128).optional(),
   summary: z.string().max(4000).optional(),
   history: z.array(historySchema).max(20),
 }).strict()
@@ -168,7 +172,7 @@ export function enqueueMissionJob(
  * workers in a different Mission against the very same checkout.
  */
 async function withProjectWorkerSlot<T>(
-  missionId: string, projectDir: string, root: string, claim: () => Promise<T>,
+  projectDir: string, root: string, claim: () => Promise<T>,
 ): Promise<T> {
   const dir = join(root, 'agent-mission-jobs')
   await mkdir(dir, { recursive: true, mode: 0o700 })
@@ -184,7 +188,7 @@ async function withProjectWorkerSlot<T>(
     let running = 0
     const filenames = await readdir(dir)
     for (const file of filenames) {
-      if (!/^mission_[a-f0-9]{16}\\.json$/.test(file)) continue
+      if (!/^mission_[a-f0-9]{16}\.json$/.test(file)) continue
       const raw = await readFile(join(dir, file), 'utf8')
       if (Buffer.byteLength(raw) > 2_000_000) throw new Error('项目任务记录超过容量限制')
       const doc = documentSchema.parse(JSON.parse(raw))
@@ -202,7 +206,7 @@ export function claimMissionJob(
 ): Promise<MissionJob> {
   if (!z.string().uuid().safeParse(ownerKey).success || !Number.isInteger(ownerPid) || ownerPid < 1)
     throw new Error('无效的任务执行宿主身份')
-  return withProjectWorkerSlot(missionId, projectDir, root ?? getClaudeConfigHomeDir(), () => mutate(missionId, projectDir, doc => {
+  return withProjectWorkerSlot(projectDir, root ?? getClaudeConfigHomeDir(), () => mutate(missionId, projectDir, doc => {
     const job = requireJob(doc, jobId)
     if (job.status !== 'queued') throw new Error(`任务目前不能执行：${job.status}`)
     // A bounded shared worker pool: concurrent desktop hosts consult the
@@ -217,6 +221,23 @@ export function claimMissionJob(
     }
     return { document: update(doc, job, next), job: next }
   }, root))
+}
+
+/** Link the SDK job to its source AgentTool worktree before any model call. */
+export function bindMissionJobWorkspace(
+  missionId: string, projectDir: string, jobId: string, runId: string,
+  workspace: { worktreePath?: string; worktreeBranch?: string; worktreeHead?: string },
+  root?: string,
+): Promise<MissionJob> {
+  return mutate(missionId, projectDir, doc => {
+    const job = requireJob(doc, jobId)
+    if (job.status !== 'running' || job.runId !== runId)
+      throw new Error('工作项当前轮次已失效，不能绑定工作树')
+    if (job.worktreePath && job.worktreePath !== workspace.worktreePath)
+      throw new Error('工作项已有隔离工作树，不能改用其他目录执行')
+    const next = { ...job, ...workspace, updatedAt: now() }
+    return { document: update(doc, job, next), job: next }
+  }, root)
 }
 
 export function bindMissionJobTurn(
