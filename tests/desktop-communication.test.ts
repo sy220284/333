@@ -722,3 +722,34 @@ test('background_tasks_changed reconciles active work without inventing completi
     status: 'running', isBackgrounded: false,
   })
 })
+
+
+test('多会话压力实测：32个独立SDK会话同时启动并完成流式工作，结果不能串到别的会话', async () => {
+  const data = fixture()
+  const gateway = createDesktopGateway(data.options)
+  const completed = new Map<string, number>()
+  const failures: string[] = []
+  const stop = gateway.subscribe(event => {
+    if (event.event === 'session.message' && event.message.type === 'result')
+      completed.set(event.sessionId, (completed.get(event.sessionId) ?? 0) + 1)
+    if (event.event === 'session.error') failures.push(`${event.sessionId}: ${event.error}`)
+  })
+  try {
+    const count = 32
+    const opened = await Promise.all(Array.from({ length: count }, () =>
+      gateway.handle(request('sessions.open')) as Promise<{ sessionId: string }>))
+    const ids = opened.map(item => item.sessionId)
+    expect(new Set(ids).size).toBe(count)
+    await Promise.all(ids.map((sessionId, index) => gateway.handle(
+      request('sessions.send', { sessionId, message: `并行检查 ${index}` }),
+    )))
+    await until(() => ids.every(sessionId => completed.has(sessionId)))
+    expect(failures).toEqual([])
+    for (const id of ids) expect(completed.get(id)).toBe(1)
+    const overview = await gateway.handle(request('agents.overview')) as { activeSessions: number }
+    expect(overview.activeSessions).toBe(count)
+  } finally {
+    stop()
+    await gateway.close()
+  }
+})
