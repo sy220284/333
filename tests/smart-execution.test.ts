@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createSmartExecutionJournal, getSmartExecutionJournalFile } from '../src/services/desktop/smartExecutionJournal.js'
 import { planLocalProjectPurge, executeLocalProjectPurge } from '../src/services/desktop/maintenance.js'
+import { createProjectBudget, getProjectBudgetFile } from '../src/services/agentCenter/projectBudget.js'
 import { createDesktopGateway, type DesktopGatewayOptions } from '../src/services/desktop/gateway.js'
 import { DesktopRequestSchema } from '../src/services/desktop/protocol.js'
 
@@ -49,14 +50,18 @@ test('本地工作区清理预览和执行完整覆盖智能执行账本', async
     const journal = createSmartExecutionJournal(project, journalRoot)
     await journal.start({ sessionId: sid(), model: 'fixture-model',
       permissionMode: 'default', status: 'running', startedAt: new Date().toISOString() })
+    const budget=createProjectBudget(project,journalRoot)
+    await budget.configure(5)
     const planned = await planLocalProjectPurge(project, journalRoot)
     const path = getSmartExecutionJournalFile(project, journalRoot)
-    const matching = planned.items.filter(item => item.path === path)
-    expect(matching).toHaveLength(1)
+    const budgetPath=getProjectBudgetFile(project,journalRoot)
+    const matching = planned.items.filter(item => item.path === path || item.path===budgetPath)
+    expect(matching).toHaveLength(2)
     expect(matching[0]?.kind).toBe('file')
     const result = await executeLocalProjectPurge(matching)
-    expect(result).toMatchObject({ deleted: 1, total: 1, errors: [] })
+    expect(result).toMatchObject({ deleted: 2, total: 2, errors: [] })
     expect(await journal.list()).toEqual([])
+    expect((await budget.get()).limitUsd).toBeNull()
   } finally { await rm(root, { force: true, recursive: true }) }
 })
 

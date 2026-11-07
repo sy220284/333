@@ -43,11 +43,16 @@ function validated(raw:unknown):BudgetDoc {
   }
   return x
 }
+export function getProjectBudgetFile(
+  projectDir:string, root=join(homedir(),'.yaoyaoche','project-budgets'),
+):string{
+  return join(resolve(root),`${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
+}
 export function createProjectBudget(
   projectDir:string, root=join(homedir(),'.yaoyaoche','project-budgets'),
 ) {
   const base=resolve(root)
-  const file=join(base,`${createHash('sha256').update(resolve(projectDir)).digest('hex')}.json`)
+  const file=getProjectBudgetFile(projectDir,root)
   const empty=():BudgetDoc=>({version:1,limit:null,spent:0,leases:[]})
   async function read():Promise<BudgetDoc>{
     let raw:string

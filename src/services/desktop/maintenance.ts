@@ -7,6 +7,7 @@ import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { findGitRoot } from '../../utils/git.js'
 import { planPurge, executePurgeItem, type PurgeItem } from '../../utils/purgeProject.ts'
 import { getSmartExecutionJournalFile } from './smartExecutionJournal.js'
+import { getProjectBudgetFile } from '../agentCenter/projectBudget.js'
 
 export type LocalPurgePlan = { workspace: string; items: PurgeItem[]; warnings: string[] }
 
@@ -17,6 +18,15 @@ export async function planLocalProjectPurge(workspace: string, smartJournalRoot?
   const aliases = [findGitRoot(project), findGitRoot(canonical)].filter((s): s is string => !!s)
   const plan = await planPurge(getClaudeConfigHomeDir(), project, { projectKeys, configAliases: aliases })
   const journalFile = getSmartExecutionJournalFile(project, smartJournalRoot)
+  for(const [file,description] of [
+    [getProjectBudgetFile(project,smartJournalRoot),'当前工作区共享预算、预占额度及历史费用'],
+  ]){
+    try{
+      const info=await lstat(file)
+      if(!info.isFile()||info.nlink!==1)throw new Error('共享预算账本必须是普通独立文件')
+      plan.items.push({path:file,kind:'file',reason:description})
+    }catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
+  }
   try {
     const info = await lstat(journalFile)
     if (!info.isFile() || info.nlink !== 1) throw new Error('智能执行记录必须是普通独立文件')

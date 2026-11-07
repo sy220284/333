@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path'
 import { createHeadlessConversationSession } from '../src/services/conversation/headlessSession.js'
 import { createDesktopGateway } from '../src/services/desktop/gateway.js'
 import { previewWorktreeIntegration, integrateWorktree } from '../src/services/agentCenter/worktreeIntegration.js'
+import { createProjectBudget } from '../src/services/agentCenter/projectBudget.js'
 import { createDesktopTaskJournal } from '../src/services/desktop/taskJournal.js'
 import { createMission, getMission, linkMissionAssignment, selectMission } from '../src/utils/agentMissions.js'
 import { enqueueMissionJob, approveMissionJob, missionJobAssignmentId } from '../src/services/agentCenter/missionJobs.js'
@@ -458,6 +459,35 @@ test('宿主重启时从已写入的 Job 终态恢复 Mission 关联，不重复
     await gateway.close()
     await rm(cwd,{recursive:true,force:true})
   }
+})
+
+test('多个宿主共享项目预算：并发预占不会超额，费用结算与未知账目持续受控',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'desktop-shared-project-budget-'))
+  try{
+    const first=createProjectBudget(root,root)
+    const second=createProjectBudget(root,root)
+    expect((await first.configure(1.2)).limitUsd).toBe(1.2)
+    const id=Array.from({length:8},()=>randomUUID())
+    const checked=await Promise.allSettled(id.map((value,index)=>
+      (index%2?second:first).reserve(value,0.4)))
+    const succeeded=checked.flatMap((x,i)=>x.status==='fulfilled'&&x.value.id?[id[i]!]:[])
+    expect(succeeded).toHaveLength(3)
+    expect(checked.filter(x=>x.status==='rejected')).toHaveLength(5)
+    const total=await first.get()
+    expect(total.reservedUsd).toBeCloseTo(1.2,5)
+    expect(total.availableUsd).toBeCloseTo(0,5)
+    await second.charge(succeeded[0]!,0.11)
+    expect((await first.get()).spentUsd).toBeCloseTo(0.11,5)
+    await first.finish(succeeded[0]!,false)
+    expect((await second.get()).availableUsd).toBeCloseTo(0.29,5)
+    await first.finish(succeeded[1]!,true)
+    const uncertain=await second.get()
+    expect(uncertain.uncertainReservations).toBe(1)
+    expect(uncertain.reservedUsd).toBeCloseTo(0.4,5)
+    await expect(second.configure(0.5)).rejects.toThrow('低于已使用')
+    await second.configure(2)
+    expect((await first.get()).limitUsd).toBe(2)
+  }finally{await rm(root,{recursive:true,force:true})}
 })
 
 test('真实 Git 工作树冲突预检、源代码保护、原子合并与幂等识别',async()=>{
