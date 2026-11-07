@@ -80,6 +80,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
   const smartJournal = options.smartJournal ?? createSmartExecutionJournal(cwd, options.dataDir)
   const smartActive = new Set<string>()
   const sessions = new Map<string, Entry>()
+  let pendingPurge: { token: string; createdAt: number; plan: import('./maintenance.js').LocalPurgePlan } | undefined
   const opening = new Set<string>()
   const ownerKey = randomUUID()
   const executingMissionJobs = new Map<string, { missionId: string; jobId: string; runId: string }>()
@@ -464,7 +465,7 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           protocolVersion: DESKTOP_PROTOCOL_VERSION,
           transport: 'stdio-jsonl',
           stream: 'sdk-stream-json',
-          capabilities: ['smart_execute', 'smart_inspect', 'smart_history', 'models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs'],
+          capabilities: ['smart_execute', 'smart_inspect', 'smart_history', 'models', 'sessions', 'interrupt', 'permissions', 'agent_progress', 'task_recovery', 'agents', 'missions', 'mission_jobs', 'system_diagnostics', 'local_purge'],
         }
       case 'smart.inspect': return inspectSmartModel(request.model)
       case 'smart.history': return (await smartJournal.list()).map(item =>
@@ -502,6 +503,49 @@ export function createDesktopGateway(options: DesktopGatewayOptions = {}) {
           await closeSessionInternal(opened.sessionId)
           throw error
         }
+      }
+      case 'system.diagnostics': {
+        const { getDoctorDiagnostic } = await import('../../utils/doctorDiagnostic.js')
+        const { listProviderApiKeyAccounts } = await import('../auth/apiKeyVault.js')
+        const { getMcpConfigsByScope } = await import('../mcp/config.js')
+        const installation = await getDoctorDiagnostic()
+        const mcp = (['project', 'user', 'local'] as const).map(scope => {
+          const result = getMcpConfigsByScope(scope)
+          return { scope, count: Object.keys(result.servers).length, errors: result.errors.map(error => error.message) }
+        })
+        return {
+          installation,
+          runtime: { cwd, activeSessions: sessions.size, activeTasks: [...sessions.values()].flatMap(item => [...item.tasks.values()]).filter(task => task.status === 'running').length },
+          configuredProviders: listProviderApiKeyAccounts(),
+          mcp,
+          note: '模型凭证及 MCP 配置检查不会主动发起付费模型请求',
+        }
+      }
+      case 'data.purge.preview': {
+        const { planLocalProjectPurge } = await import('./maintenance.js')
+        const plan = await planLocalProjectPurge(cwd)
+        const token = randomUUID()
+        pendingPurge = { token, createdAt: Date.now(), plan }
+        return { token, workspace: plan.workspace, items: plan.items.map(item => ({ kind: item.kind, path: item.path, reason: item.reason })), warnings: plan.warnings, activeSessions: sessions.size }
+      }
+      case 'data.purge.apply': {
+        const pending = pendingPurge
+        if (!pending || pending.token !== request.token || Date.now() - pending.createdAt > 300000)
+          throw new Error('清理预览已失效，请重新检查删除清单')
+        pendingPurge = undefined
+        if (activeMissionQueues.size || drainingMissionQueues.size || executingMissionJobs.size ||
+            [...sessions.values()].some(entry => entry.sending || entry.consuming ||
+              [...entry.tasks.values()].some(task => task.status === 'running')))
+          throw new Error('当前仍有执行中的会话、智能体或任务队列。请先停止执行再清理')
+        // Explicit confirmation was received in the Electron main process.
+        // Idle SDK sessions must close before their on-disk transcripts can be removed.
+        for (const sessionId of [...sessions.keys()]) await closeSessionInternal(sessionId)
+        const { planLocalProjectPurge, executeLocalProjectPurge } = await import('./maintenance.js')
+        const current = await planLocalProjectPurge(cwd)
+        const signature = (items: typeof current.items) => JSON.stringify(items.map(item => [item.kind, item.path, item.reason]))
+        if (signature(current.items) !== signature(pending.plan.items))
+          throw new Error('清理内容已变化，请重新预览后确认')
+        return executeLocalProjectPurge(current.items)
       }
       case 'models.list': return models(request.sessionId)
       case 'mcp.list': {

@@ -19,6 +19,9 @@ const request = <T extends string, S extends z.ZodRawShape>(method: T, shape: S)
  * stay in their canonical stream-json shapes. */
 export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('hello', {}),
+  request('system.diagnostics', {}),
+  request('data.purge.preview', {}),
+  request('data.purge.apply', { token: z.string().uuid() }),
   request('models.list', { sessionId: sessionId.optional() }),
   request('smart.inspect', { model: z.string().min(1).max(300).optional() }),
   request('smart.history', {}),
@@ -33,7 +36,7 @@ export const DesktopRequestSchema = z.discriminatedUnion('method', [
   request('mcp.add', { name: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), scope: z.enum(['project', 'user', 'local']), config: z.union([
     z.object({ type: z.literal('http'), url: z.string().url().max(2048) }).strict(),
     z.object({ type: z.literal('sse'), url: z.string().url().max(2048) }).strict(),
-    z.object({ type: z.literal('stdio'), command: z.string().trim().min(1).max(1024), args: z.array(z.string().max(1000)).max(80) }).strict()
+    z.object({ type: z.literal('stdio'), command: z.string().trim().min(1).max(1024), args: z.array(z.string().max(1000)).max(80), env: z.record(z.string().max(120), z.string().max(8192)).optional() }).strict()
   ]) }),
   request('mcp.remove', { name: z.string().min(1), scope: z.enum(['project','user','local']) }),
   request('mcp.toggle', { name: z.string().min(1), enabled: z.boolean() }),
