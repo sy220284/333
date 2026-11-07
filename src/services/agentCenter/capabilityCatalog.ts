@@ -89,7 +89,7 @@ export async function listCapabilityCatalog(projectDir: string): Promise<Capabil
     }
     for (const plugin of plugins.disabled) {
       items.push({
-        id: 'plugin:' + plugin.source + ':' + plugin.name,
+        id: `plugin:${plugin.source}:${plugin.name}`,
         name: plugin.name,
         kind: 'plugin',
         source: plugin.source,
