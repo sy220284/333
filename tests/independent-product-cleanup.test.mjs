@@ -30,6 +30,18 @@ test('正式菜单只提供统一入口及自主反馈', () => {
   assert.doesNotMatch(source('src/commands.ts'), /INTERNAL_ONLY_COMMANDS|agents-platform\/index\.js|commands\/mock-limits\/index\.js/)
 })
 
+test('官方云远控、定时、同步及Slack机器人不能重新注册命令', () => {
+  const commands=source('src/commands.ts')
+  const registered=commands.slice(commands.indexOf('const COMMANDS ='),commands.indexOf('export const builtInCommandNames'))
+  for(const name of ['remoteControl','schedule','designSync','installSlackApp','teleport','ultrareview']) {
+    assert.doesNotMatch(registered,new RegExp(`^\\s+${name}\\s*,?\\s*$,'m'),`已退役原厂命令重新进入菜单：${name}`)
+  }
+  const cli=source('src/main.tsx')
+  for(const name of ['remote-control','schedule','ultrareview','teleport']) {
+    assert.doesNotMatch(cli,new RegExp(`\\.command\\(['"]${name}(?:\\s|['"])`),`官方云端命令再次注册：${name}`)
+  }
+})
+
 test('已删除 Claude 商业推广、云审查及外部统计上传文件', () => {
   for (const path of [
     'src/commands/stickers/index.ts',
