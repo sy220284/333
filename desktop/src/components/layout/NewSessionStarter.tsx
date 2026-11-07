@@ -36,7 +36,7 @@ export function NewSessionStarter({projectName,modelName,teamMode,sessions,missi
         <span className="flex items-center gap-1.5"><Cpu size={13}/>{modelName}</span>
       </div>
     </Card>
-    <div className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-3 max-[850px]:grid-cols-1" aria-label="建议的任务">
+    <div role="group" className="mx-auto grid w-full max-w-[720px] grid-cols-2 gap-3 max-[850px]:grid-cols-1" aria-label="建议的任务">
       {suggestions.map(({label,subtitle,prompt,icon:Icon})=><Card key={label} radius="lg" padding="none" surface="lowest" shadow="card" interactive lift>
         <button type="button" onClick={()=>onSuggestion(prompt)} className="flex min-h-[78px] w-full items-center gap-3 p-4 text-left">
           <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-container-low)] text-[var(--color-text-secondary)]"><Icon size={18}/></span>

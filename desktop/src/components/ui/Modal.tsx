@@ -70,8 +70,8 @@ export function Modal({
         return
       }
 
-      const first = focusable[0]!
-      const last = focusable[focusable.length - 1]!
+      const first = focusable[0] as HTMLElement
+      const last = focusable[focusable.length - 1] as HTMLElement
       const focusOutsideDialog = !dialog.contains(document.activeElement)
       if (event.shiftKey && (document.activeElement === first || focusOutsideDialog)) {
         event.preventDefault()
@@ -90,9 +90,12 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-[var(--z-dialog)] flex items-center justify-center">
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
+        aria-label="关闭对话框"
+        disabled={!dismissible}
         className={`absolute inset-0 transition-opacity duration-200 ${variant === 'lightbox' ? 'bg-[var(--color-lightbox-scrim)]' : 'bg-[var(--color-modal-scrim)]'}`}
-        onClick={dismissible ? onClose : undefined}
+        onClick={onClose}
       />
 
       {/* Modal content */}

@@ -34,7 +34,7 @@ test('引入 cc-haha 原生卡片按钮状态及空白页组件和完整主题�
   assert.ok(theme.includes('@theme {'))
   assert.ok(theme.includes('@keyframes'))
   assert.ok(packageJson.devDependencies['@tailwindcss/vite'])
-  assert.ok(packageJson.devDependencies['tailwindcss'])
+  assert.ok(packageJson.devDependencies.tailwindcss)
 })
 test('源码六套主题通过单一 data-theme 选择器控制，不受旧主题层覆盖', () => {
   for (const name of ['white','paper','warm-classic','celadon','dark','ink-blue']) {
