@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { api, type AppEvent, type Item } from './api'
 import { MarkdownMessage } from './MarkdownMessage'
+import brandIconUrl from '../build/icon.svg'
 import { asObject, itemFromMessage, statusName, type ConversationItem } from './projection'
 
 type View='dashboard'|'chat'|'agents'|'missions'|'files'|'models'|'integrations'|'github'|'history'|'settings'
@@ -566,7 +567,7 @@ export function App(){
   const heading=TITLES[view]
     return <div className="app-shell">
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Sparkles size={21}/></div><div><strong>摇摇车</strong><small>AGENT WORKSPACE</small></div></div>
+      <div className="brand"><div className="brand-mark"><img src={brandIconUrl} alt="" width={40} height={40}/></div><div><strong>摇摇车</strong><small>AGENT WORKSPACE</small></div></div>
       <button type="button" className="workspace-picker" onClick={selectWorkspace} title={workspace||'选择工作区'}>
         <div className="workspace-icon"><HardDrive size={17}/></div><div className="workspace-details"><strong>{workspace.split(/[\\/]/).filter(Boolean).at(-1)||'选择工作区'}</strong><small>{workspace?'本地工作区':'选择本地项目'}</small></div><ChevronDown size={14}/>
       </button>
