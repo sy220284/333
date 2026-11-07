@@ -90,6 +90,15 @@ jobs:
           npm run package:linux
           test -d release/linux-unpacked
           ls -lh release/*.{AppImage,deb}
+          DEB="$(find release -maxdepth 1 -name '*.deb' -print -quit)"
+          test -n "$DEB"
+          dpkg-deb -f "$DEB" Depends | grep -q 'fonts-noto-cjk'
+      - name: 安装并核对真实中文字体，确保用户界面没有缺失字形
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk fontconfig
+          fc-list :lang=zh-cn family > /tmp/yaoyaoche-fonts.txt
+          grep -q 'Noto Sans CJK' /tmp/yaoyaoche-fonts.txt
       - name: 图形环境中启动发行版并检查真实页面与 SDK Host 握手
         run: |
           command -v xvfb-run
