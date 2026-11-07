@@ -403,7 +403,19 @@ function startSession(
         const request = requests.get(reply.request_id)
         requests.delete(reply.request_id)
         if (reply.subtype === 'error') request?.reject(new Error(reply.error))
-        else request?.resolve(reply.response ?? {})
+        else {
+          // Reinitializing an existing 2.1.317 CLI can return unresolved
+          // prompts for the new host to serve. Retain their original request
+          // IDs and use the same cancellation/permission semantics as live
+          // control_request frames.
+          const pending = [
+            ...(reply.pending_permission_requests ?? []),
+            ...(reply.pending_user_dialog_requests ?? []),
+            ...(reply.pending_elicitation_requests ?? []),
+          ]
+          for (const parked of pending) void respondToControl(parked).catch(fail)
+          request?.resolve(reply.response ?? {})
+        }
       } else {
         messages.enqueue(message)
       }
