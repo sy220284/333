@@ -307,12 +307,15 @@ export function App(){
     })
     void (async()=>{
       try{
-        const info=await api.call<{workspace:string}>('app.info')
+        const info=await api.call<{workspace:string;startupSessionId?:string;initialPrompt?:string}>('app.info')
         if(!alive)return
         setWorkspace(info.workspace);setFolder(info.workspace)
         await api.call('hello')
         if(!alive)return
         setConnected(true);await refresh()
+        if(!alive)return
+        if(info.initialPrompt){setDraft(info.initialPrompt);setView('chat')}
+        if(info.startupSessionId)await resumeSession(info.startupSessionId)
       }catch(e){if(alive){setConnected(false);setError(presentError(e))}}
     })()
     return ()=>{alive=false;unsub()}
