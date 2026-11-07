@@ -36,6 +36,7 @@ type MissionJob={id:string;title:string;instruction:string;status:JobStatus;atte
 type TeamMember={agentId:string;name:string;agentType?:string;model?:string;status:'running'|'idle'|'unknown'}
 type MissionActivity={key:string;jobId:string;sessionId:string;task:Task}
 type SmartRecord={sessionId:string;model:string;permissionMode:string;budgetUsd?:number;costUsd?:number;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;finishedAt?:string}
+type ProjectBudget={limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number}
 type SmartInspection={model:string;status:string;message:string;checkedOffline:boolean;contextWindow?:number|null;maxOutputTokens?:number|null;outputSource?:string;toolRoundTrip?:boolean|null;hasPricing?:boolean}
 type McpServer={name:string;scope:string;type:string;disabled:boolean;url?:string}
 const NAV:{id:View;label:string;icon:LucideIcon}[]=[
@@ -116,6 +117,9 @@ export function App(){
     return saved==='acceptEdits'||saved==='plan'||saved==='dontAsk'?saved:'default'
   })
   const [smartHistory,setSmartHistory]=useState<SmartRecord[]>([])
+  const [projectBudget,setProjectBudget]=useState<ProjectBudget|null>(null)
+  const [projectBudgetInput,setProjectBudgetInput]=useState('')
+  const projectBudgetInitialized=useRef(false)
   const [smartInspection,setSmartInspection]=useState<SmartInspection|null>(null)
   const [mode,setMode]=useState<'master'|'super'>('master')
   const [overview,setOverview]=useState<Item>({})
@@ -187,6 +191,14 @@ export function App(){
     const queries=[
       api.call<{models:Model[]}>('models.list').then(data=>{if(current())setModels(data.models??[])}),
       api.call<SmartRecord[]>('smart.history').then(data=>{if(current())setSmartHistory(data??[])}),
+      api.call<ProjectBudget>('budget.project.get').then(data=>{
+        if(!current())return
+        setProjectBudget(data)
+        if(!projectBudgetInitialized.current){
+          setProjectBudgetInput(data.limitUsd===null?'':String(data.limitUsd))
+          projectBudgetInitialized.current=true
+        }
+      }),
       api.call<Item[]>('sessions.list',{limit:50,offset:0})
         .then(data=>{if(current())setSessions(Array.isArray(data)?data:[])}),
       api.call<Item>('agents.overview').then(data=>{
@@ -207,7 +219,7 @@ export function App(){
     // A hung external provider must never hold the global action lock.
     // Surface individual failures immediately instead of waiting for the
     // slowest service before showing the user a reason.
-    const names=['模型列表','智能执行记录','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
+    const names=['模型列表','智能执行记录','项目共享预算','历史会话','智能体概览','长期任务','模型凭证','MCP服务']
     const failed:string[]=[]
     queries.forEach((query,index)=>{
       void query.catch(error=>{
@@ -446,6 +458,17 @@ export function App(){
       ? `使用原生 SendMessage 给团队成员 ${JSON.stringify(teamMemberDraft.trim())} 发送任务：${JSON.stringify(teamMemberInstruction.trim())}，确认团队和接收人身份，保留团队信箱记录。`
       : '先通过原生 SendMessage/requestShutdown 请求现有成员退出，确认全部退出后使用 TeamDelete 完成团队清理，并报告实际结果。'
     await sendTeamInstruction(`用户授权在负责人所属团队 ${JSON.stringify(selectedTeam)} 执行下述操作。确认所属项目和负责人身份后操作：${description} 禁止对其他团队执行。`,leadSessionId)
+  }
+  async function saveProjectBudget(){
+    await operation('保存项目共享预算',async()=>{
+      const value=projectBudgetInput.trim()?Number(projectBudgetInput):null
+      if(value!==null&&(!Number.isFinite(value)||value<=0||value>100000))
+        throw new Error('项目预算请输入大于零且不超过 100000 的美元金额')
+      const next=await invoke<ProjectBudget>('budget.project.set',{limitUsd:value})
+      setProjectBudget(next)
+      projectBudgetInitialized.current=true
+      setProjectBudgetInput(next.limitUsd===null?'':String(next.limitUsd))
+    })
   }
   async function executeSmart(){
     const text=draft.trim()
@@ -824,7 +847,10 @@ export function App(){
             missions={missions.flatMap(m=>{const id=missionId(m);return id?[{id,objective:String(m.objective||'未命名任务'),status:String(m.status||'active')}]:[]})}
             task={draft} onTask={setDraft} onExecute={()=>void executeSmart()} busy={Boolean(busy)} connected={connected}
             models={models} selectedModel={selectedModel} onModel={setSelectedModel}
-            budget={smartBudget} onBudget={setSmartBudget} permission={smartPolicy} onPermission={setSmartPolicy}
+            budget={smartBudget} onBudget={setSmartBudget}
+            projectBudget={projectBudgetInput} onProjectBudget={setProjectBudgetInput}
+            onSaveProjectBudget={()=>void saveProjectBudget()} budgetState={projectBudget??undefined}
+            permission={smartPolicy} onPermission={setSmartPolicy}
             executions={smartHistory} onOpenExecution={id=>void resumeSession(id)}
             onSuggestion={setDraft}
             onOpenSession={id=>id===sessionId?setView('chat'):void resumeSession(id)}
@@ -1130,7 +1156,7 @@ export function App(){
   </Card></Section>
   <Section title="主机交互请求"><Card radius="lg" surface="lowest" shadow="card">{hostRequests.length?hostRequests.map(r=><div key={r.id} className="mb-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 last:mb-0"><strong className="text-[12px]">{String(r.type||'交互请求')}</strong><pre className="my-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-sm)] bg-[var(--color-code-bg)] p-3 font-mono text-[11px] text-[var(--color-code-fg)]">{json(r.request||r)}</pre><Button variant="danger-outline" size="base" onClick={()=>void operation('拒绝请求',async()=>{await invoke('host.reject',{sessionId:r.sessionId,requestId:r.id,reason:'用户在桌面端拒绝请求'});await refreshSession(r.sessionId)})}>拒绝请求</Button></div>):<p className="text-[12px] text-[var(--color-text-tertiary)]">没有需要处理的主机交互请求。</p>}</Card></Section>
   <LocalMaintenance key={workspace} workspace={workspace} connected={connected} onPurged={()=>{
-    setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setSmartHistory([]);setSmartInspection(null);setPermissions([]);setHostRequests([]);setSessionPhase('idle');
+    setSessionId('');sessionRef.current='';setSessions([]);setMessages([]);setTasks([]);setSmartHistory([]);setSmartInspection(null);setProjectBudget(null);projectBudgetInitialized.current=false;setPermissions([]);setHostRequests([]);setSessionPhase('idle');
     void refresh()
   }}/>
   <Section title="外观与体验" subtitle="新项目的六套原生配色与统一动效。"><Card radius="lg" surface="lowest" shadow="card">
@@ -1146,6 +1172,7 @@ export function App(){
           connected={connected} phase={statusName(sessionPhase)} model={selectedModel} mode={mode}
           approvals={permissions.length} tasks={tasks.length} activity={activity} busy={busy}
           smartExecution={smartHistory.find(record=>record.sessionId===sessionId)}
+          projectBudget={projectBudget??undefined}
           onClose={()=>setRightOpen(false)} onPermissions={()=>setView('settings')} onMissions={()=>setView('missions')} onModels={()=>setView('models')}
         />}
 

@@ -39,6 +39,10 @@ type Props = {
   onModel: (value: string) => void
   budget: string
   onBudget: (value: string) => void
+  projectBudget: string
+  onProjectBudget: (value: string) => void
+  onSaveProjectBudget: () => void
+  budgetState?: {limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number}
   permission: 'default' | 'acceptEdits' | 'plan' | 'dontAsk'
   onPermission: (value: Props['permission']) => void
   executions: SmartExecutionPreview[]
@@ -56,6 +60,7 @@ const executionText: Record<SmartExecutionPreview['status'], string> = {
 export function NewSessionStarter({
   projectName, modelName, teamMode, sessions, missions, task, onTask, onExecute,
   busy, connected, models, selectedModel, onModel, budget, onBudget,
+  projectBudget, onProjectBudget, onSaveProjectBudget, budgetState,
   permission, onPermission, executions, onOpenExecution,
   onSuggestion, onOpenSession, onOpenHistory, onOpenMission, onOpenMissionBoard,
 }: Props) {
@@ -112,8 +117,22 @@ export function NewSessionStarter({
             <option value="dontAsk">未授权则拒绝</option>
           </select>
         </label>
+        <div className="col-span-full flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-container-low)] p-3">
+          <label className="flex min-w-[200px] flex-1 flex-col gap-2 text-[11px] text-[var(--color-text-secondary)]">
+            项目共享预算（美元）
+            <input aria-label="项目共享预算" type="number" min="0.01" max="100000" step="0.01"
+              value={projectBudget} onChange={event=>onProjectBudget(event.target.value)}
+              placeholder="留空则不限制整个项目"/>
+          </label>
+          <Button variant="secondary" size="sm" disabled={busy||!connected} onClick={onSaveProjectBudget}>保存项目预算</Button>
+          {budgetState&&<p className="m-0 w-full text-[10px] leading-5 text-[var(--color-text-secondary)]">
+            已结算 USD {budgetState.spentUsd.toFixed(4)} · 执行预占 USD {budgetState.reservedUsd.toFixed(4)}
+            {budgetState.uncertainReservations>0&&` · ${budgetState.uncertainReservations} 笔费用待核实，额度继续保留`}
+            {budgetState.availableUsd!==null&&` · 可用 USD ${budgetState.availableUsd.toFixed(4)}`}
+          </p>}
+        </div>
         <p className="col-span-full m-0 text-[10px] leading-5 text-[var(--color-text-tertiary)]">
-          服务商保持当前选择，敏感操作沿用权限审批。费用上限按请求结算检查，最后一轮可能超额。
+          项目额度由全部本地 SDK 会话和智能体共享，执行前预占、模型返回后结算；最后一个模型请求仍可能超额，实际费用以服务商为准。
         </p>
       </div>}
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-[var(--color-text-tertiary)]">

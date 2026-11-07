@@ -46,7 +46,7 @@ test('新 UI 业务入口对应实际回调，重要危险操作仍保留确认'
   for(const name of ['sessions.open','sessions.send','sessions.interrupt','sessions.setModel','agents.setMode','missions.jobs.runQueue','missions.jobs.approve','workspace.read','workspace.write','mcp.toggle','mcp.remove','host.reject'])assert.ok(app.includes(name),`缺少 ${name}`)
   assert.ok(app.includes('window.confirm'))
   assert.ok(app.includes('onSuggestion={setDraft}'))
-  for(const method of ['smart.execute','smart.start','smart.history','smart.inspect'])assert.ok(app.includes(method),`新首页缺失 ${method}`)
+  for(const method of ['smart.execute','smart.start','smart.history','smart.inspect','budget.project.set'])assert.ok(app.includes(method),`新首页缺失 ${method}`)
 })
 
 test('剔除未接入的原项目 UI 样式与冗余组件，不改变本地功能入口',()=>{

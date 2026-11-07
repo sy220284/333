@@ -24,6 +24,7 @@ let createdMission:{id:string;objective:string;status:string}|undefined
 let activeAgentMode:'master'|'super'='master'
 let mockTeam:{name:string;leadSessionId:string;memberCount:number;runningCount:number}|undefined
 let mockTasks:Array<{taskId:string;description:string;status:string}>=[]
+let budgetState:{limitUsd:number|null;spentUsd:number;reservedUsd:number;availableUsd:number|null;uncertainReservations:number;activeReservations:number}={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0}
 let smartRecord:{sessionId:string;model:string;permissionMode:string;status:'running'|'completed'|'failed'|'interrupted';startedAt:string;costUsd?:number;budgetUsd?:number}|undefined
 let longHistory=false
 let manyFiles=false
@@ -36,6 +37,11 @@ const call=vi.fn(async(method:string,args:Record<string,unknown>={})=>{
     case 'models.list':return {models:[{value:'minimax/M3',displayName:'MiniMax M3'}]}
     case 'smart.inspect':return {model:String(args.model||'minimax/M3'),status:'configured',message:'本地模型已就绪',checkedOffline:true,contextWindow:64000,hasPricing:true}
     case 'smart.history':return smartRecord?[smartRecord]:[]
+    case 'budget.project.get':return budgetState
+    case 'budget.project.set':
+      budgetState={...budgetState,limitUsd:args.limitUsd as number|null,
+        availableUsd:args.limitUsd===null?null:Number(args.limitUsd)-budgetState.spentUsd-budgetState.reservedUsd}
+      return budgetState
     case 'smart.execute':
       smartRecord={sessionId:SID,model:String(args.model||'minimax/M3'),permissionMode:String(args.permissionMode||'default'),
         status:'running',startedAt:new Date().toISOString(),...(args.maxBudgetUsd?{budgetUsd:Number(args.maxBudgetUsd)}:{})}
@@ -106,7 +112,7 @@ Object.defineProperty(window,'yaoyao',{value:{
 HTMLElement.prototype.scrollIntoView=vi.fn()
 const {App}=await import('./App')
 
-beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
+beforeEach(()=>{call.mockClear();listener=()=>{};showHistoricalJob=false;failMcpRefresh=false;activeAgentMode='master';mockTeam=undefined;mockTasks=[];smartRecord=undefined;budgetState={limitUsd:null,spentUsd:0,reservedUsd:0,availableUsd:null,uncertainReservations:0,activeReservations:0};longHistory=false;manyFiles=false;failModelSelection=false;pickedOfflineWorkspace=false;suspendMcpRefresh=false;releaseMcpRefresh=undefined;createdMission=undefined;window.localStorage.clear()})
 afterEach(()=>cleanup())
 
 describe('摇摇车真实桌面页面交互',()=>{
@@ -198,6 +204,17 @@ describe('摇摇车真实桌面页面交互',()=>{
     })))
     expect(screen.getByText('智能执行已进入真实会话')).toBeInTheDocument()
     await waitFor(()=>expect(screen.getAllByText(/上限 USD 2.50/).length).toBeGreaterThan(0))
+  })
+
+  it('项目共享预算从新 UI 配置到真实本地网关，并显示使用与预占',async()=>{
+    const user=userEvent.setup()
+    render(<App/>)
+    await screen.findByText('本地后台已连接')
+    await user.click(screen.getByRole('button',{name:'高级选项'}))
+    await user.type(screen.getByRole('spinbutton',{name:'项目共享预算'}),'5.00')
+    await user.click(screen.getByRole('button',{name:'保存项目预算'}))
+    await waitFor(()=>expect(call).toHaveBeenCalledWith('budget.project.set',{limitUsd:5}))
+    expect(await screen.findByText(/可用 USD 5.0000/)).toBeInTheDocument()
   })
 
   it('模型离线自检提供实际档案，无需在线模型请求',async()=>{
