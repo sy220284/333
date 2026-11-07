@@ -44,7 +44,7 @@ test('同一长期身份动态切换职责，保留完整角色历史',async()=>
     expect(changed.roles[0]?.state).toBe('released')
     expect(changed.roles[1]?.state).toBe('active')
     await expect(updateAgentProfileStatus(project,person.id,'retired',root)).rejects.toThrow('在岗职责')
-    const released=await releaseAgentRole(project,person.id,changed.roles[1]!.id,root)
+    const released=await releaseAgentRole(project,person.id,changed.roles[1]?.id ?? '',root)
     expect(released.roles[1]?.state).toBe('released')
     await updateAgentProfileStatus(project,person.id,'retired',root)
     expect((await listAgentProfiles(project,root))[0]?.status).toBe('retired')
