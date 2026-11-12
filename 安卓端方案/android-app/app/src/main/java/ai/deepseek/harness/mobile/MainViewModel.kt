@@ -23,12 +23,21 @@ import java.util.UUID
 data class ChatLine(val seq: Long, val actor: String, val text: String)
 data class SessionRow(val id: String, val running: Boolean, val blank: Boolean)
 data class ModelRow(val provider: String, val model: String, val name: String)
+data class WorkspaceRow(val id: String, val title: String, val path: String, val sessionIds: List<String>)
+data class JobRow(val id: String, val label: String, val status: String, val progress: String)
+data class McpRow(val name: String, val status: String)
+data class PluginRow(val name: String, val status: String)
 data class UiState(
     val connecting: Boolean = false, val connected: Boolean = false,
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
     val sending: Boolean = false, val running: Boolean = false,
     val lines: List<ChatLine> = emptyList(), val sessions: List<SessionRow> = emptyList(),
-    val models: List<ModelRow> = emptyList(), val error: String? = null
+    val models: List<ModelRow> = emptyList(), val error: String? = null,
+    val workspaces: List<WorkspaceRow> = emptyList(),
+    val jobs: List<JobRow> = emptyList(),
+    val mcpServers: List<McpRow> = emptyList(),
+    val plugins: List<PluginRow> = emptyList(),
+    val panelError: String? = null
 )
 
 /**
@@ -40,6 +49,9 @@ class MainViewModel : ViewModel() {
     val state = mutable.asStateFlow()
     private var remote: HarnessRemote? = null
     private var stream: Closeable? = null
+    private var workspaceStream: Closeable? = null
+    private var jobStream: Closeable? = null
+    private var mcpStream: Closeable? = null
     private var retryJob: Job? = null
     private var observedId: String? = null
     private var manualClose = false
@@ -62,6 +74,9 @@ class MainViewModel : ViewModel() {
                 manualClose = false
                 mutable.value = mutable.value.copy(connecting = false, connected = true,
                     connectionStatus = "核心 API 已连接", sessions = sessions, error = null)
+                observeWorkspaces()
+                observeMcpServers()
+                refreshBundles()
             } catch (e: Exception) {
                 mutable.value = mutable.value.copy(connecting = false, connected = false,
                     connectionStatus = "连接失败", error = e.message ?: "未知连接错误")
@@ -90,6 +105,7 @@ class MainViewModel : ViewModel() {
         events.clear()
         mutable.value = mutable.value.copy(sessionId = id, lines = emptyList(), error = null)
         subscribe(id)
+        observeJobs()
     }
 
     private fun subscribe(id: String) {
@@ -249,6 +265,141 @@ class MainViewModel : ViewModel() {
         } catch (e: Exception) { showError(e) }
     }
 
+
+    /**
+     * 与官方 workspace/follow 的 baseline/replace/upsert/remove/order 流保持同步。
+     * 每次重连由 Host 重新发送完整 baseline，因此不保留旧连接的推测数据。
+     */
+    fun observeWorkspaces() {
+        val connection = remote ?: return
+        workspaceStream?.close()
+        val workspaceMap = linkedMapOf<String, WorkspaceRow>()
+        workspaceStream = connection.stream("workspace/follow", buildJsonObject {}) { frame ->
+            viewModelScope.launch {
+                val objectFrame = frame as? JsonObject ?: return@launch
+                val type = objectFrame["type"]?.jsonPrimitive?.content
+                when (type) {
+                    "baseline", "replace" -> {
+                        workspaceMap.clear()
+                        val value = objectFrame["value"] as? JsonObject ?: return@launch
+                        val items = value["items"] as? JsonArray ?: return@launch
+                        for (item in items) parseWorkspace(item)?.let { workspaceMap[it.id] = it }
+                    }
+                    "upsert" -> parseWorkspace(objectFrame["workspace"])?.let { workspaceMap[it.id] = it }
+                    "remove" -> objectFrame["workspaceId"]?.jsonPrimitive?.content?.let(workspaceMap::remove)
+                    "order" -> {
+                        val ids = (objectFrame["workspaceIds"] as? JsonArray)
+                            ?.mapNotNull { it.jsonPrimitive.content } ?: return@launch
+                        val ordered = linkedMapOf<String, WorkspaceRow>()
+                        for (id in ids) workspaceMap[id]?.let { ordered[id] = it }
+                        workspaceMap.clear()
+                        workspaceMap.putAll(ordered)
+                    }
+                }
+                mutable.value = mutable.value.copy(workspaces = workspaceMap.values.toList(), panelError = null)
+            }
+        }, onError = { e ->
+            viewModelScope.launch { mutable.value = mutable.value.copy(panelError = "项目状态订阅失败：" + (e.message ?: "未知错误")) }
+        })
+    }
+
+    private fun parseWorkspace(value: JsonElement?): WorkspaceRow? {
+        val item = value as? JsonObject ?: return null
+        val id = item["workspaceId"]?.jsonPrimitive?.content ?: return null
+        val title = item["title"]?.jsonPrimitive?.content ?: id
+        val path = item["path"]?.jsonPrimitive?.content ?: ""
+        val sessions = (item["sessionIds"] as? JsonArray)?.map { it.jsonPrimitive.content } ?: emptyList()
+        return WorkspaceRow(id, title, path, sessions)
+    }
+
+    fun observeJobs() {
+        val connection = remote ?: return
+        val sessionId = mutable.value.sessionId ?: run {
+            mutable.value = mutable.value.copy(jobs = emptyList())
+            return
+        }
+        jobStream?.close()
+        jobStream = connection.stream("job/list", buildJsonObject {
+            put("request", buildJsonObject { put("sessionId", JsonPrimitive(sessionId)) })
+        }, onItem = { frame ->
+            viewModelScope.launch {
+                val obj = frame as? JsonObject ?: return@launch
+                if (obj["type"]?.jsonPrimitive?.content != "rows") return@launch
+                val items = (obj["jobs"] as? JsonArray)?.mapNotNull { raw ->
+                    val row = raw as? JsonObject ?: return@mapNotNull null
+                    val id = row["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    JobRow(id, row["label"]?.jsonPrimitive?.content ?: id,
+                        row["status"]?.jsonPrimitive?.content ?: "unknown",
+                        row["progress"]?.jsonPrimitive?.content ?: "")
+                } ?: return@launch
+                if (mutable.value.sessionId == sessionId) mutable.value = mutable.value.copy(jobs = items, panelError = null)
+            }
+        }, onError = { e ->
+            viewModelScope.launch { mutable.value = mutable.value.copy(panelError = "后台任务订阅失败：" + (e.message ?: "未知错误")) }
+        })
+    }
+
+    fun observeMcpServers() {
+        val connection = remote ?: return
+        mcpStream?.close()
+        mcpStream = connection.stream("mcpManager/watch", buildJsonObject {}, onItem = { frame ->
+            viewModelScope.launch {
+                val rows = (frame as? JsonArray)?.mapNotNull { raw ->
+                    val item = raw as? JsonObject ?: return@mapNotNull null
+                    val name = item["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    val status = (item["status"] as? JsonObject)?.get("state")?.jsonPrimitive?.content ?: "unknown"
+                    McpRow(name, status)
+                } ?: return@launch
+                mutable.value = mutable.value.copy(mcpServers = rows, panelError = null)
+            }
+        }, onError = { e ->
+            viewModelScope.launch { mutable.value = mutable.value.copy(panelError = "MCP 连接状态失败：" + (e.message ?: "未知错误")) }
+        })
+    }
+
+    fun refreshBundles() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val bundles = connection.call("pluginManager/listBundles", buildJsonObject {}) as? JsonArray
+                ?: throw IllegalStateException("插件清单未返回数组")
+            val items = bundles.mapNotNull { raw ->
+                val item = raw as? JsonObject ?: return@mapNotNull null
+                val name = item["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                PluginRow(name, item["version"]?.jsonPrimitive?.content ?: "可用")
+            }
+            mutable.value = mutable.value.copy(plugins = items, panelError = null)
+        } catch (e: Exception) { mutable.value = mutable.value.copy(panelError = "插件清单失败：" + (e.message ?: "未知错误")) }
+    }
+
+    fun startWorkspaceSession(workspaceId: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val value = connection.call("session/create", buildJsonObject {
+                put("request", buildJsonObject { put("workspaceId", JsonPrimitive(workspaceId)) })
+            }).jsonObject
+            activateSession(value["sessionId"]?.jsonPrimitive?.content ?: error("Host 未返回会话编号"))
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun stopJob(jobId: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        val sessionId = mutable.value.sessionId ?: return@launch
+        try {
+            connection.call("job/kill", buildJsonObject {
+                put("request", buildJsonObject {
+                    put("sessionId", JsonPrimitive(sessionId))
+                    put("jobId", JsonPrimitive(jobId))
+                })
+            })
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun restartMcp(name: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try { connection.call("mcpManager/restart", buildJsonObject { put("name", JsonPrimitive(name)) }) }
+        catch (e: Exception) { showError(e) }
+    }
+
     fun clearError() { mutable.value = mutable.value.copy(error = null) }
     private fun showError(e: Throwable) {
         mutable.value = mutable.value.copy(error = e.message ?: "操作失败")
@@ -257,6 +408,9 @@ class MainViewModel : ViewModel() {
         manualClose = true
         retryJob?.cancel()
         stream?.close()
+        workspaceStream?.close()
+        jobStream?.close()
+        mcpStream?.close()
         super.onCleared()
     }
 }

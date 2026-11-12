@@ -114,7 +114,7 @@ class HarnessRemote private constructor(private val root: HttpUrl, private val c
                 throw RemoteFailure("connection/rpc-id", "请求与响应不匹配")
             val result = frame["result"]?.jsonObject ?: throw RemoteFailure("connection/envelope", "无效的 RPC 响应")
             if (result["ok"]?.jsonPrimitive?.booleanOrNull == true)
-                result["value"] ?: throw RemoteFailure("connection/value", "成功回包缺少值")
+                result["value"] ?: kotlinx.serialization.json.JsonNull
             else {
                 val error = result["error"]?.jsonObject ?: throw RemoteFailure("connection/envelope", "核心拒绝请求但未提供错误详情")
                 throw RemoteFailure(error["code"]?.jsonPrimitive?.content ?: "remote/error",
