@@ -28,3 +28,6 @@
 
 ## 进度口径
 版本清单、契约、设计和代码提交后标记“落库”；CI 通过后才标记“可构建”；真实 Android 设备上完成独立 Host 运行、进程管理、模型调用、子进程/沙箱/PTY 与重启恢复后才标记“独立运行完成”。两项由不同证据控制。禁止将远程连接演示当成本机独立运行。
+
+## Node26 独立 Artifact 制作（与主客户端构建拆开）
+`.github/workflows/android-node-runtime.yml` 在运行时源码变化、PR 或人工触发时执行。完整复制 777 MIT 的 Termux 签名索引、SHA256 和 ELF 检查，产出 Node26 预编译 payload；再次校验后在 Gradle 构建期间使用 `DSH333_NODE_RUNTIME_DIR` 注入 APK。此分支必须同时出现 `lib/arm64-v8a/libdsh_node.so` 和对应的资源完整性清单才算通过 Node打包。Host 本身尚需独立可执行包与系统适配，并由真机握手完成验收。
