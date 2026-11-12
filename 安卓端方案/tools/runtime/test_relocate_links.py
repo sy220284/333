@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -44,6 +45,39 @@ class RelocateExternalLinksTests(unittest.TestCase):
             (deploy/"node_modules"/"leak").symlink_to(outside)
             with self.assertRaisesRegex(ValueError,"受信任源码"):
                 module.relocate(deploy,checkout)
+
+    def test_missing_macos_optional_is_explicitly_pruned(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            macos = checkout / "packages" / "experimental" / "cua-macos"
+            macos.mkdir(parents=True)
+            (macos / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/dsh-experimental-cua-macos",
+                "os": ["darwin"]
+            }))
+            caller = checkout / "packages" / "experimental" / "cua-bundle"
+            caller.mkdir()
+            (caller / "package.json").write_text(json.dumps({
+                "optionalDependencies": {"@deepseek-ai/dsh-experimental-cua-macos": "workspace:*"}
+            }))
+            broken = deploy / "node_modules" / "cua-macos"
+            broken.symlink_to(str(macos) + "(" + "a"*32 + ")", target_is_directory=True)
+            result = module.relocate(deploy, checkout)
+            self.assertEqual(result["prunedPlatformOptionals"], 1)
+            self.assertFalse(broken.is_symlink())
+
+    def test_missing_required_workspace_dependency_is_error(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            required = checkout / "packages" / "experimental" / "required"
+            required.mkdir(parents=True)
+            (required / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/required", "os": ["darwin"]
+            }))
+            broken = deploy / "node_modules" / "required"
+            broken.symlink_to(str(required) + "(" + "a"*32 + ")")
+            with self.assertRaisesRegex(ValueError, "未声明的缺失"):
+                module.relocate(deploy, checkout)
 
     def test_checkout_as_deployment_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
