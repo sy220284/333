@@ -191,6 +191,29 @@ fun HarnessApp(model: MainViewModel) {
                     }
                 }
             }
+
+            if (state.approvals.isNotEmpty()) {
+                val current = state.approvals.first()
+                ModalBottomSheet(onDismissRequest = {
+                    if (!state.approvalSubmitting) model.decideApproval(current.eventId, false)
+                }) {
+                    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("执行权限确认", style = MaterialTheme.typography.headlineSmall)
+                        Text(current.toolName, fontWeight = FontWeight.SemiBold)
+                        Text(current.reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("允许后仅授权这一次操作。", fontSize = 12.sp)
+                        Button(
+                            onClick = { model.decideApproval(current.eventId, true) },
+                            enabled = !state.approvalSubmitting, modifier = Modifier.fillMaxWidth().height(52.dp)
+                        ) { Text("仅本次允许") }
+                        OutlinedButton(
+                            onClick = { model.decideApproval(current.eventId, false) },
+                            enabled = !state.approvalSubmitting, modifier = Modifier.fillMaxWidth().height(52.dp)
+                        ) { Text("拒绝操作") }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
             if (modelSheet) {
                 ModalBottomSheet(onDismissRequest = { modelSheet = false }) {
                     Column(Modifier.padding(20.dp)) {
@@ -302,13 +325,13 @@ private fun ConversationPage(model: MainViewModel, state: UiState, modifier: Mod
                         }
                     } else {
                         IconButton(onClick = { if (!state.sending && draft.isNotBlank()) model.send(draft) },
-                            enabled = !state.sending && draft.isNotBlank(), modifier = Modifier.size(52.dp)) {
+                            enabled = state.interactionReady && !state.sending && draft.isNotBlank(), modifier = Modifier.size(52.dp)) {
                             Icon(Icons.Outlined.Send, contentDescription = "发送消息",
                                 tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
-                Text(if (state.sending) "消息正在入队…" else "由 Host 确认执行与完成状态",
+                Text(if (state.sending) "消息正在入队…" else if (!state.interactionReady) "正在建立审批与交互通道…" else "由 Host 确认执行与完成状态",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
             }

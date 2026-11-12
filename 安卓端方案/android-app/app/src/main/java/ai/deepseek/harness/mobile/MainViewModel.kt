@@ -27,6 +27,7 @@ data class WorkspaceRow(val id: String, val title: String, val path: String, val
 data class JobRow(val id: String, val label: String, val status: String, val progress: String)
 data class McpRow(val name: String, val status: String)
 data class PluginRow(val name: String, val status: String)
+data class ApprovalRow(val clientId: String, val eventId: String, val toolName: String, val reason: String)
 data class UiState(
     val connecting: Boolean = false, val connected: Boolean = false,
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
@@ -37,7 +38,10 @@ data class UiState(
     val jobs: List<JobRow> = emptyList(),
     val mcpServers: List<McpRow> = emptyList(),
     val plugins: List<PluginRow> = emptyList(),
-    val panelError: String? = null
+    val panelError: String? = null,
+    val interactionReady: Boolean = false,
+    val approvalSubmitting: Boolean = false,
+    val approvals: List<ApprovalRow> = emptyList()
 )
 
 /**
@@ -52,6 +56,8 @@ class MainViewModel : ViewModel() {
     private var workspaceStream: Closeable? = null
     private var jobStream: Closeable? = null
     private var mcpStream: Closeable? = null
+    private var eventsStream: Closeable? = null
+    private var eventClientId: String? = null
     private var retryJob: Job? = null
     private var observedId: String? = null
     private var manualClose = false
@@ -70,10 +76,12 @@ class MainViewModel : ViewModel() {
                     SessionRow(id, obj["running"]?.jsonPrimitive?.content == "true",
                         obj["blank"]?.jsonPrimitive?.content == "true")
                 } ?: emptyList()
+                remote?.close()
                 remote = connection
                 manualClose = false
                 mutable.value = mutable.value.copy(connecting = false, connected = true,
                     connectionStatus = "核心 API 已连接", sessions = sessions, error = null)
+                observeRemoteEvents()
                 observeWorkspaces()
                 observeMcpServers()
                 refreshBundles()
@@ -197,6 +205,10 @@ class MainViewModel : ViewModel() {
     fun send(text: String) = viewModelScope.launch {
         val clean = text.trim()
         if (clean.isEmpty() || mutable.value.sending) return@launch
+        if (!mutable.value.interactionReady) {
+            showError(IllegalStateException("授权通道仍在连接，确认安全后再发送"))
+            return@launch
+        }
         val connection = remote ?: return@launch
         mutable.value = mutable.value.copy(sending = true, error = null)
         try {
@@ -265,6 +277,90 @@ class MainViewModel : ViewModel() {
         } catch (e: Exception) { showError(e) }
     }
 
+
+
+    /** Host waterfall 只有经过明确用户确认才会返回 allowed-once。 */
+    private fun observeRemoteEvents() {
+        val connection = remote ?: return
+        eventsStream?.close()
+        eventClientId = null
+        mutable.value = mutable.value.copy(interactionReady = false, approvals = emptyList())
+        eventsStream = connection.stream("\$events", buildJsonObject {}, onItem = { frame ->
+            viewModelScope.launch {
+                val item = frame as? JsonObject ?: return@launch
+                when (item["type"]?.jsonPrimitive?.content) {
+                    "ready" -> {
+                        eventClientId = item["clientId"]?.jsonPrimitive?.content
+                        mutable.value = mutable.value.copy(
+                            interactionReady = eventClientId != null, approvals = emptyList(), approvalSubmitting = false
+                        )
+                    }
+                    "waterfall" -> {
+                        val clientId = eventClientId ?: return@launch
+                        val eventId = item["eventId"]?.jsonPrimitive?.content ?: return@launch
+                        val event = item["event"]?.jsonPrimitive?.content ?: return@launch
+                        if (event == "approval/request") {
+                            val request = item["request"] as? JsonObject ?: return@launch
+                            val name = request["toolName"]?.jsonPrimitive?.content ?: "工具操作"
+                            val reason = request["reason"]?.jsonPrimitive?.content ?: "核心请求执行此操作"
+                            val pending = ApprovalRow(clientId, eventId, name, reason)
+                            mutable.value = mutable.value.copy(approvals = mutable.value.approvals + pending)
+                        } else {
+                            respondToWaterfall(clientId, eventId, buildJsonObject {
+                                put("kind", JsonPrimitive("next"))
+                            })
+                        }
+                    }
+                    "cancel" -> {
+                        val eventId = item["eventId"]?.jsonPrimitive?.content ?: return@launch
+                        mutable.value = mutable.value.copy(
+                            approvals = mutable.value.approvals.filterNot { it.eventId == eventId },
+                            approvalSubmitting = false
+                        )
+                    }
+                }
+            }
+        }, onError = { failure ->
+            viewModelScope.launch {
+                eventClientId = null
+                mutable.value = mutable.value.copy(
+                    interactionReady = false, approvals = emptyList(), approvalSubmitting = false,
+                    panelError = "审批连接中断：" + (failure.message ?: "未知错误")
+                )
+            }
+        })
+    }
+
+    private suspend fun respondToWaterfall(clientId: String, eventId: String, outcome: JsonObject) {
+        val connection = remote ?: return
+        connection.call("\$events/result", buildJsonObject {
+            put("clientId", JsonPrimitive(clientId))
+            put("eventId", JsonPrimitive(eventId))
+            put("outcome", outcome)
+        })
+    }
+
+    fun decideApproval(eventId: String, allowed: Boolean) {
+        if (mutable.value.approvalSubmitting) return
+        val current = mutable.value.approvals.find { it.eventId == eventId } ?: return
+        if (current.clientId != eventClientId) return
+        mutable.value = mutable.value.copy(approvalSubmitting = true)
+        viewModelScope.launch {
+            try {
+                respondToWaterfall(current.clientId, current.eventId, buildJsonObject {
+                    put("kind", JsonPrimitive("result"))
+                    put("value", JsonPrimitive(if (allowed) "allowed-once" else "rejected"))
+                })
+                mutable.value = mutable.value.copy(
+                    approvals = mutable.value.approvals.filterNot { it.eventId == eventId },
+                    approvalSubmitting = false
+                )
+            } catch (e: Exception) {
+                mutable.value = mutable.value.copy(approvalSubmitting = false)
+                showError(e)
+            }
+        }
+    }
 
     /**
      * 与官方 workspace/follow 的 baseline/replace/upsert/remove/order 流保持同步。
@@ -411,6 +507,8 @@ class MainViewModel : ViewModel() {
         workspaceStream?.close()
         jobStream?.close()
         mcpStream?.close()
+        eventsStream?.close()
+        remote?.close()
         super.onCleared()
     }
 }
