@@ -79,6 +79,45 @@ class RelocateExternalLinksTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "未声明的缺失"):
                 module.relocate(deploy, checkout)
 
+    def test_required_internal_workspace_link_is_restored(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            vendor = checkout / "vendor" / "cosmokit"
+            vendor.mkdir()
+            (vendor / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/cosmokit"
+            }))
+            (vendor / "lib").mkdir()
+            (vendor / "lib/index.js").write_text("export const one=1")
+            importer = deploy / "node_modules" / "schemastery"
+            (importer / "node_modules" / "@deepseek-ai").mkdir(parents=True)
+            (importer / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/schemastery",
+                "dependencies": {"@deepseek-ai/cosmokit": "workspace:~"}
+            }))
+            broken = importer / "node_modules" / "@deepseek-ai" / "cosmokit"
+            broken.symlink_to("../../../missing-cosmokit", target_is_directory=True)
+            result = module.relocate(deploy, checkout)
+            self.assertEqual(result["relocated"], 1)
+            self.assertTrue((broken / "lib/index.js").is_file())
+
+    def test_broken_internal_link_not_declared_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            vendor = checkout / "vendor" / "cosmokit"
+            vendor.mkdir()
+            (vendor / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/cosmokit"
+            }))
+            importer = deploy / "node_modules" / "unknown"
+            (importer / "node_modules" / "@deepseek-ai").mkdir(parents=True)
+            (importer / "package.json").write_text('{"name":"other"}')
+            (importer / "node_modules" / "@deepseek-ai" / "cosmokit").symlink_to(
+                "../../../missing-cosmokit"
+            )
+            with self.assertRaisesRegex(ValueError, "未声明的缺失"):
+                module.relocate(deploy, checkout)
+
     def test_checkout_as_deployment_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout,deploy=self.workspace(Path(temp))

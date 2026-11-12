@@ -23,20 +23,60 @@ def directory_bytes(path: Path) -> int:
                 total += file.stat().st_size
     return total
 
-def optional_platform_names(checkout: Path) -> set[str]:
-    """只能从官方工作区包清单中发现 optionalDependencies。"""
+def workspace_package_manifests(checkout: Path) -> dict[str, tuple[Path, dict]]:
+    """只解析 pnpm-workspace.yaml 中声明的源码工作区。"""
     patterns = (
         "packages/*/*/package.json", "apps/*/package.json",
         "vendor/*/package.json", "native/system/packages/*/package.json",
         "native/system/package.json", "python/sdk-runtime/package.json",
         "website/package.json", "benchmarks/package.json"
     )
-    found = set()
+    packages: dict[str, tuple[Path, dict]] = {}
     for pattern in patterns:
         for entry in checkout.glob(pattern):
             data = json.loads(entry.read_text(encoding="utf-8"))
-            found.update(data.get("optionalDependencies", {}).keys())
-    return found
+            name = data.get("name")
+            if name:
+                if name in packages:
+                    raise ValueError(f"重复的工作区包名: {name}")
+                packages[name] = (entry.parent, data)
+    return packages
+
+def optional_platform_names(packages: dict[str, tuple[Path, dict]]) -> set[str]:
+    return {
+        name
+        for _, metadata in packages.values()
+        for name in metadata.get("optionalDependencies", {})
+    }
+
+def declared_missing_workspace_dependency(
+    link: Path, deployment: Path, packages: dict[str, tuple[Path, dict]]
+) -> Path | None:
+    """缺失的内部链接只有在包声明明确引用官方工作区时才被实体化。"""
+    if not link.parent.resolve(strict=True).is_relative_to(deployment):
+        return None
+    raw = Path(os.path.normpath(os.path.join(str(link.parent), os.readlink(link))))
+    if not raw.is_relative_to(deployment):
+        return None
+    module_name = (link.parent.name + "/" + link.name
+                   if link.parent.name.startswith("@") else link.name)
+    source = packages.get(module_name)
+    if source is None:
+        return None
+    current = link.parent
+    while current != deployment:
+        manifest_path = current / "package.json"
+        if manifest_path.is_file():
+            importer = json.loads(manifest_path.read_text(encoding="utf-8"))
+            spec = importer.get("dependencies", {}).get(module_name)
+            if spec is None:
+                spec = importer.get("optionalDependencies", {}).get(module_name)
+            if isinstance(spec, str) and spec.startswith(("workspace:", "link:")):
+                print(f"MATERIALIZE declared workspace package: {module_name} ({link})")
+                return source[0]
+            return None
+        current = current.parent
+    return None
 
 def is_missing_platform_optional(link: Path, checkout: Path, optional_names: set[str]) -> bool:
     if "node_modules" not in link.parts:
@@ -75,13 +115,19 @@ def relocate(deployment: Path, checkout: Path) -> dict:
     for root in trusted:
         if not root.is_dir():
             raise ValueError(f"缺少受信任的源码域: {root.name}")
-    allowed_optionals = optional_platform_names(checkout)
+    packages = workspace_package_manifests(checkout)
+    allowed_optionals = optional_platform_names(packages)
     replaced = 0
+    restored = 0
     pruned = 0
     copied = 0
     while True:
-        paths = [p for p in deployment.rglob("*") if p.is_symlink()]
+        # 先处理最外层链接，防止遍历穿过未实体化的目录并误写回 checkout。
+        paths = sorted((p for p in deployment.rglob("*") if p.is_symlink()),
+                       key=lambda p: len(p.parts))
+        paths = [p for p in paths if p.parent.resolve(strict=True).is_relative_to(deployment)]
         externals = []
+        restored = []
         omitted = []
         for path in paths:
             try:
@@ -89,6 +135,10 @@ def relocate(deployment: Path, checkout: Path) -> dict:
             except FileNotFoundError as error:
                 if is_missing_platform_optional(path, checkout, allowed_optionals):
                     omitted.append(path)
+                    continue
+                source = declared_missing_workspace_dependency(path, deployment, packages)
+                if source is not None:
+                    restored.append((path, source))
                     continue
                 raise ValueError(f"发布包存在未声明的缺失符号链接: {path}") from error
             except (OSError, RuntimeError) as error:
@@ -101,9 +151,9 @@ def relocate(deployment: Path, checkout: Path) -> dict:
         for path in omitted:
             path.unlink()
             pruned += 1
-        if not externals:
+        if not externals and not restored:
             break
-        for link, resolved in externals:
+        for link, resolved in [*externals, *restored]:
             if not link.is_symlink():
                 continue
             replaced += 1
