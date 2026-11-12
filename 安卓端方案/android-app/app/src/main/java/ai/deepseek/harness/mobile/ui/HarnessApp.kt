@@ -485,15 +485,19 @@ private fun SessionHistory(state: UiState, onOpen: (String) -> Unit) {
 @Composable
 private fun RuntimePage() {
     val context = LocalContext.current
-    val state = remember(context) { LocalRuntime(context).inspect() }
+    val runtime = remember(context) { LocalRuntime(context) }
+    var state by remember { mutableStateOf<RuntimeStatus>(RuntimeStatus.Checking) }
+    LaunchedEffect(runtime) { state = runtime.probeNode() }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("核心运行诊断", fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Card {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Android Node / Host", fontWeight = FontWeight.SemiBold)
-                Text(when (state) {
-                    is RuntimeStatus.Missing -> state.reason
-                    is RuntimeStatus.Available -> "文件存在：等待签名、哈希及运行握手检查"
+                Text(when (val current = state) {
+                    RuntimeStatus.Checking -> "正在核对 Node 二进制、动态库并执行启动检测"
+                    is RuntimeStatus.Missing -> current.reason
+                    is RuntimeStatus.NodeReady -> current.detail
+                    is RuntimeStatus.Available -> "Node 文件存在，Host 仍需进行完整就绪握手"
                 })
             }
         }
