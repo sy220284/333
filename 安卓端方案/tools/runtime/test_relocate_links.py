@@ -58,6 +58,7 @@ class RelocateExternalLinksTests(unittest.TestCase):
             caller = checkout / "packages" / "experimental" / "cua-bundle"
             caller.mkdir()
             (caller / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/dsh-cua-bundle",
                 "optionalDependencies": {"@deepseek-ai/dsh-experimental-cua-macos": "workspace:*"}
             }))
             broken = deploy / "node_modules" / "cua-macos"
