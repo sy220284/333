@@ -162,7 +162,9 @@ class HarnessRemote private constructor(
         onOpen: () -> Unit = {},
         onError: (Throwable) -> Unit
     ): Closeable {
-        require(Regex("^[A-Za-z0-9_$.-]+/[A-Za-z0-9_$.-]+$").matches(endpoint)) { "非法流端点" }
+        require(endpoint == "\$events" || Regex("^[A-Za-z0-9_$.-]+/[A-Za-z0-9_$.-]+$").matches(endpoint)) {
+            "非法流端点"
+        }
         val streamId = UUID.randomUUID().toString()
         synchronized(lock) {
             check(!disposed) { "连接已关闭" }

@@ -40,11 +40,11 @@ class HarnessRemoteTest {
         validateHostUrl("https://example.com/".toHttpUrl())
     }
 
-    @Test fun multiplexesThreeStreamsOverOneAuthenticatedSocket() = runBlocking {
+    @Test fun multiplexesEventAndBusinessStreamsOverOneAuthenticatedSocket() = runBlocking {
         val socketCount = AtomicInteger(0)
         val opened = Collections.synchronizedSet(mutableSetOf<String>())
         val errors = Collections.synchronizedList(mutableListOf<Throwable>())
-        val arrivals = CountDownLatch(3)
+        val arrivals = CountDownLatch(4)
         val socketClosed = CountDownLatch(1)
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -81,13 +81,13 @@ class HarnessRemoteTest {
         }
         server.start()
         val remote = HarnessRemote.connectFromLink("http://127.0.0.1:" + server.port + "/?token=fixture")
-        val streams = listOf("session/follow", "workspace/follow", "mcpManager/watch").map { endpoint ->
+        val streams = listOf("session/follow", "workspace/follow", "mcpManager/watch", "\$events").map { endpoint ->
             remote.stream(endpoint, buildJsonObject {}, onItem = { arrivals.countDown() }, onError = { errors.add(it) })
         }
         try {
             assertTrue("三条逻辑流均应收到消息", arrivals.await(10, TimeUnit.SECONDS))
             assertEquals("API Peer 只允许一个物理 WebSocket", 1, socketCount.get())
-            assertEquals(setOf("session/follow", "workspace/follow", "mcpManager/watch"), opened)
+            assertEquals(setOf("session/follow", "workspace/follow", "mcpManager/watch", "\$events"), opened)
             assertFalse(errors.toString(), errors.isNotEmpty())
         } finally {
             streams.forEach { it.close() }
