@@ -115,10 +115,22 @@ class LocalRuntime(private val context: Context) {
                                 Files.deleteIfExists(stage.toPath())
                             }
                         }
+                        // Android app-private storage can reject hard links even on the
+                        // same volume. A verified copy keeps the DT_NEEDED basename stable.
                         val target = File(store, name)
-                        if (target.exists() && Files.isSameFile(target.toPath(), canonical.toPath())) continue
-                        Files.deleteIfExists(target.toPath())
-                        Files.createLink(target.toPath(), canonical.toPath())
+                        if (target.isFile && checksum(target) == digest) continue
+                        val staging = File(store, ".$name.tmp")
+                        try {
+                            Files.deleteIfExists(staging.toPath())
+                            Files.copy(canonical.toPath(), staging.toPath())
+                            require(checksum(staging) == digest) {
+                                "动态库展开后的 SHA-256 校验失败：$name"
+                            }
+                            Files.move(staging.toPath(), target.toPath(),
+                                StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+                        } finally {
+                            Files.deleteIfExists(staging.toPath())
+                        }
                     }
                 }
             }
