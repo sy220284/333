@@ -25,6 +25,7 @@ jobs:
       - run: |
           set -euo pipefail
           python3 安卓端方案/tools/verify-contracts.py
+          python3 -m unittest discover -s 安卓端方案/tools/runtime -p "test_*.py" -v
           bash 安卓端方案/tools/check-toolchain.sh --self-test
   build:
     needs: static

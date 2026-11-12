@@ -91,6 +91,8 @@ import ai.deepseek.harness.mobile.PendingQuestion
 import ai.deepseek.harness.mobile.QuestionAnswer
 import ai.deepseek.harness.mobile.MainViewModel
 import ai.deepseek.harness.mobile.UiState
+import ai.deepseek.harness.mobile.runtime.CoreHostService
+import ai.deepseek.harness.mobile.runtime.LocalHostState
 import ai.deepseek.harness.mobile.runtime.LocalRuntime
 import ai.deepseek.harness.mobile.runtime.RuntimeStatus
 import kotlinx.coroutines.launch
@@ -115,6 +117,17 @@ private val pages = listOf("对话", "历史会话", "我的项目", "任务记�
 @Composable
 fun HarnessApp(model: MainViewModel) {
     val state by model.state.collectAsState()
+    val context = LocalContext.current
+    val localHost by CoreHostService.state.collectAsState()
+    LaunchedEffect(Unit) {
+        if (LocalRuntime(context).inspect() is RuntimeStatus.Available) {
+            CoreHostService.start(context)
+        }
+    }
+    LaunchedEffect(localHost, state.connected) {
+        val host = localHost
+        if (!state.connected && host is LocalHostState.Announced) model.connect(host.link)
+    }
     var page by rememberSaveable { mutableStateOf("对话") }
     var darkMode by rememberSaveable { mutableStateOf(false) }
     var modelSheet by remember { mutableStateOf(false) }
@@ -260,6 +273,7 @@ private fun ConnectionPage(model: MainViewModel, state: UiState,
     onDiagnostics: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val runtime = remember(context) { LocalRuntime(context).inspect() }
+    val localHost by CoreHostService.state.collectAsState()
     var showRemote by remember { mutableStateOf(false) }
     var link by remember { mutableStateOf("") }
     Column(modifier.padding(horizontal = 24.dp, vertical = 30.dp),
@@ -277,12 +291,20 @@ private fun ConnectionPage(model: MainViewModel, state: UiState,
                 Text(when (runtime) {
                     RuntimeStatus.Checking -> "正在检查本机组件"
                     is RuntimeStatus.Missing -> runtime.reason
-                    is RuntimeStatus.NodeReady -> "已包含 Node 运行时，进入诊断页面可验证实际启动；核心 Host 尚未部署"
-                    is RuntimeStatus.Available -> "已找到 Node 运行时和 Host 清单，仍需核心握手验证"
+                    is RuntimeStatus.NodeReady -> "Node 已包含；当前构建尚缺本机 Harness Host 完整资源"
+                    is RuntimeStatus.Available -> "完整运行时已打包；正在检查本机 Host 启动和 API 握手"
                 }, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("运行时发布物尚未纳入安装包时，该功能明确显示待安装状态。",
-                    fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(when (val host = localHost) {
+                    LocalHostState.Idle -> "本机核心尚未启动"
+                    is LocalHostState.Starting -> host.step
+                    is LocalHostState.Announced -> "Host 已监听本机地址，等待 API 连接验证"
+                    is LocalHostState.Failed -> host.reason
+                }, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        if (runtime is RuntimeStatus.Available) {
+            Button(onClick = { CoreHostService.start(context) },
+                modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("启动本机核心") }
         }
         Button(onClick = onDiagnostics, modifier = Modifier.fillMaxWidth().height(52.dp)) {
             Text("检查本机运行环境")
@@ -494,6 +516,7 @@ private fun SessionHistory(state: UiState, onOpen: (String) -> Unit) {
 private fun RuntimePage() {
     val context = LocalContext.current
     val runtime = remember(context) { LocalRuntime(context) }
+    val localHost by CoreHostService.state.collectAsState()
     var state by remember { mutableStateOf<RuntimeStatus>(RuntimeStatus.Checking) }
     LaunchedEffect(runtime) { state = runtime.probeNode() }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -508,6 +531,16 @@ private fun RuntimePage() {
                     is RuntimeStatus.Available -> "Node 文件存在，Host 仍需进行完整就绪握手"
                 })
             }
+        }
+        Text(when (val host = localHost) {
+            LocalHostState.Idle -> "Host 未启动"
+            is LocalHostState.Starting -> "Host 正在启动：" + host.step
+            is LocalHostState.Announced -> "Host 已发布本机地址，API 仍需实际握手验证"
+            is LocalHostState.Failed -> host.reason
+        }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { CoreHostService.start(context) }) { Text("启动本机核心") }
+            OutlinedButton(onClick = { CoreHostService.stop(context) }) { Text("停止") }
         }
         Text("本机运行完整验收依次要求 Node、Host、Session、Shell/PTY、沙箱及 MCP。"
             + " 未通过的环节应保留在诊断中，便于定位。",

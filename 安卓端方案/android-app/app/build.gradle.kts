@@ -37,6 +37,16 @@ android {
         sourceSets.getByName("main").jniLibs.srcDir(file("$embeddedNode/jniLibs"))
         sourceSets.getByName("main").assets.srcDir(file("$embeddedNode/assets"))
     }
+    val embeddedHost = System.getenv("DSH333_HOST_BUNDLE_DIR")?.takeIf { it.isNotBlank() }
+    if (embeddedHost != null) {
+        check(file("$embeddedHost/assets/runtime/dsh-host-manifest.json").isFile) {
+            "Host 发布包缺少签名清单"
+        }
+        check(file("$embeddedHost/assets/runtime/host/package.zip").isFile) {
+            "Host 发布包缺少已校验归档"
+        }
+        sourceSets.getByName("main").assets.srcDir(file("$embeddedHost/assets"))
+    }
     buildFeatures { compose = true }
     packaging { jniLibs.useLegacyPackaging = true }
 }
