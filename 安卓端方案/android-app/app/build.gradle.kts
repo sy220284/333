@@ -27,15 +27,14 @@ android {
     // 只有显式传入完整 payload 目录时才打包，缺失会在配置阶段直接失败。
     val embeddedNode = System.getenv("DSH333_NODE_RUNTIME_DIR")?.takeIf { it.isNotBlank() }
     if (embeddedNode != null) {
-        val payload = file(embeddedNode)
-        check(file("\$embeddedNode/jniLibs/arm64-v8a/libdsh_node.so").isFile) {
-            "指定的 Android Node payload 不包含可执行文件：\$embeddedNode"
+        check(file("$embeddedNode/jniLibs/arm64-v8a/libdsh_node.so").isFile) {
+            "指定的 Android Node payload 不包含可执行文件：$embeddedNode"
         }
-        check(file("\$embeddedNode/assets/runtime/node/integrity-manifest.json").isFile) {
-            "指定的 Android Node payload 未通过 integrity-manifest 输出：\$embeddedNode"
+        check(file("$embeddedNode/assets/runtime/node/integrity-manifest.json").isFile) {
+            "指定的 Android Node payload 未通过 integrity-manifest 输出：$embeddedNode"
         }
-        sourceSets.getByName("main").jniLibs.srcDir(file("\$embeddedNode/jniLibs"))
-        sourceSets.getByName("main").assets.srcDir(file("\$embeddedNode/assets"))
+        sourceSets.getByName("main").jniLibs.srcDir(file("$embeddedNode/jniLibs"))
+        sourceSets.getByName("main").assets.srcDir(file("$embeddedNode/assets"))
     }
     buildFeatures { compose = true }
     packaging { jniLibs.useLegacyPackaging = true }

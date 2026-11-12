@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n 安卓端方案/tools/runtime/*.sh
-          python3 -m unittest discover -s 安卓端方案/tools/runtime -p 'test-*.py' -v
+          python3 -m unittest discover -s 安卓端方案/tools/runtime -p 'test_*.py' -v
           for program in curl gpgv python3 dpkg-deb readelf sha256sum; do command -v "$program"; done
       - name: 签名和SHA256校验后构建arm64 Android Node 26
         shell: bash
