@@ -27,8 +27,9 @@ android {
     // 只有显式传入完整 payload 目录时才打包，缺失会在配置阶段直接失败。
     val embeddedNode = System.getenv("DSH333_NODE_RUNTIME_DIR")?.takeIf { it.isNotBlank() }
     if (embeddedNode != null) {
-        check(file("$embeddedNode/jniLibs/arm64-v8a/libdsh_node.so").isFile) {
-            "指定的 Android Node payload 不包含可执行文件：$embeddedNode"
+        val supportedRuntimeAbis = listOf("arm64-v8a", "x86_64")
+        check(supportedRuntimeAbis.any { abi -> file("$embeddedNode/jniLibs/$abi/libdsh_node.so").isFile }) {
+            "指定的 Android Node payload 不包含受支持 ABI 的可执行文件：$embeddedNode"
         }
         check(file("$embeddedNode/assets/runtime/node/integrity-manifest.json").isFile) {
             "指定的 Android Node payload 未通过 integrity-manifest 输出：$embeddedNode"
@@ -56,4 +57,7 @@ dependencies {
     implementation(libs.compose.tooling.preview)
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test:core:1.7.0")
 }
