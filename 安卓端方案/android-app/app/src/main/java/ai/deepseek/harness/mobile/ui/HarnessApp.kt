@@ -1,5 +1,6 @@
 package ai.deepseek.harness.mobile.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -99,25 +100,28 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 
 private val light = lightColorScheme(
-    primary = Color(0xFF0878C9), onPrimary = Color.White,
-    background = Color(0xFFFAFAFA), surface = Color.White,
-    onBackground = Color(0xFF15191F), onSurface = Color(0xFF15191F),
-    surfaceVariant = Color(0xFFF2F5F7), outline = Color(0xFFDDE2E8)
+    primary = Color(0xFF225C50), onPrimary = Color.White,
+    background = Color(0xFFF6F4EF), surface = Color(0xFFFCFBF7),
+    onBackground = Color(0xFF19231F), onSurface = Color(0xFF19231F),
+    surfaceVariant = Color(0xFFECEFE9), outline = Color(0xFFD3DAD3)
 )
 private val dark = darkColorScheme(
-    primary = Color(0xFF22D3EE), onPrimary = Color(0xFF071019),
-    background = Color(0xFF070C14), surface = Color(0xFF101825),
-    onBackground = Color(0xFFEFF4FA), onSurface = Color(0xFFEFF4FA),
-    surfaceVariant = Color(0xFF1B2533), outline = Color(0xFF293646)
+    primary = Color(0xFF9FDACB), onPrimary = Color(0xFF0C201A),
+    background = Color(0xFF131A18), surface = Color(0xFF1E2824),
+    onBackground = Color(0xFFE9EFE9), onSurface = Color(0xFFE9EFE9),
+    surfaceVariant = Color(0xFF293831), outline = Color(0xFF42564C)
 )
-
-private val pages = listOf("对话", "历史会话", "我的项目", "任务记录", "扩展中心", "运行诊断", "设置")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HarnessApp(model: MainViewModel) {
     val state by model.state.collectAsState()
     val context = LocalContext.current
+    val catalog = remember(context) {
+        context.assets.open("design/feature-navigation-v1.1.json").bufferedReader().use {
+            FeatureNavigationCatalog.parse(it.readText())
+        }
+    }
     val localHost by CoreHostService.state.collectAsState()
     LaunchedEffect(Unit) {
         if (LocalRuntime(context).inspect() is RuntimeStatus.Available) {
@@ -128,12 +132,26 @@ fun HarnessApp(model: MainViewModel) {
         val host = localHost
         if (!state.connected && host is LocalHostState.Announced) model.connect(host.link)
     }
-    var page by rememberSaveable { mutableStateOf("对话") }
+    var page by rememberSaveable { mutableStateOf("home") }
+    var drawerSearch by rememberSaveable { mutableStateOf("") }
     var darkMode by rememberSaveable { mutableStateOf(false) }
     var modelSheet by remember { mutableStateOf(false) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    fun openFeature(id: String) {
+        require(catalog.canOpen(id)) { "任务内操作和后台功能不得作为独立菜单页：$id" }
+        page = id
+        scope.launch { drawer.close() }
+    }
+    fun returnToParent() {
+        page = catalog.parentOf(page)?.id ?: "home"
+    }
+    BackHandler(enabled = page != "home" &&
+        drawer.currentValue == DrawerValue.Closed && !modelSheet &&
+        state.approvals.isEmpty() && state.questions.isEmpty()) {
+        returnToParent()
+    }
     LaunchedEffect(state.error) {
         val error = state.error ?: return@LaunchedEffect
         snackbar.showSnackbar(error, withDismissAction = true)
@@ -147,19 +165,45 @@ fun HarnessApp(model: MainViewModel) {
                     Spacer(Modifier.height(6.dp))
                     Text("项目 · 对话 · 工具", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 }
-                HorizontalDivider()
-                pages.forEach { item ->
-                    val icon = when (item) {
-                        "对话" -> Icons.Outlined.Add
-                        "历史会话" -> Icons.Outlined.History
-                        "我的项目" -> Icons.Outlined.Folder
-                        "设置" -> Icons.Outlined.Settings
+                OutlinedButton(onClick = {
+                    if (state.connected) {
+                        model.startSession()
+                        openFeature("home")
+                    }
+                }, enabled = state.connected,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Icon(Icons.Outlined.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("新建任务")
+                }
+                OutlinedTextField(
+                    value = drawerSearch, onValueChange = { drawerSearch = it },
+                    label = { Text("查找功能") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                )
+                if (drawerSearch.isNotBlank()) {
+                    catalog.search(drawerSearch).take(8).forEach { result ->
+                        NavigationDrawerItem(
+                            label = { Text(result.title) },
+                            selected = page == result.id,
+                            onClick = { openFeature(result.id); drawerSearch = "" },
+                            modifier = Modifier.padding(horizontal = 12.dp)
+                        )
+                    }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                catalog.roots.forEach { item ->
+                    val icon = when (item.id) {
+                        "home" -> Icons.Outlined.Add
+                        "sessions" -> Icons.Outlined.History
+                        "projects" -> Icons.Outlined.Folder
+                        "settings" -> Icons.Outlined.Settings
                         else -> Icons.Outlined.Build
                     }
                     NavigationDrawerItem(
-                        label = { Text(item) }, selected = page == item,
+                        label = { Text(item.title) }, selected = catalog.get(page).root == item.id,
                         icon = { Icon(icon, null) },
-                        onClick = { page = item; scope.launch { drawer.close() } },
+                        onClick = { openFeature(item.id) },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                     )
                 }
@@ -171,7 +215,7 @@ fun HarnessApp(model: MainViewModel) {
                     TopAppBar(
                         title = {
                             Column {
-                                Text(if (page == "对话") "新对话" else page, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                                Text(catalog.get(page).title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                                 Text(state.connectionStatus, fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -183,7 +227,7 @@ fun HarnessApp(model: MainViewModel) {
                             }
                         },
                         actions = {
-                            if (page == "对话" && state.connected) {
+                            if ((page == "home" || page == "chat") && state.connected) {
                                 IconButton(onClick = { model.startSession() }) {
                                     Icon(Icons.Outlined.Add, contentDescription = "新建会话")
                                 }
@@ -196,17 +240,34 @@ fun HarnessApp(model: MainViewModel) {
                 }
             ) { insets ->
                 Column(Modifier.fillMaxSize().padding(insets)) {
+                    val route = catalog.get(page)
+                    if (route.role == "root" && state.connected) {
+                        SectionRouteActions(catalog.children(route.id), onOpen = ::openFeature)
+                    }
+                    if (route.depth != 1) {
+                        TextButton(onClick = ::returnToParent,
+                            modifier = Modifier.padding(horizontal = 12.dp)) {
+                            Text("返回 ${catalog.parentOf(page)?.title ?: "开始"}")
+                        }
+                    }
                     when {
-                        page == "运行诊断" -> RuntimePage()
-                        page == "设置" -> SettingsPage(darkMode, onMode = { darkMode = it })
+                        page == "runtime" || page == "diagnostics" -> RuntimePage()
+                        page == "settings" || page == "appearance" ->
+                            SettingsPage(darkMode, onMode = { darkMode = it })
                         !state.connected -> ConnectionPage(model, state,
-                            onDiagnostics = { page = "运行诊断" }, modifier = Modifier.fillMaxSize())
+                            onDiagnostics = { openFeature("diagnostics") }, modifier = Modifier.fillMaxSize())
                         else -> when (page) {
-                            "对话" -> ConversationPage(model, state, Modifier.fillMaxSize())
-                            "历史会话" -> SessionHistory(state, onOpen = { model.openSession(it); page = "对话" })
-                            "我的项目" -> WorkspacePage(model, state, onOpenSession = { page = "对话" })
-                            "任务记录" -> JobsPage(model, state)
-                            "扩展中心" -> ExtensionsPage(model, state)
+                            "home", "chat" -> ConversationPage(model, state, Modifier.fillMaxSize())
+                            "sessions" -> SessionHistory(state, onOpen = {
+                                model.openSession(it); openFeature("home")
+                            })
+                            "projects" -> WorkspacePage(model, state, onOpenSession = {
+                                openFeature("home")
+                            })
+                            "task-center", "jobs", "activity" -> JobsPage(model, state)
+                            "capabilities", "plugins", "mcp" -> ExtensionsPage(model, state)
+                            "models" -> ModelSelectionPage(model, state)
+                            else -> FeaturePendingPage(route, onBack = ::returnToParent)
                         }
                     }
                 }
