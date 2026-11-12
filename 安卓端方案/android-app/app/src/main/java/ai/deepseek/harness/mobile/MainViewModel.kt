@@ -306,9 +306,11 @@ class MainViewModel : ViewModel() {
                             val pending = ApprovalRow(clientId, eventId, name, reason)
                             mutable.value = mutable.value.copy(approvals = mutable.value.approvals + pending)
                         } else {
-                            respondToWaterfall(clientId, eventId, buildJsonObject {
-                                put("kind", JsonPrimitive("next"))
-                            })
+                            try {
+                                respondToWaterfall(clientId, eventId, buildJsonObject {
+                                    put("kind", JsonPrimitive("next"))
+                                })
+                            } catch (error: Exception) { showError(error) }
                         }
                     }
                     "cancel" -> {

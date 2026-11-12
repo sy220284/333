@@ -243,7 +243,7 @@ private fun ConnectionPage(model: MainViewModel, state: UiState, modifier: Modif
     val context = LocalContext.current
     val runtime = remember(context) { LocalRuntime(context).inspect() }
     var showRemote by remember { mutableStateOf(false) }
-    var link by rememberSaveable { mutableStateOf("") }
+    var link by remember { mutableStateOf("") }
     Column(modifier.padding(horizontal = 24.dp, vertical = 30.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Spacer(Modifier.height(12.dp))
@@ -273,7 +273,11 @@ private fun ConnectionPage(model: MainViewModel, state: UiState, modifier: Modif
                     modifier = Modifier.fillMaxWidth(), maxLines = 2,
                     label = { Text("粘贴 Host 提供的连接链接") },
                     supportingText = { Text("必须包含 Host 签发的 token；远程连接使用 HTTPS") })
-                Button(onClick = { model.connect(link) }, enabled = !state.connecting && link.isNotBlank(),
+                Button(onClick = {
+                    val entered = link
+                    link = ""
+                    model.connect(entered)
+                }, enabled = !state.connecting && link.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(52.dp)) {
                     Text(if (state.connecting) "正在验证…" else "连接并验证核心")
                 }

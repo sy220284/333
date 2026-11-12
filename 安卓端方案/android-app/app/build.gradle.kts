@@ -42,4 +42,5 @@ dependencies {
     debugImplementation(libs.compose.tooling)
     implementation(libs.compose.tooling.preview)
     testImplementation(libs.junit)
+    testImplementation(libs.mockwebserver)
 }
