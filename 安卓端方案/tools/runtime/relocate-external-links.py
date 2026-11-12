@@ -28,7 +28,7 @@ def relocate(deployment: Path, checkout: Path) -> dict:
         raise ValueError("Host 临时部署目录必须位于工作区外")
     if not (deployment / "package.json").is_file():
         raise ValueError("缺少可部署的 Host 根包")
-    trusted = [checkout / name for name in ("vendor", "packages", "native", "apps")]
+    trusted = [checkout / name for name in ("vendor", "packages", "native", "apps", "python", "website", "benchmarks")]
     for root in trusted:
         if not root.is_dir():
             raise ValueError(f"缺少受信任的源码域: {root.name}")

@@ -11,7 +11,7 @@ spec.loader.exec_module(module)
 class RelocateExternalLinksTests(unittest.TestCase):
     def workspace(self,root):
         checkout=root/"checkout"
-        for name in ("vendor","packages","native","apps"):
+        for name in ("vendor","packages","native","apps","python","website","benchmarks"):
             (checkout/name).mkdir(parents=True)
         deploy=root/"deploy"
         (deploy/"node_modules").mkdir(parents=True)
