@@ -45,6 +45,7 @@ class HarnessRemoteTest {
         val opened = Collections.synchronizedSet(mutableSetOf<String>())
         val errors = Collections.synchronizedList(mutableListOf<Throwable>())
         val arrivals = CountDownLatch(3)
+        val socketClosed = CountDownLatch(1)
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 return when {
@@ -56,6 +57,12 @@ class HarnessRemoteTest {
                         assertTrue(request.getHeader("Cookie").orEmpty().contains("dsh-auth-fixture"))
                         socketCount.incrementAndGet()
                         MockResponse().withWebSocketUpgrade(object : WebSocketListener() {
+                            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                                webSocket.close(code, reason)
+                            }
+                            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                                socketClosed.countDown()
+                            }
                             override fun onMessage(webSocket: WebSocket, text: String) {
                                 val msg = Json.parseToJsonElement(text).jsonObject
                                 if (msg["type"]?.jsonPrimitive?.content == "open") {
@@ -85,6 +92,8 @@ class HarnessRemoteTest {
         } finally {
             streams.forEach { it.close() }
             remote.close()
+            assertTrue("WebSocket close handshake must finish before server teardown",
+                socketClosed.await(8, TimeUnit.SECONDS))
         }
     }
 }
