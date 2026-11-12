@@ -37,7 +37,9 @@ class ArchiveVerificationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             source,out=self.make_payload(Path(d))
             archive=out/"assets/runtime/host/package.zip"
-            archive.write_bytes(archive.read_bytes()+b"modified")
+            data = bytearray(archive.read_bytes())
+            data[12] ^= 1
+            archive.write_bytes(data)
             with self.assertRaisesRegex(AssertionError,"摘要"):
                 validator.verify(out,source)
 
