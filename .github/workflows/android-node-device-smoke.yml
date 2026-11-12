@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
     env:
       DSH_RUNTIME_ABIS: x86_64
-      DSH333_NODE_RUNTIME_DIR: ${{ runner.temp }}/node333-x86
+      DSH333_NODE_RUNTIME_DIR: ${{ github.workspace }}/.node333-x86
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: 构建经签名校验的 x86_64 Node 并缩减重复库
