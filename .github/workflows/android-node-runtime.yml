@@ -87,6 +87,9 @@ jobs:
               assert "lib/arm64-v8a/libdsh_node.so" in entries
               assert "assets/runtime/node/node-version.txt" in entries
               assert "assets/runtime/node/integrity-manifest.json" in entries
+              assert any(p.startswith("assets/runtime/node/arm64-v8a/blobs/") for p in entries)
+              assert not any(p.startswith("assets/runtime/node/arm64-v8a/lib/") for p in entries)
+              assert __import__("json").loads(z.read("assets/runtime/node/integrity-manifest.json"))["format"] == "333-node-v2"
               assert not any("/dsh-host-manifest.json" in p for p in entries), "Host has not been verified yet"
               print("Node 26 packaged; Host deployment remains a separate acceptance gate", apk[0])
           PY

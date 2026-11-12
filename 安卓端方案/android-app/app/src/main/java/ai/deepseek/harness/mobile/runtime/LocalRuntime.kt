@@ -52,7 +52,7 @@ class LocalRuntime(private val context: Context) {
             val manifest = context.assets.open(integrity).bufferedReader().use {
                 Json.parseToJsonElement(it.readText()).jsonObject
             }
-            require(manifest["format"]?.jsonPrimitive?.content == "333-node-v1") { "运行时清单版本不匹配" }
+            require(manifest["format"]?.jsonPrimitive?.content == "333-node-v2") { "运行时清单版本不匹配" }
             val abi = manifest["abi"]?.jsonPrimitive?.content ?: error("运行时没有 ABI 声明")
             require(abi in Build.SUPPORTED_ABIS) { "此设备 ABI 不支持已打包的 Node：$abi" }
             val version = manifest["nodeVersion"]?.jsonPrimitive?.content ?: error("缺少 Node 版本")
@@ -63,47 +63,62 @@ class LocalRuntime(private val context: Context) {
             val expectedNodeSha = files[executableKey]?.jsonPrimitive?.content
                 ?: error("Node 可执行文件缺少摘要")
             require(checksum(node) == expectedNodeSha) { "Node 可执行文件 SHA-256 校验失败" }
-            val libraryPrefix = "assets/$root/$abi/lib/"
-            val libraries = files.entries.filter { it.key.startsWith(libraryPrefix) }
-            require(libraries.isNotEmpty()) { "运行时没有动态依赖库" }
+            val libraries = manifest["libraries"]?.jsonObject
+                ?: error("运行时缺少动态库别名映射")
+            val blobs = manifest["blobs"]?.jsonObject ?: error("运行时缺少动态库资源清单")
+            require(libraries.isNotEmpty() && libraries.values.map { it.jsonPrimitive.content }.toSet() == blobs.keys) {
+                "动态库别名与资源清单不一致"
+            }
             val allowedName = Regex("[a-zA-Z0-9._+\\-]+")
+            val allowedSha = Regex("[0-9a-f]{64}")
             val store = File(context.noBackupFilesDir, "$root/$version/$abi/lib")
             val lockDir = File(context.noBackupFilesDir, "$root/shared/$abi")
+            val canonicalDir = File(lockDir, "blobs")
             check(lockDir.isDirectory || lockDir.mkdirs()) { "无法创建运行时共享锁目录" }
             FileChannel.open(File(lockDir, ".prepare.lock").toPath(),
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { channel ->
                 channel.lock().use {
                     check(store.isDirectory || store.mkdirs()) { "无法建立运行库目录" }
-                    for ((relative, digestValue) in libraries) {
-                        val name = relative.removePrefix(libraryPrefix)
+                    check(canonicalDir.isDirectory || canonicalDir.mkdirs()) { "无法建立共享资源目录" }
+                    for ((name, digestValue) in libraries) {
                         require(allowedName.matches(name)) { "非法动态库名称：$name" }
                         val digest = digestValue.jsonPrimitive.content
-                        require(Regex("[0-9a-f]{64}").matches(digest)) { "动态库摘要格式错误：$name" }
-                        val target = File(store, name)
-                        if (target.isFile && checksum(target) == digest) continue
-                        val stage = File(store, ".$name.tmp")
-                        try {
-                            Files.deleteIfExists(stage.toPath())
-                            val hash = MessageDigest.getInstance("SHA-256")
-                            context.assets.open("$root/$abi/lib/$name").use { input ->
-                                FileOutputStream(stage).use { output ->
-                                    val buffer = ByteArray(65536)
-                                    while (true) {
-                                        val n = input.read(buffer)
-                                        if (n == -1) break
-                                        if (n == 0) continue
-                                        output.write(buffer, 0, n)
-                                        hash.update(buffer, 0, n)
+                        require(allowedSha.matches(digest)) { "动态库摘要格式错误：$name" }
+                        val canonical = File(canonicalDir, digest)
+                        if (!canonical.isFile || checksum(canonical) != digest) {
+                            val stage = File(canonicalDir, ".$digest.tmp")
+                            try {
+                                Files.deleteIfExists(stage.toPath())
+                                val hash = MessageDigest.getInstance("SHA-256")
+                                var bytes = 0L
+                                context.assets.open("$root/$abi/blobs/$digest").use { input ->
+                                    FileOutputStream(stage).use { output ->
+                                        val buffer = ByteArray(65536)
+                                        while (true) {
+                                            val n = input.read(buffer)
+                                            if (n == -1) break
+                                            if (n == 0) continue
+                                            output.write(buffer, 0, n)
+                                            hash.update(buffer, 0, n)
+                                            bytes += n
+                                        }
+                                        output.fd.sync()
                                     }
-                                    output.fd.sync()
                                 }
+                                require(hash.digest().toHex() == digest) { "运行库摘要校验失败：$name" }
+                                require(bytes == blobs[digest]?.jsonPrimitive?.content?.toLong()) {
+                                    "运行库大小与清单不一致：$name"
+                                }
+                                Files.move(stage.toPath(), canonical.toPath(),
+                                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+                            } finally {
+                                Files.deleteIfExists(stage.toPath())
                             }
-                            require(hash.digest().toHex() == digest) { "运行库摘要校验失败：$name" }
-                            Files.move(stage.toPath(), target.toPath(),
-                                StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-                        } finally {
-                            Files.deleteIfExists(stage.toPath())
                         }
+                        val target = File(store, name)
+                        if (target.exists() && Files.isSameFile(target.toPath(), canonical.toPath())) continue
+                        Files.deleteIfExists(target.toPath())
+                        Files.createLink(target.toPath(), canonical.toPath())
                     }
                 }
             }
