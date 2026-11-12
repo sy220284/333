@@ -41,6 +41,8 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
@@ -71,6 +73,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -84,6 +87,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.deepseek.harness.mobile.ChatLine
+import ai.deepseek.harness.mobile.PendingQuestion
+import ai.deepseek.harness.mobile.QuestionAnswer
 import ai.deepseek.harness.mobile.MainViewModel
 import ai.deepseek.harness.mobile.UiState
 import ai.deepseek.harness.mobile.runtime.LocalRuntime
@@ -212,6 +217,16 @@ fun HarnessApp(model: MainViewModel) {
                         ) { Text("拒绝操作") }
                         Spacer(Modifier.height(12.dp))
                     }
+                }
+            }
+            if (state.approvals.isEmpty() && state.questions.isNotEmpty()) {
+                val pending = state.questions.first()
+                ModalBottomSheet(onDismissRequest = {
+                    if (!state.questionSubmitting) model.cancelQuestion(pending.eventId)
+                }) {
+                    QuestionReplySheet(pending, state.questionSubmitting,
+                        onSubmit = { answers -> model.answerQuestions(pending.eventId, answers) },
+                        onCancel = { model.cancelQuestion(pending.eventId) })
                 }
             }
             if (modelSheet) {
@@ -354,6 +369,92 @@ private fun MessageRow(line: ChatLine) {
                 Text(line.text, modifier = Modifier.padding(16.dp),
                     fontSize = 15.sp, lineHeight = 25.sp)
             }
+        }
+    }
+}
+
+/** Host user-questions/request 的原生表单：按实际问题数量展示，不要求用户预填后台配置。 */
+@Composable
+private fun QuestionReplySheet(
+    pending: PendingQuestion,
+    submitting: Boolean,
+    onSubmit: (List<QuestionAnswer>) -> Unit,
+    onCancel: () -> Unit
+) {
+    val selections = remember(pending.eventId) { mutableStateMapOf<String, List<String>>() }
+    val customs = remember(pending.eventId) { mutableStateMapOf<String, String>() }
+    val complete = pending.questions.all { question ->
+        selections[question.id].orEmpty().isNotEmpty() || !customs[question.id].isNullOrBlank()
+    }
+    LazyColumn(contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Text("需要你的回答", style = MaterialTheme.typography.headlineSmall)
+            Text("核心已暂停当前步骤，答复后继续。",
+                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        }
+        items(pending.questions, key = { it.id }) { question ->
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text(question.question, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                if (question.detail.isNotBlank()) {
+                    Text(question.detail, fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                question.choices.forEach { option ->
+                    val picked = selections[question.id].orEmpty().contains(option.label)
+                    Row(Modifier.fillMaxWidth().clickable(enabled = !submitting) {
+                        val previous = selections[question.id].orEmpty()
+                        selections[question.id] = if (question.multiSelect) {
+                            if (picked) previous.filterNot { it == option.label }
+                            else previous + option.label
+                        } else listOf(option.label)
+                    }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (question.multiSelect) {
+                            Checkbox(checked = picked, onCheckedChange = { enabled ->
+                                if (!submitting) {
+                                    val previous = selections[question.id].orEmpty()
+                                    selections[question.id] = if (enabled) (previous + option.label).distinct()
+                                    else previous.filterNot { it == option.label }
+                                }
+                            }, enabled = !submitting)
+                        } else {
+                            RadioButton(selected = picked,
+                                onClick = { if (!submitting) selections[question.id] = listOf(option.label) },
+                                enabled = !submitting)
+                        }
+                        Column(Modifier.padding(start = 8.dp)) {
+                            Text(option.label)
+                            if (option.description.isNotBlank()) Text(option.description,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                    }
+                }
+                if (question.choices.isEmpty() || customs.containsKey(question.id)) {
+                    OutlinedTextField(value = customs[question.id].orEmpty(),
+                        onValueChange = { customs[question.id] = it }, enabled = !submitting,
+                        label = { Text("你的回答") }, modifier = Modifier.fillMaxWidth(),
+                        minLines = 1, maxLines = 4)
+                } else {
+                    TextButton(onClick = { customs[question.id] = "" }, enabled = !submitting) {
+                        Text("填写其他回答")
+                    }
+                }
+                HorizontalDivider()
+            }
+        }
+        item {
+            Button(onClick = {
+                onSubmit(pending.questions.map { q ->
+                    QuestionAnswer(q.id, selections[q.id].orEmpty(),
+                        customs[q.id]?.trim()?.takeIf(String::isNotBlank))
+                })
+            }, enabled = complete && !submitting,
+                modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Text(if (submitting) "正在提交…" else "提交回答")
+            }
+            OutlinedButton(onClick = onCancel, enabled = !submitting,
+                modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("取消回答") }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
