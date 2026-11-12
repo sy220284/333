@@ -183,16 +183,18 @@ fun HarnessApp(model: MainViewModel) {
                 }
             ) { insets ->
                 Column(Modifier.fillMaxSize().padding(insets)) {
-                    if (!state.connected) {
-                        ConnectionPage(model, state, Modifier.fillMaxSize())
-                    } else when (page) {
-                        "对话" -> ConversationPage(model, state, Modifier.fillMaxSize())
-                        "历史会话" -> SessionHistory(state, onOpen = { model.openSession(it); page = "对话" })
-                        "运行诊断" -> RuntimePage()
-                        "设置" -> SettingsPage(darkMode, onMode = { darkMode = it })
-                        "我的项目" -> WorkspacePage(model, state, onOpenSession = { page = "对话" })
-                        "任务记录" -> JobsPage(model, state)
-                        "扩展中心" -> ExtensionsPage(model, state)
+                    when {
+                        page == "运行诊断" -> RuntimePage()
+                        page == "设置" -> SettingsPage(darkMode, onMode = { darkMode = it })
+                        !state.connected -> ConnectionPage(model, state,
+                            onDiagnostics = { page = "运行诊断" }, modifier = Modifier.fillMaxSize())
+                        else -> when (page) {
+                            "对话" -> ConversationPage(model, state, Modifier.fillMaxSize())
+                            "历史会话" -> SessionHistory(state, onOpen = { model.openSession(it); page = "对话" })
+                            "我的项目" -> WorkspacePage(model, state, onOpenSession = { page = "对话" })
+                            "任务记录" -> JobsPage(model, state)
+                            "扩展中心" -> ExtensionsPage(model, state)
+                        }
                     }
                 }
             }
@@ -254,7 +256,8 @@ fun HarnessApp(model: MainViewModel) {
 }
 
 @Composable
-private fun ConnectionPage(model: MainViewModel, state: UiState, modifier: Modifier = Modifier) {
+private fun ConnectionPage(model: MainViewModel, state: UiState,
+    onDiagnostics: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val runtime = remember(context) { LocalRuntime(context).inspect() }
     var showRemote by remember { mutableStateOf(false) }
@@ -272,12 +275,17 @@ private fun ConnectionPage(model: MainViewModel, state: UiState, modifier: Modif
                 Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.primary)
                 Text("本机核心", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                 Text(when (runtime) {
+                    RuntimeStatus.Checking -> "正在检查本机组件"
                     is RuntimeStatus.Missing -> runtime.reason
+                    is RuntimeStatus.NodeReady -> "已包含 Node 运行时，进入诊断页面可验证实际启动；核心 Host 尚未部署"
                     is RuntimeStatus.Available -> "已找到 Node 运行时和 Host 清单，仍需核心握手验证"
                 }, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("运行时发布物尚未纳入安装包时，该功能明确显示待安装状态。",
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        Button(onClick = onDiagnostics, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+            Text("检查本机运行环境")
         }
         OutlinedButton(onClick = { showRemote = !showRemote }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
             Text(if (showRemote) "收起远程连接" else "连接另一台设备上的 Harness")
