@@ -1,0 +1,46 @@
+name: 333 完整源码快照
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/android-plan-foundation-20261112
+    paths:
+      - '.github/workflows/android-source-snapshot.yml'
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: 检查源码完整性并生成可本地恢复的浅克隆工作树
+        shell: bash
+        run: |
+          set -euo pipefail
+          count="$(git ls-files | wc -l)"
+          echo "tracked files=$count"
+          test "$count" -ge 20000
+          test -z "$(git status --porcelain)"
+          sha="$(git rev-parse HEAD)"
+          test "$sha" = "$GITHUB_SHA"
+          printf '%s\n' "$sha" > "$RUNNER_TEMP/SOURCE_SHA"
+          # .git 与工作树一起归档，远端凭据已由 checkout 清除。
+          tar -czf "$RUNNER_TEMP/333-source-checkout.tgz" \
+            --exclude='./.git/logs' \
+            --exclude='./.git/hooks' \
+            -C "$GITHUB_WORKSPACE" .
+          sha256sum "$RUNNER_TEMP/333-source-checkout.tgz" > "$RUNNER_TEMP/SOURCE_ARCHIVE_SHA256"
+          du -h "$RUNNER_TEMP/333-source-checkout.tgz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 333-source-snapshot-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/333-source-checkout.tgz
+            ${{ runner.temp }}/SOURCE_SHA
+            ${{ runner.temp }}/SOURCE_ARCHIVE_SHA256
+          if-no-files-found: error
+          retention-days: 7
