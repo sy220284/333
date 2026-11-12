@@ -1,10 +1,18 @@
 package ai.deepseek.harness.mobile.net
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
@@ -25,7 +33,6 @@ import java.io.Closeable
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 /** Host 侧 RemoteError 原样向上暴露，交给 UI 显示用户可理解的错误。 */
 class RemoteFailure(val code: String, message: String) : IOException("$code: $message")
@@ -47,9 +54,33 @@ internal class SessionCookies : CookieJar {
     }
     @Synchronized override fun loadForRequest(url: HttpUrl): List<Cookie> =
         items.filter { it.expiresAt > System.currentTimeMillis() && it.matches(url) }
+    @Synchronized fun clear() { items.clear() }
 }
 
-class HarnessRemote private constructor(private val root: HttpUrl, private val cookies: SessionCookies) {
+class HarnessRemote private constructor(
+    private val root: HttpUrl,
+    private val cookies: SessionCookies,
+    private val launchToken: String
+) : Closeable {
+    // 官方每个 API Peer 最多拥有一条物理 WebSocket；各业务 streamId 必须复用该 socket。
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lock = Any()
+    private val subscribers = linkedMapOf<String, StreamSubscription>()
+    private var physicalSocket: WebSocket? = null
+    private var socketReady = false
+    private var dialing = false
+    private var authenticated = true
+    private var disposed = false
+    private var generation = 0L
+    private var failureCount = 0
+
+    private data class StreamSubscription(
+        val endpoint: String,
+        val args: JsonObject,
+        val onItem: (JsonElement) -> Unit,
+        val onOpen: () -> Unit,
+        val onError: (Throwable) -> Unit
+    )
     private val json = Json { ignoreUnknownKeys = false }
     private val http = OkHttpClient.Builder()
         .cookieJar(cookies).followRedirects(false).followSslRedirects(false)
@@ -69,7 +100,7 @@ class HarnessRemote private constructor(private val root: HttpUrl, private val c
             val basePath = if (path.endsWith("/connect")) path.removeSuffix("connect") else path
             require(basePath.endsWith("/")) { "请使用 Host 原始启动链接，不要附加页面路径" }
             val root = linkUrl.newBuilder().query(null).fragment(null).encodedPath(basePath).build()
-            val gateway = HarnessRemote(root, SessionCookies())
+            val gateway = HarnessRemote(root, SessionCookies(), token)
             gateway.exchange(token)
             return gateway
         }
@@ -123,66 +154,175 @@ class HarnessRemote private constructor(private val root: HttpUrl, private val c
         }
     }
 
-    /**
-     * /api/remote.mux 物理连接；一个物理连接承载一条逻辑流，
-     * 逻辑 streamId 与可取消生命周期由本句柄独占。
-     */
+    /** 复用一个 WebSocket 的逻辑 Remote stream，遵循单 Peer/单 socket 约束。 */
     fun stream(
-        endpoint: String, args: JsonObject,
-        onItem: (kotlinx.serialization.json.JsonElement) -> Unit,
+        endpoint: String,
+        args: JsonObject,
+        onItem: (JsonElement) -> Unit,
         onOpen: () -> Unit = {},
         onError: (Throwable) -> Unit
     ): Closeable {
-        require(Regex("^[A-Za-z0-9_$.-]+/[A-Za-z0-9_$.-]+$").matches(endpoint))
+        require(Regex("^[A-Za-z0-9_$.-]+/[A-Za-z0-9_$.-]+$").matches(endpoint)) { "非法流端点" }
         val streamId = UUID.randomUUID().toString()
-        val closed = AtomicBoolean(false)
-        val wsUrl = root.newBuilder().addPathSegment("api").addPathSegment("remote.mux").build()
-        val request = Request.Builder().url(wsUrl).build()
-        val socket = http.newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                val open = buildJsonObject {
-                    put("type", JsonPrimitive("open"))
-                    put("streamId", JsonPrimitive(streamId))
-                    put("endpoint", JsonPrimitive(endpoint))
-                    put("payload", buildJsonObject { put("args", args) })
+        synchronized(lock) {
+            check(!disposed) { "连接已关闭" }
+            subscribers[streamId] = StreamSubscription(endpoint, args, onItem, onOpen, onError)
+            if (socketReady) {
+                val socket = physicalSocket ?: error("Socket 状态不一致")
+                if (!socket.send(openFrame(streamId, endpoint, args))) {
+                    socket.cancel()
                 }
-                if (!webSocket.send(open.toString())) onError(RemoteFailure("connection/stream", "无法打开实时数据流"))
-                else onOpen()
-            }
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                try {
-                    val frame = json.parseToJsonElement(text).jsonObject
-                    if (frame["streamId"]?.jsonPrimitive?.content != streamId) return
-                    when (frame["type"]?.jsonPrimitive?.content) {
-                        "item" -> frame["value"]?.let(onItem)
-                        "error" -> {
-                            val error = frame["error"]?.jsonObject
-                            onError(RemoteFailure(error?.get("code")?.jsonPrimitive?.content ?: "remote/stream",
-                                error?.get("message")?.jsonPrimitive?.content ?: "数据流异常"))
-                        }
-                        "end" -> if (!closed.get()) onError(RemoteFailure("connection/ended", "实时数据流结束"))
-                        else -> onError(RemoteFailure("connection/frame", "未知的数据流帧"))
-                    }
-                } catch (error: Exception) { onError(error) }
-            }
-            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                onError(RemoteFailure("connection/binary-stream", "收到未协商的二进制数据帧"))
-            }
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                if (!closed.get()) onError(t)
-            }
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                if (!closed.get()) onError(RemoteFailure("connection/closed", "实时连接关闭（$code）"))
-            }
-        })
-        return Closeable {
-            if (closed.compareAndSet(false, true)) {
-                socket.send(buildJsonObject {
-                    put("type", JsonPrimitive("cancel"))
-                    put("streamId", JsonPrimitive(streamId))
-                }.toString())
-                socket.close(1000, "client disposed")
+            } else {
+                dialLocked()
             }
         }
+        return Closeable {
+            synchronized(lock) {
+                if (subscribers.remove(streamId) != null && socketReady) {
+                    physicalSocket?.send(buildJsonObject {
+                        put("type", JsonPrimitive("cancel"))
+                        put("streamId", JsonPrimitive(streamId))
+                    }.toString())
+                }
+            }
+        }
+    }
+
+    private fun openFrame(id: String, endpoint: String, args: JsonObject): String =
+        buildJsonObject {
+            put("type", JsonPrimitive("open"))
+            put("streamId", JsonPrimitive(id))
+            put("endpoint", JsonPrimitive(endpoint))
+            put("payload", buildJsonObject { put("args", args) })
+        }.toString()
+
+    /** lock 已被持有。网络操作一律由 IO scope 执行，避免阻塞 Compose 主线程。 */
+    private fun dialLocked() {
+        if (disposed || dialing || socketReady || subscribers.isEmpty()) return
+        dialing = true
+        val target = ++generation
+        scope.launch {
+            try {
+                if (!authenticated) exchange(launchToken)
+                synchronized(lock) {
+                    if (disposed || target != generation) return@launch
+                    authenticated = true
+                }
+                val url = root.newBuilder().addPathSegment("api").addPathSegment("remote.mux").build()
+                val socket = http.newWebSocket(Request.Builder().url(url).build(), socketListener(target))
+                synchronized(lock) {
+                    if (disposed || target != generation) socket.close(1000, "disposed")
+                    else physicalSocket = socket
+                }
+            } catch (error: Exception) {
+                disconnected(target, error)
+            }
+        }
+    }
+
+    private fun socketListener(target: Long): WebSocketListener = object : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: Response) {
+            val current: List<Pair<String, StreamSubscription>>
+            synchronized(lock) {
+                if (disposed || target != generation) {
+                    webSocket.close(1000, "stale")
+                    return
+                }
+                physicalSocket = webSocket
+                socketReady = true
+                dialing = false
+                failureCount = 0
+                current = subscribers.toList()
+            }
+            for ((id, observer) in current) {
+                val valid = synchronized(lock) { subscribers[id] === observer && socketReady && generation == target }
+                if (valid) {
+                    if (!webSocket.send(openFrame(id, observer.endpoint, observer.args))) {
+                        webSocket.cancel()
+                        return
+                    }
+                    observer.onOpen()
+                }
+            }
+        }
+
+        override fun onMessage(webSocket: WebSocket, text: String) {
+            val frame = try { json.parseToJsonElement(text).jsonObject } catch (e: Exception) {
+                disconnected(target, RemoteFailure("connection/invalid-frame", "Host 发送了无效流消息"))
+                webSocket.cancel()
+                return
+            }
+            val id = frame["streamId"]?.jsonPrimitive?.content ?: return
+            val observer = synchronized(lock) { if (target == generation) subscribers[id] else null } ?: return
+            when (frame["type"]?.jsonPrimitive?.content) {
+                "item" -> observer.onItem(frame["value"] ?: JsonNull)
+                "error" -> {
+                    val error = frame["error"] as? JsonObject
+                    synchronized(lock) { subscribers.remove(id) }
+                    observer.onError(RemoteFailure(error?.get("code")?.jsonPrimitive?.content ?: "remote/stream",
+                        error?.get("message")?.jsonPrimitive?.content ?: "数据流异常"))
+                }
+                "end" -> {
+                    synchronized(lock) { subscribers.remove(id) }
+                    observer.onError(RemoteFailure("connection/stream-ended", "数据流已结束"))
+                }
+                else -> {
+                    synchronized(lock) { subscribers.remove(id) }
+                    observer.onError(RemoteFailure("connection/unknown-frame", "未知 Remote 数据流帧"))
+                }
+            }
+        }
+
+        override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+            disconnected(target, RemoteFailure("connection/binary-stream", "收到未协商的二进制数据流"))
+            webSocket.cancel()
+        }
+
+        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            disconnected(target, t)
+        }
+
+        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            disconnected(target, RemoteFailure("connection/closed", "WebSocket 已关闭：" + code))
+        }
+    }
+
+    /** 网络失败后必须重新交换 API Peer Cookie；旧 Peer 在 Host 端已被释放。 */
+    private fun disconnected(target: Long, error: Throwable) {
+        val current: List<StreamSubscription>
+        val retryDelay: Long?
+        synchronized(lock) {
+            if (disposed || generation != target) return
+            physicalSocket = null
+            socketReady = false
+            dialing = false
+            authenticated = false
+            failureCount += 1
+            current = subscribers.values.toList()
+            retryDelay = if (current.isNotEmpty() && failureCount <= 7) {
+                (500L shl (failureCount - 1)).coerceAtMost(8_000L)
+            } else null
+        }
+        current.forEach { it.onError(error) }
+        if (retryDelay != null) scope.launch {
+            delay(retryDelay)
+            synchronized(lock) { if (generation == target) dialLocked() }
+        }
+    }
+
+    override fun close() {
+        synchronized(lock) {
+            if (disposed) return
+            disposed = true
+            generation++
+            subscribers.clear()
+            physicalSocket?.close(1000, "client closing")
+            physicalSocket = null
+            socketReady = false
+        }
+        scope.cancel()
+        cookies.clear()
+        http.dispatcher.executorService.shutdown()
+        http.connectionPool.evictAll()
     }
 }
