@@ -43,10 +43,12 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build:artifacts --profile official
           pnpm --filter @deepseek-ai/dsh deploy --prod --legacy "$RUNNER_TEMP/dsh-android-deploy"
+          python3 安卓端方案/tools/runtime/relocate-external-links.py "$RUNNER_TEMP/dsh-android-deploy" "$GITHUB_WORKSPACE"
       - name: 验证完整 Host 发布目录并生成归档
         run: |
           set -euo pipefail
-          python3 -m unittest discover -s 安卓端方案/tools/runtime -p 'test_host_archive.py' -v
+          python3 -m unittest discover -s 安卓端方案/tools/runtime -p 'test_host*.py' -v
+          python3 -m unittest discover -s 安卓端方案/tools/runtime -p 'test_relocate*.py' -v
           python3 安卓端方案/tools/runtime/package-host.py "$RUNNER_TEMP/dsh-android-deploy" "$RUNNER_TEMP/dsh-android-host"
           python3 安卓端方案/tools/runtime/verify-host-payload.py "$RUNNER_TEMP/dsh-android-host" --source "$RUNNER_TEMP/dsh-android-deploy"
           test -f "$RUNNER_TEMP/dsh-android-host/assets/runtime/host/package.zip"
