@@ -1,0 +1,47 @@
+{
+  "schema": "333-motion-v1",
+  "curve": [
+    0.2,
+    0,
+    0,
+    1
+  ],
+  "transitions": {
+    "forward": {
+      "durationMs": 220,
+      "offsetDp": 12
+    },
+    "back": {
+      "durationMs": 200,
+      "offsetDp": -8
+    },
+    "bottomSheet": {
+      "durationMs": 300
+    },
+    "drawer": {
+      "durationMs": 280
+    },
+    "item": {
+      "durationMs": 140
+    },
+    "expand": {
+      "durationMs": 180
+    },
+    "collapse": {
+      "durationMs": 150
+    },
+    "status": {
+      "durationMs": 120
+    }
+  },
+  "reduceMotion": {
+    "durationMs": 60,
+    "offsetDp": 0,
+    "loopAnimation": false
+  },
+  "rules": [
+    "输入期间不夺取用户滚动位置",
+    "仅真实状态变化才有动效",
+    "审批结果优先即时文字反馈"
+  ]
+}

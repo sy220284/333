@@ -1,0 +1,343 @@
+{
+  "schema": "333-android-contract-v1",
+  "hostCommit": "19a73bc7274832fc1dbff6fb084031537dab51c5",
+  "note": "verified=true仅表示已对照@Remote实现，false的扩展名待生成描述符核对；界面不得在未核验时声称调用成功",
+  "features": [
+    {
+      "action": "新建会话",
+      "endpoint": "session/create",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "发送消息",
+      "endpoint": "session/prompt",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "实时消息",
+      "endpoint": "session/follow",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "历史列表",
+      "endpoint": "session/list",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "历史搜索",
+      "endpoint": "session/search",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "停止生成",
+      "endpoint": "session/cancel",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "编辑队列",
+      "endpoint": "session/updateQueue",
+      "page": "对话",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "模型目录",
+      "endpoint": "session/modelCatalog",
+      "page": "模型",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "切换模型",
+      "endpoint": "session/selectModel",
+      "page": "模型",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "工作区状态",
+      "endpoint": "workspace/follow",
+      "page": "项目",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "新建工作区",
+      "endpoint": "workspace/create",
+      "page": "项目",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "文件读取",
+      "endpoint": "workspaceFiles/read",
+      "page": "文件",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "文件列表",
+      "endpoint": "workspaceFiles/list",
+      "page": "文件",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "终端创建",
+      "endpoint": "terminal/create",
+      "page": "终端",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "终端双向流",
+      "endpoint": "terminal/attach",
+      "page": "终端",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "后台任务列表",
+      "endpoint": "job/list",
+      "page": "任务",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "任务输出",
+      "endpoint": "job/follow",
+      "page": "任务",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "停止任务",
+      "endpoint": "job/kill",
+      "page": "任务",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "账号状态",
+      "endpoint": "account/watch",
+      "page": "账号",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": false
+    },
+    {
+      "action": "MCP状态",
+      "endpoint": "mcpManager/watch",
+      "page": "扩展",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": false
+    },
+    {
+      "action": "插件包",
+      "endpoint": "pluginManager/listBundles",
+      "page": "扩展",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": false
+    },
+    {
+      "action": "模型审批",
+      "endpoint": "$events",
+      "page": "授权",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "文件上传",
+      "endpoint": "HTTP /api/session/uploadFileBinary",
+      "page": "附件",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": true
+    },
+    {
+      "action": "权限预设",
+      "endpoint": "permissionPresets/catalog",
+      "page": "设置",
+      "states": [
+        "initial",
+        "loading",
+        "ready",
+        "action-required",
+        "failed",
+        "completed"
+      ],
+      "verified": false
+    }
+  ]
+}

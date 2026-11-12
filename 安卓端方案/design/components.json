@@ -1,0 +1,59 @@
+{
+  "schema": "333-components-v1",
+  "families": {
+    "structure": [
+      "AppScaffold",
+      "Drawer",
+      "AdaptivePane"
+    ],
+    "conversation": [
+      "MessageRow",
+      "ComposerDock",
+      "ReasoningDetails",
+      "ToolRunRow",
+      "QueueRow"
+    ],
+    "context": [
+      "ModelPickerSheet",
+      "ApprovalSheet",
+      "QuestionSheet"
+    ],
+    "project": [
+      "WorkspaceRow",
+      "FileRow",
+      "DiffRow"
+    ],
+    "execution": [
+      "TerminalView",
+      "JobRow",
+      "RuntimeStatusCard"
+    ],
+    "extension": [
+      "ExtensionRow",
+      "McpRow",
+      "SettingsRow"
+    ],
+    "foundation": [
+      "ActionButton",
+      "ListRow",
+      "StatusPill",
+      "TextField",
+      "EmptyState",
+      "LoadingSkeleton",
+      "ErrorPanel"
+    ]
+  },
+  "requiredStates": [
+    "initial",
+    "loading",
+    "ready",
+    "action-required",
+    "failed",
+    "completed"
+  ],
+  "accessibility": {
+    "touchMinDp": 48,
+    "textContrast": 4.5,
+    "scaleSupport": 2
+  }
+}
