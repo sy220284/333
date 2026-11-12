@@ -33,6 +33,17 @@ class ArchiveVerificationTest(unittest.TestCase):
             source,out=self.make_payload(Path(d))
             self.assertEqual(validator.verify(out,source)["files"],3)
 
+    def test_internal_package_symlink_accepted(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            source,out=self.make_payload(root)
+            (source/"node_modules"/"alias").symlink_to("mock",target_is_directory=True)
+            packer.package_host(source,out)
+            result=validator.verify(out,source)
+            self.assertEqual(result["files"],3)
+            meta=json.loads((out/"assets/runtime/dsh-host-manifest.json").read_text())
+            self.assertEqual(meta["links"],{"node_modules/alias":"mock"})
+
     def test_tampered_archive_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             source,out=self.make_payload(Path(d))

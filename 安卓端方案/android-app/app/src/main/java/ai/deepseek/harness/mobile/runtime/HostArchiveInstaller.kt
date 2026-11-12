@@ -37,6 +37,8 @@ class HostArchiveInstaller(private val context: Context) {
         val entry = manifest["entry"]?.jsonPrimitive?.content
             ?: error("Host 缺少入口")
         require(entry == "lib/bin.js") { "Host 必须使用官方 dsh CLI 入口" }
+        val links = manifest["links"]?.jsonObject ?: error("Host 清单缺少 pnpm 链接映射")
+        require(links.size <= maxEntries) { "Host 包的符号链接超出上限" }
         val length = manifest["bytes"]?.jsonPrimitive?.content?.toLongOrNull()
             ?: error("Host 缺少归档长度")
         require(length > 0) { "Host 发布包为空" }
@@ -116,6 +118,30 @@ class HostArchiveInstaller(private val context: Context) {
                         }
                     }
                     check(File(stage, entry).isFile) { "Host 缺少官方启动入口" }
+                    // pnpm 发布目录中的相对 symlink 指向同一归档内已解包的包。
+                    // 逐个创建后统一解析目标，杜绝经过其他链接的越界路径。
+                    val stageRoot = stage.canonicalPath + File.separator
+                    for ((name, value) in links) {
+                        val targetValue = value.jsonPrimitive.content
+                        require(name.isNotBlank() && !name.startsWith("/") &&
+                            !name.contains('\\') && name.split('/').none { it == "." || it == ".." || it.isEmpty() }) {
+                            "非法 Host 链接名称"
+                        }
+                        require(targetValue.isNotBlank() && !targetValue.startsWith("/") &&
+                            !targetValue.contains('\\')) { "Host 链接目标必须是相对路径" }
+                        val link = File(stage, name)
+                        check(link.parentFile!!.isDirectory && !Files.exists(link.toPath())) {
+                            "Host 链接目标位置冲突或父目录不存在：$name"
+                        }
+                        Files.createSymbolicLink(link.toPath(), java.nio.file.Path.of(targetValue))
+                    }
+                    for ((name, _) in links) {
+                        val link = File(stage, name)
+                        require(link.canonicalPath.startsWith(stageRoot) &&
+                            (link.isDirectory || link.isFile)) {
+                            "Host 链接越界、失效或循环：$name"
+                        }
+                    }
                     File(stage, ".archive-sha256").writeText(digest)
                     if (target.exists()) check(target.deleteRecursively()) { "无法清理损坏的旧 Host" }
                     Files.move(stage.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE)

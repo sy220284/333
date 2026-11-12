@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
+import posixpath
 import re
 import stat
 import struct
@@ -25,6 +26,9 @@ def verify(root: Path, source: Path | None = None, target: str = "android-arm64"
     assert metadata.get("format") == "333-host-v1", "Host 清单格式不正确"
     assert metadata.get("entry") == "lib/bin.js", "必须使用官方 dsh 入口"
     assert re.fullmatch(r"[0-9a-f]{64}", metadata.get("sha256","")), "归档摘要缺失"
+    links = metadata.get("links")
+    assert isinstance(links, dict), "Host 必须声明符号链接目录（可为空）"
+    assert len(links) <= MAX_FILES, "Host 符号链接过多"
     archive = root / ARCHIVE
     assert archive.is_file(), "缺少 Host 归档"
     assert metadata["bytes"] == archive.stat().st_size and metadata["bytes"] > 0, "Host 归档长度与清单不匹配"
@@ -65,9 +69,19 @@ def verify(root: Path, source: Path | None = None, target: str = "android-arm64"
         assert len(names) == metadata["fileCount"], "Host 文件数量与清单不一致"
         assert "lib/bin.js" in names and "package.json" in names, "官方 dsh 发布文件缺失"
         assert any(n.startswith("node_modules/") for n in names), "缺少发布依赖闭包"
+    for name, target in links.items():
+        assert isinstance(name, str) and isinstance(target, str), "Host 链接格式无效"
+        assert name not in names and name and not name.startswith("/") and "\\" not in name, f"Host 链接与文件冲突或非法：{name}"
+        assert all(part not in ("..", ".") for part in PurePosixPath(name).parts), f"非法链接路径：{name}"
+        assert target and not target.startswith("/") and "\\" not in target, f"非法链接目标：{name}"
+        resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
+        assert resolved != ".." and not resolved.startswith("../") and not resolved.startswith("/"), f"链接越界：{name}"
+        assert resolved in names or resolved in links or any(x.startswith(resolved + "/") for x in names), f"链接目标缺失：{name}"
     if source is not None:
-        source_names = {p.relative_to(source).as_posix() for p in source.rglob("*") if p.is_file()}
+        source_names = {p.relative_to(source).as_posix() for p in source.rglob("*") if p.is_file() and not p.is_symlink()}
+        source_links = {p.relative_to(source).as_posix() for p in source.rglob("*") if p.is_symlink()}
         assert source_names == names, "Host 归档文件集与发布目录不一致"
+        assert source_links == set(links), "Host 链接集与发布目录不一致"
     return {"format":metadata["format"],"files":len(names),"native":native_files,"uncompressed":total}
 
 if __name__ == "__main__":

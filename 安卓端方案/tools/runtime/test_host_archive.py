@@ -24,12 +24,25 @@ class HostTests(unittest.TestCase):
                 self.assertIn("lib/bin.js",z.namelist())
             self.assertEqual(json.loads((root/"output/assets/runtime/dsh-host-manifest.json").read_text()),result)
 
-    def test_symlink_rejected(self):
+    def test_internal_symlink_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); app=root/"app"
             (app/"lib").mkdir(parents=True);(app/"node_modules").mkdir()
             (app/"package.json").write_text('{"version":"1"}')
             (app/"lib/bin.js").write_text("ok")
-            (app/"lib/copy").symlink_to(app/"lib/bin.js")
+            (app/"lib/copy").symlink_to("bin.js")
+            result=host.package_host(app,root/"output")
+            self.assertEqual(result["links"],{"lib/copy":"bin.js"})
+            with zipfile.ZipFile(root/"output/assets/runtime/host/package.zip") as z:
+                self.assertNotIn("lib/copy",z.namelist())
+
+    def test_outside_symlink_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); app=root/"app"
+            (app/"lib").mkdir(parents=True);(app/"node_modules").mkdir()
+            (app/"package.json").write_text('{"version":"1"}')
+            (app/"lib/bin.js").write_text("ok")
+            (root/"outside").write_text("secret")
+            (app/"lib/leak").symlink_to(root/"outside")
             with self.assertRaisesRegex(ValueError,"符号链接"):
                 host.package_host(app,root/"output")
