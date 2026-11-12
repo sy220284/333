@@ -274,7 +274,7 @@ class MainViewModel : ViewModel() {
         val connection = remote ?: return
         workspaceStream?.close()
         val workspaceMap = linkedMapOf<String, WorkspaceRow>()
-        workspaceStream = connection.stream("workspace/follow", buildJsonObject {}) { frame ->
+        workspaceStream = connection.stream("workspace/follow", buildJsonObject {}, onItem = { frame ->
             viewModelScope.launch {
                 val objectFrame = frame as? JsonObject ?: return@launch
                 val type = objectFrame["type"]?.jsonPrimitive?.content

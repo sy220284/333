@@ -185,15 +185,9 @@ fun HarnessApp(model: MainViewModel) {
                         "历史会话" -> SessionHistory(state, onOpen = { model.openSession(it); page = "对话" })
                         "运行诊断" -> RuntimePage()
                         "设置" -> SettingsPage(darkMode, onMode = { darkMode = it })
-                        "我的项目" -> PlannedCapabilityPage("我的项目", "项目目录与文件浏览",
-                            listOf("最近工作区", "文件浏览与预览", "工作区搜索", "代码改动审阅"),
-                            "工作区 Remote 已具备，原生浏览器实现正在接入。")
-                        "任务记录" -> PlannedCapabilityPage("任务记录", "过程和结果",
-                            listOf("正在执行", "终端与后台任务", "历史执行结果", "操作日志"),
-                            "job 和 terminal Remote 已具备，原生事件显示正在接入。")
-                        "扩展中心" -> PlannedCapabilityPage("扩展中心", "按需添加能力",
-                            listOf("技能与预设", "MCP 服务", "插件市场", "权限与审批"),
-                            "扩展接口已经装配；功能入口以实际 Host 状态为准。")
+                        "我的项目" -> WorkspacePage(model, state, onOpenSession = { page = "对话" })
+                        "任务记录" -> JobsPage(model, state)
+                        "扩展中心" -> ExtensionsPage(model, state)
                     }
                 }
             }
