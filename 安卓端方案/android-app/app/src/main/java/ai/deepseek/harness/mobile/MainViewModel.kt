@@ -28,6 +28,10 @@ data class JobRow(val id: String, val label: String, val status: String, val pro
 data class McpRow(val name: String, val status: String)
 data class PluginRow(val name: String, val status: String)
 data class ApprovalRow(val clientId: String, val eventId: String, val toolName: String, val reason: String)
+data class QuestionChoice(val label: String, val description: String)
+data class QuestionPrompt(val id: String, val question: String, val detail: String, val choices: List<QuestionChoice>, val multiSelect: Boolean)
+data class PendingQuestion(val clientId: String, val eventId: String, val questions: List<QuestionPrompt>)
+data class QuestionAnswer(val id: String, val selected: List<String>, val custom: String? = null)
 data class UiState(
     val connecting: Boolean = false, val connected: Boolean = false,
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
@@ -41,7 +45,9 @@ data class UiState(
     val panelError: String? = null,
     val interactionReady: Boolean = false,
     val approvalSubmitting: Boolean = false,
-    val approvals: List<ApprovalRow> = emptyList()
+    val approvals: List<ApprovalRow> = emptyList(),
+    val questions: List<PendingQuestion> = emptyList(),
+    val questionSubmitting: Boolean = false
 )
 
 /**
@@ -284,7 +290,7 @@ class MainViewModel : ViewModel() {
         val connection = remote ?: return
         eventsStream?.close()
         eventClientId = null
-        mutable.value = mutable.value.copy(interactionReady = false, approvals = emptyList())
+        mutable.value = mutable.value.copy(interactionReady = false, approvals = emptyList(), questions = emptyList())
         eventsStream = connection.stream("\$events", buildJsonObject {}, onItem = { frame ->
             viewModelScope.launch {
                 val item = frame as? JsonObject ?: return@launch
@@ -292,7 +298,8 @@ class MainViewModel : ViewModel() {
                     "ready" -> {
                         eventClientId = item["clientId"]?.jsonPrimitive?.content
                         mutable.value = mutable.value.copy(
-                            interactionReady = eventClientId != null, approvals = emptyList(), approvalSubmitting = false
+                            interactionReady = eventClientId != null, approvals = emptyList(), approvalSubmitting = false,
+                            questions = emptyList(), questionSubmitting = false
                         )
                     }
                     "waterfall" -> {
@@ -305,6 +312,29 @@ class MainViewModel : ViewModel() {
                             val reason = request["reason"]?.jsonPrimitive?.content ?: "核心请求执行此操作"
                             val pending = ApprovalRow(clientId, eventId, name, reason)
                             mutable.value = mutable.value.copy(approvals = mutable.value.approvals + pending)
+                        } else if (event == "user-questions/request") {
+                            val request = item["request"] as? JsonObject ?: return@launch
+                            val raw = request["questions"] as? JsonArray ?: return@launch
+                            val questions = raw.mapNotNull { entry ->
+                                val value = entry as? JsonObject ?: return@mapNotNull null
+                                val id = value["id"]?.jsonPrimitive?.content?.takeIf(String::isNotBlank)
+                                    ?: return@mapNotNull null
+                                val question = value["question"]?.jsonPrimitive?.content
+                                    ?: return@mapNotNull null
+                                val choices = (value["options"] as? JsonArray)?.mapNotNull { option ->
+                                    val obj = option as? JsonObject ?: return@mapNotNull null
+                                    val label = obj["label"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                                    QuestionChoice(label, obj["description"]?.jsonPrimitive?.content.orEmpty())
+                                } ?: emptyList()
+                                QuestionPrompt(id, question, value["detail"]?.jsonPrimitive?.content.orEmpty(),
+                                    choices, value["multiSelect"]?.jsonPrimitive?.content == "true")
+                            }
+                            if (questions.size != raw.size || questions.isEmpty()) {
+                                showError(IllegalArgumentException("核心返回了无法展示的用户问题"))
+                            } else {
+                                mutable.value = mutable.value.copy(questions = mutable.value.questions +
+                                    PendingQuestion(clientId, eventId, questions))
+                            }
                         } else {
                             try {
                                 respondToWaterfall(clientId, eventId, buildJsonObject {
@@ -317,7 +347,8 @@ class MainViewModel : ViewModel() {
                         val eventId = item["eventId"]?.jsonPrimitive?.content ?: return@launch
                         mutable.value = mutable.value.copy(
                             approvals = mutable.value.approvals.filterNot { it.eventId == eventId },
-                            approvalSubmitting = false
+                            questions = mutable.value.questions.filterNot { it.eventId == eventId },
+                            approvalSubmitting = false, questionSubmitting = false
                         )
                     }
                 }
@@ -327,6 +358,7 @@ class MainViewModel : ViewModel() {
                 eventClientId = null
                 mutable.value = mutable.value.copy(
                     interactionReady = false, approvals = emptyList(), approvalSubmitting = false,
+                    questions = emptyList(), questionSubmitting = false,
                     panelError = "审批连接中断：" + (failure.message ?: "未知错误")
                 )
             }
@@ -360,6 +392,65 @@ class MainViewModel : ViewModel() {
             } catch (e: Exception) {
                 mutable.value = mutable.value.copy(approvalSubmitting = false)
                 showError(e)
+            }
+        }
+    }
+
+    /** 仅对当前仍有效的 user-questions/request 发结构化回答，保留 Host 的取消生命周期。 */
+    fun answerQuestions(eventId: String, answers: List<QuestionAnswer>) {
+        if (mutable.value.questionSubmitting) return
+        val pending = mutable.value.questions.firstOrNull { it.eventId == eventId } ?: return
+        if (pending.clientId != eventClientId) return
+        if (pending.questions.size != answers.size || pending.questions.any { prompt ->
+                answers.count { it.id == prompt.id && (it.selected.isNotEmpty() || !it.custom.isNullOrBlank()) } != 1
+            }) {
+            showError(IllegalArgumentException("请完成全部问题后提交"))
+            return
+        }
+        mutable.value = mutable.value.copy(questionSubmitting = true)
+        viewModelScope.launch {
+            try {
+                val payload = JsonArray(answers.map { answer ->
+                    buildJsonObject {
+                        put("id", JsonPrimitive(answer.id))
+                        put("selected", JsonArray(answer.selected.map { JsonPrimitive(it) }))
+                        answer.custom?.takeIf(String::isNotBlank)?.let { put("custom", JsonPrimitive(it)) }
+                    }
+                })
+                respondToWaterfall(pending.clientId, pending.eventId, buildJsonObject {
+                    put("kind", JsonPrimitive("result"))
+                    put("value", buildJsonObject { put("answers", payload) })
+                })
+                mutable.value = mutable.value.copy(questionSubmitting = false,
+                    questions = mutable.value.questions.filterNot { it.eventId == eventId })
+            } catch (error: Exception) {
+                mutable.value = mutable.value.copy(questionSubmitting = false)
+                showError(error)
+            }
+        }
+    }
+
+    /** 主动取消未作答问题，向 Host 返回真实拒绝结果，不向模型制造空答案。 */
+    fun cancelQuestion(eventId: String) {
+        if (mutable.value.questionSubmitting) return
+        val pending = mutable.value.questions.firstOrNull { it.eventId == eventId } ?: return
+        if (pending.clientId != eventClientId) return
+        mutable.value = mutable.value.copy(questionSubmitting = true)
+        viewModelScope.launch {
+            try {
+                respondToWaterfall(pending.clientId, pending.eventId, buildJsonObject {
+                    put("kind", JsonPrimitive("rejected"))
+                    put("error", buildJsonObject {
+                        put("name", JsonPrimitive("UserQuestionError"))
+                        put("message", JsonPrimitive("用户取消了问题回答"))
+                        put("code", JsonPrimitive("ASK_CANCELLED"))
+                    })
+                })
+                mutable.value = mutable.value.copy(questionSubmitting = false,
+                    questions = mutable.value.questions.filterNot { it.eventId == eventId })
+            } catch (error: Exception) {
+                mutable.value = mutable.value.copy(questionSubmitting = false)
+                showError(error)
             }
         }
     }
