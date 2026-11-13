@@ -39,6 +39,10 @@ data class QuestionAnswer(val id: String, val selected: List<String>, val custom
 /** 只在 session/prompt 收到 Host 成功回执后增加序号；用于安全清除输入草稿。 */
 data class PromptReceipt(val serial: Long, val text: String)
 
+/** 官方 workspaceFiles 返回的工作区相对路径；不推测本地 Android 文件路径。 */
+data class WorkspaceFileEntry(val name: String, val type: String, val bytes: Long?)
+data class WorkspaceFileMatch(val path: String, val type: String)
+
 data class UiState(
     val connecting: Boolean = false, val connected: Boolean = false,
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
@@ -47,6 +51,20 @@ data class UiState(
     val models: List<ModelRow> = emptyList(), val error: String? = null,
     val promptReceipt: PromptReceipt? = null,
     val activeModelKey: String? = null,
+    val directoryPath: String = ".",
+    val directoryEntries: List<WorkspaceFileEntry> = emptyList(),
+    val directoryTruncated: Boolean = false,
+    val directoryLoading: Boolean = false,
+    val filePath: String? = null,
+    val fileText: String = "",
+    val filePageOffset: Int = 1,
+    val filePageLines: Int = 0,
+    val fileEof: Boolean = true,
+    val fileLoading: Boolean = false,
+    val fileMatches: List<WorkspaceFileMatch> = emptyList(),
+    val fileSearchIncomplete: Boolean = false,
+    val fileSearching: Boolean = false,
+    val fileError: String? = null,
     val workspaces: List<WorkspaceRow> = emptyList(),
     val jobs: List<JobRow> = emptyList(),
     val mcpServers: List<McpRow> = emptyList(),
@@ -78,6 +96,9 @@ class MainViewModel : ViewModel() {
     private var manualClose = false
     private val events = sortedMapOf<Long, ChatLine>()
     private var acceptedPromptSerial = 0L
+    private var directoryGeneration = 0L
+    private var fileGeneration = 0L
+    private var searchGeneration = 0L
 
     fun connect(link: String) {
         if (mutable.value.connecting) return
@@ -150,8 +171,15 @@ class MainViewModel : ViewModel() {
         stream?.close()
         observedId = id
         events.clear()
+        directoryGeneration += 1
+        fileGeneration += 1
+        searchGeneration += 1
         mutable.value = mutable.value.copy(sessionId = id, lines = emptyList(),
-            running = false, jobs = emptyList(), activeModelKey = null, error = null)
+            running = false, jobs = emptyList(), activeModelKey = null,
+            directoryPath = ".", directoryEntries = emptyList(), directoryTruncated = false,
+            filePath = null, fileText = "", fileMatches = emptyList(),
+            fileLoading = false, directoryLoading = false, fileSearching = false,
+            fileError = null, error = null)
         subscribe(id)
         observeJobs()
         refreshSessions()
@@ -585,6 +613,116 @@ class MainViewModel : ViewModel() {
         }, onError = { e ->
             viewModelScope.launch { mutable.value = mutable.value.copy(panelError = "MCP 连接状态失败：" + (e.message ?: "未知错误")) }
         })
+    }
+
+    /**
+     * 真正调用官方 workspaceFiles Remote。
+     * lookup 的 wire 参数为 workspaceFileScopeId（见 workspace-files/scope.spec.ts）。
+     */
+    fun listWorkspaceFiles(path: String = ".") = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        val sessionId = mutable.value.sessionId ?: run {
+            mutable.value = mutable.value.copy(fileError = "请先选择项目会话")
+            return@launch
+        }
+        val generation = ++directoryGeneration
+        mutable.value = mutable.value.copy(directoryLoading = true, fileError = null)
+        try {
+            val result = connection.call("workspaceFiles/list", buildJsonObject {
+                put("workspaceFileScopeId", JsonPrimitive(sessionId))
+                put("path", JsonPrimitive(path))
+            }).jsonObject
+            val items = (result["entries"] as? JsonArray)?.map { raw ->
+                val file = raw as? JsonObject ?: error("Host 返回了无效目录条目")
+                WorkspaceFileEntry(
+                    name = file["name"]?.jsonPrimitive?.content ?: error("文件条目缺少名称"),
+                    type = file["type"]?.jsonPrimitive?.content ?: error("文件条目缺少类型"),
+                    bytes = file["size"]?.jsonPrimitive?.longOrNull
+                )
+            } ?: error("Host 未返回目录条目")
+            if (sessionId == mutable.value.sessionId && generation == directoryGeneration) {
+                val actualPath = result["path"]?.jsonPrimitive?.content.orEmpty()
+                mutable.value = mutable.value.copy(
+                    directoryPath = if (actualPath.isBlank()) "." else actualPath,
+                    directoryEntries = items, directoryLoading = false,
+                    directoryTruncated = result["truncated"]?.jsonPrimitive?.content == "true",
+                    fileError = null
+                )
+            }
+        } catch (error: Exception) {
+            if (generation == directoryGeneration) mutable.value = mutable.value.copy(
+                directoryLoading = false, fileError = "目录读取失败：" + (error.message ?: "未知错误"))
+        }
+    }
+
+    fun readWorkspaceFile(path: String, offset: Int = 1) = viewModelScope.launch {
+        require(path.isNotBlank() && offset > 0)
+        val connection = remote ?: return@launch
+        val sessionId = mutable.value.sessionId ?: return@launch
+        val generation = ++fileGeneration
+        mutable.value = mutable.value.copy(filePath = path, filePageOffset = offset,
+            fileLoading = true, fileError = null, fileText = "")
+        try {
+            val result = connection.call("workspaceFiles/read", buildJsonObject {
+                put("workspaceFileScopeId", JsonPrimitive(sessionId))
+                put("path", JsonPrimitive(path))
+                put("range", buildJsonObject {
+                    put("offset", JsonPrimitive(offset))
+                    put("limit", JsonPrimitive(100))
+                })
+            }).jsonObject
+            if (sessionId == mutable.value.sessionId && generation == fileGeneration) {
+                mutable.value = mutable.value.copy(filePath = path,
+                    fileText = result["text"]?.jsonPrimitive?.content ?: error("Host 未返回文本页"),
+                    filePageLines = result["lines"]?.jsonPrimitive?.content?.toIntOrNull()
+                        ?: error("Host 未返回有效行数"),
+                    fileEof = result["eof"]?.jsonPrimitive?.content == "true",
+                    fileLoading = false, fileError = null)
+            }
+        } catch (error: Exception) {
+            if (generation == fileGeneration) mutable.value = mutable.value.copy(
+                fileLoading = false, fileError = "预览失败：" + (error.message ?: "未知错误"))
+        }
+    }
+
+    fun searchWorkspaceFiles(query: String) = viewModelScope.launch {
+        val term = query.trim()
+        if (term.isBlank()) {
+            mutable.value = mutable.value.copy(fileMatches = emptyList(), fileSearchIncomplete = false)
+            return@launch
+        }
+        val connection = remote ?: return@launch
+        val sessionId = mutable.value.sessionId ?: return@launch
+        val generation = ++searchGeneration
+        mutable.value = mutable.value.copy(fileSearching = true, fileError = null)
+        try {
+            val result = connection.call("workspaceFiles/search", buildJsonObject {
+                put("workspaceFileScopeId", JsonPrimitive(sessionId))
+                put("request", buildJsonObject {
+                    put("query", JsonPrimitive(term))
+                    put("excludedPaths", JsonArray(emptyList()))
+                    put("includeHidden", JsonPrimitive(false))
+                    put("respectGitignore", JsonPrimitive(true))
+                })
+            }).jsonObject
+            val matches = (result["matches"] as? JsonArray)?.map { raw ->
+                val item = raw as? JsonObject ?: error("Host 文件搜索返回无效结果")
+                WorkspaceFileMatch(
+                    item["path"]?.jsonPrimitive?.content ?: error("搜索结果缺少路径"),
+                    item["type"]?.jsonPrimitive?.content ?: error("搜索结果缺少类型"))
+            } ?: error("Host 未返回文件搜索结果")
+            if (sessionId == mutable.value.sessionId && generation == searchGeneration) {
+                mutable.value = mutable.value.copy(
+                    fileMatches = matches, fileSearching = false, fileError = null,
+                    fileSearchIncomplete =
+                        result["truncated"]?.jsonPrimitive?.content == "true" ||
+                        result["incomplete"]?.jsonPrimitive?.content == "true"
+                )
+            }
+        } catch (error: Exception) {
+            if (generation == searchGeneration) mutable.value = mutable.value.copy(
+                fileSearching = false, fileError = "文件搜索失败：" + (error.message ?: "未知错误"))
+        }
     }
 
     fun refreshBundles() = viewModelScope.launch {
