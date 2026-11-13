@@ -257,6 +257,57 @@ def is_missing_platform_optional(link: Path, checkout: Path, optional_names: set
     print(f"PRUNE unsupported optional package on Android: {manifest['name']} ({link})")
     return True
 
+def unpublished_test_fixture(link: Path, deployment: Path) -> bool:
+    """只清理真实发布清单排除的根级测试目录；生产入口与资源受保护。"""
+    current = link.parent
+    while current.is_relative_to(deployment):
+        manifest = current / "package.json"
+        if manifest.is_file():
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            files = data.get("files")
+            if not isinstance(files, list) or not all(isinstance(item, str) for item in files):
+                return False
+            relative = link.relative_to(current).parts
+            if len(relative) < 2 or relative[0] not in ("tests", "__tests__"):
+                return False
+            prefix = relative[0]
+            if any(item == "*" or item.startswith("**") or
+                   item == prefix or item.startswith(prefix + "/") or
+                   item.startswith("{" + prefix) for item in files):
+                return False
+            print(f"PRUNE unpublished test fixture link: {link}")
+            return True
+        if current == deployment:
+            break
+        current = current.parent
+    return False
+
+
+def prune_unpublished_test_trees(deployment: Path) -> int:
+    """pnpm legacy deploy 复制出的 tests 不属于 package.json 发布文件集。"""
+    count = 0
+    for manifest in sorted(deployment.rglob("package.json")):
+        package = manifest.parent
+        if package.is_symlink() or not package.resolve(strict=True).is_relative_to(deployment):
+            continue
+        metadata = json.loads(manifest.read_text(encoding="utf-8"))
+        files = metadata.get("files")
+        if not isinstance(files, list) or not all(isinstance(item, str) for item in files):
+            continue
+        for folder in ("tests", "__tests__"):
+            if any(item == "*" or item.startswith("**") or
+                   item == folder or item.startswith(folder + "/") or
+                   item.startswith("{" + folder) for item in files):
+                continue
+            candidate = package / folder
+            if candidate.is_symlink():
+                continue
+            if candidate.is_dir():
+                shutil.rmtree(candidate)
+                count += 1
+    return count
+
+
 def relocate(deployment: Path, checkout: Path) -> dict:
     deployment = deployment.resolve(strict=True)
     checkout = checkout.resolve(strict=True)
@@ -287,7 +338,8 @@ def relocate(deployment: Path, checkout: Path) -> dict:
                 destination = path.resolve(strict=True)
             except FileNotFoundError as error:
                 if (is_missing_platform_optional(path, checkout, allowed_optionals) or
-                        is_missing_development_only_dependency(path, deployment)):
+                        is_missing_development_only_dependency(path, deployment) or
+                        unpublished_test_fixture(path, deployment)):
                     omitted.append(path)
                     continue
                 source = declared_missing_workspace_dependency(path, deployment, packages)
@@ -326,7 +378,9 @@ def relocate(deployment: Path, checkout: Path) -> dict:
                 shutil.copy2(resolved, link)
             else:
                 raise ValueError(f"外部链接目标并非文件或目录: {resolved}")
-    return {"relocated": replaced, "prunedPlatformOptionals": pruned, "copiedBytes": copied}
+    omitted_trees = prune_unpublished_test_trees(deployment)
+    return {"relocated": replaced, "prunedPlatformOptionals": pruned,
+            "prunedTestTrees": omitted_trees, "copiedBytes": copied}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

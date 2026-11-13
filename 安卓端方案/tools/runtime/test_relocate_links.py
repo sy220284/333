@@ -294,6 +294,37 @@ class RelocateExternalLinksTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "版本无法唯一校验|冻结依赖版本无法唯一校验"):
                 module.relocate(deploy,checkout)
 
+    def test_unpublished_test_fixture_removed_without_packaging(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            pkg = deploy / "node_modules" / "dsh"
+            fixtures = pkg / "tests" / "profiles"
+            fixtures.mkdir(parents=True)
+            (pkg / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/dsh", "files": ["lib/*.js", "src", "docs"]
+            }))
+            (pkg / "lib").mkdir()
+            (pkg / "lib" / "index.js").write_text("export const official = true")
+            (fixtures / "test.js").write_text("this is a test")
+            (fixtures / "cordis.yml").symlink_to("../missing-snapshot")
+            result = module.relocate(deploy, checkout)
+            self.assertFalse((pkg / "tests").exists())
+            self.assertEqual(result["prunedTestTrees"], 1)
+            self.assertTrue((pkg / "lib" / "index.js").is_file())
+
+    def test_explicitly_published_test_fixture_remains_required(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            pkg = deploy / "node_modules" / "published-tests"
+            fixtures = pkg / "tests"
+            fixtures.mkdir(parents=True)
+            (pkg / "package.json").write_text(json.dumps({
+                "name": "published-tests", "files": ["lib", "tests"]
+            }))
+            (fixtures / "important.js").symlink_to("not-found")
+            with self.assertRaisesRegex(ValueError, "未声明的缺失"):
+                module.relocate(deploy, checkout)
+
     def test_checkout_as_deployment_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout,deploy=self.workspace(Path(temp))
