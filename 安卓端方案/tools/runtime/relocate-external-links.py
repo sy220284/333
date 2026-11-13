@@ -5,6 +5,7 @@
 部署目录内部的相对链接原样保留，由 package-host.py 统一审计并编码。
 """
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -322,9 +323,15 @@ def relocate(deployment: Path, checkout: Path) -> dict:
     packages = workspace_package_manifests(checkout)
     allowed_optionals = optional_platform_names(packages)
     replaced = 0
-    restored = 0
     pruned = 0
     copied = 0
+    # 每份可信包只复制一次。其余引用使用发布包内的相对链接。
+    # 旧实现按引用位置整包复制，造成递归依赖的指数级体积膨胀。
+    staging = deployment / "node_modules" / ".333-closure"
+    if staging.exists() or staging.is_symlink():
+        raise ValueError("发布目录的闭包暂存区已存在，拒绝覆盖")
+    staging.mkdir()
+    copied_sources: dict[Path, Path] = {}
     while True:
         # 先处理最外层链接，防止遍历穿过未实体化的目录并误写回 checkout。
         paths = sorted((p for p in deployment.rglob("*") if p.is_symlink()),
@@ -367,19 +374,35 @@ def relocate(deployment: Path, checkout: Path) -> dict:
             replaced += 1
             if replaced > MAX_RELOCATIONS:
                 raise ValueError("Host 外部链接过多，拒绝无界递归")
-            additional = directory_bytes(resolved) if resolved.is_dir() else resolved.stat().st_size
-            copied += additional
-            if copied > MAX_COPIED_BYTES:
-                raise ValueError("工作区依赖实体化体积超过审计上限")
-            link.unlink()
-            if resolved.is_dir():
-                shutil.copytree(resolved, link, symlinks=True)
-            elif resolved.is_file():
-                shutil.copy2(resolved, link)
+            source = resolved.resolve(strict=True)
+            if source.is_relative_to(deployment):
+                destination = source
             else:
-                raise ValueError(f"外部链接目标并非文件或目录: {resolved}")
+                if not any(source.is_relative_to(root) for root in trusted):
+                    raise ValueError(f"依赖来源越过受信任源码目录: {source}")
+                destination = copied_sources.get(source)
+                if destination is None:
+                    additional = directory_bytes(source) if source.is_dir() else source.stat().st_size
+                    if copied + additional > MAX_COPIED_BYTES:
+                        raise ValueError("工作区依赖实体化体积超过审计上限")
+                    identifier = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:24]
+                    destination = staging / identifier
+                    if destination.exists() or destination.is_symlink():
+                        raise ValueError(f"依赖闭包标识冲突: {source}")
+                    if source.is_dir():
+                        shutil.copytree(source, destination, symlinks=True)
+                    elif source.is_file():
+                        shutil.copy2(source, destination)
+                    else:
+                        raise ValueError(f"依赖目标不是文件或目录: {source}")
+                    copied_sources[source] = destination
+                    copied += additional
+            link.unlink()
+            link.symlink_to(os.path.relpath(destination, link.parent),
+                            target_is_directory=destination.is_dir())
     omitted_trees = prune_unpublished_test_trees(deployment)
-    return {"relocated": replaced, "prunedPlatformOptionals": pruned,
+    return {"relocated": replaced, "uniqueSources": len(copied_sources),
+            "prunedPlatformOptionals": pruned,
             "prunedTestTrees": omitted_trees, "copiedBytes": copied}
 
 if __name__ == "__main__":
