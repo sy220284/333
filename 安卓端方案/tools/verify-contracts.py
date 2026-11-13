@@ -36,4 +36,39 @@ expected = [
 ]
 for relative in expected:
     assert (ROOT / "android-app" / relative).is_file(), relative
+# V1.1 设计路由与真实原生实现状态分开验证，拒绝用页面映射冒充完整功能。
+catalog = json.loads((ROOT / "android-app/app/src/main/assets/design/feature-navigation-v1.1.json").read_text(encoding="utf-8"))
+implementation = json.loads((ROOT / "contracts/feature-native-status-v1.1.json").read_text(encoding="utf-8"))
+assert catalog["schema"] == "333-feature-navigation-v1.1"
+assert implementation["schema"] == "333-android-v1.1-native-implementation"
+routes = catalog["features"]
+statuses = implementation["features"]
+assert len(routes) == len(statuses) == 72
+assert len({row["id"] for row in routes}) == 72
+assert {row["id"] for row in routes} == {row["id"] for row in statuses}
+assert catalog["roots"] == ["home", "sessions", "projects", "task-center", "capabilities", "settings"]
+assert {role: sum(row["role"] == role for row in routes) for role in (
+    "root", "section", "detail", "contextual", "background")} == {
+    "root": 6, "section": 27, "detail": 18, "contextual": 15, "background": 6}
+by_id = {row["id"]: row for row in routes}
+for row in routes:
+    if row["role"] in ("root", "section", "detail"):
+        assert row["depth"] in (1, 2, 3), row["id"]
+    else:
+        assert row["depth"] is None, row["id"]
+    if row["parent"] is not None:
+        assert row["parent"] in by_id, row["id"]
+for status in statuses:
+    assert status["role"] == by_id[status["id"]]["role"], status["id"]
+    assert status["nativeState"] in (
+        "native-wired", "native-partial", "not-connected", "core-background")
+    assert status["runtimeVerified"] is False, status["id"]
+    if status["role"] == "background":
+        assert status["nativeState"] == "core-background", status["id"]
+    if status["nativeState"] in ("native-wired", "native-partial"):
+        source = status["nativeSource"]
+        assert isinstance(source, str) and (ROOT / source).is_file(), status["id"]
+    else:
+        assert status["nativeSource"] is None, status["id"]
+print("PASS V1.1 feature catalogue=72 and native-status coverage=72")
 print(f"PASS feature-map={len(features)} icons={len(icons)} Kotlin sources={len(expected)}")

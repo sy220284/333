@@ -1,0 +1,635 @@
+{
+  "schema": "333-android-v1.1-native-implementation",
+  "version": "2026-11-13",
+  "meaning": "功能路由存在不代表原生功能已接通；runtimeVerified 仅可在真实Host/设备测试通过后设置为true",
+  "features": [
+    {
+      "id": "home",
+      "role": "root",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [
+        "session/create",
+        "session/prompt",
+        "session/follow"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "chat",
+      "role": "section",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [
+        "session/create",
+        "session/prompt",
+        "session/follow"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "sessions",
+      "role": "root",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "session/list"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "search",
+      "role": "section",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "session/list",
+        "workspace/follow"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "session-detail",
+      "role": "detail",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "session/list"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "activity",
+      "role": "section",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HostFeaturePages.kt",
+      "hostEndpoints": [
+        "job/list"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "task-center",
+      "role": "root",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "job/list"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "task-detail",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "jobs",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HostFeaturePages.kt",
+      "hostEndpoints": [
+        "job/list",
+        "job/kill"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "terminal",
+      "role": "section",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/TerminalInventoryPage.kt",
+      "hostEndpoints": [
+        "terminal/list"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "command",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "files",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/WorkspaceFilesPages.kt",
+      "hostEndpoints": [
+        "workspaceFiles/list"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "file-preview",
+      "role": "detail",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/WorkspaceFilesPages.kt",
+      "hostEndpoints": [
+        "workspaceFiles/read"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "file-edit",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "file-search",
+      "role": "detail",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/WorkspaceFilesPages.kt",
+      "hostEndpoints": [
+        "workspaceFiles/search"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "diff",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "review",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "worktree",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "pull-requests",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "lsp",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "projects",
+      "role": "root",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HostFeaturePages.kt",
+      "hostEndpoints": [
+        "workspace/follow",
+        "session/create"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "remote",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "runtime",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "sandbox",
+      "role": "section",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HostSettingsPages.kt",
+      "hostEndpoints": [
+        "$events"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "approval",
+      "role": "contextual",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [
+        "$events/result"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "questions",
+      "role": "contextual",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [
+        "$events/result"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "agent-team",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "subagents",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "team-board",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "workflow",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "goal",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "plan",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "todo",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "ralph",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "skills",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "skill-detail",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "plugins",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "pluginManager/listBundles"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "plugin-detail",
+      "role": "detail",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "pluginManager/listBundles"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "plugin-market",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "creator",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "mcp",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "mcpManager/watch"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "mcp-detail",
+      "role": "detail",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [
+        "mcpManager/restart"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "mcp-resources",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "web-search",
+      "role": "background",
+      "nativeState": "core-background",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "browser",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "computer",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "app-grants",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "office",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "document-preview",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "schedule",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "schedule-edit",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "webhook",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "models",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/NavigationFeaturePages.kt",
+      "hostEndpoints": [
+        "session/modelCatalog",
+        "session/selectModel"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "model-provider",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "account",
+      "role": "section",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HostSettingsPages.kt",
+      "hostEndpoints": [
+        "settings/describe"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "credentials",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "usage",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "stats",
+      "role": "detail",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "inspector",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "diagnostics",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "logs",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "settings",
+      "role": "root",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "appearance",
+      "role": "section",
+      "nativeState": "native-wired",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "feedback",
+      "role": "section",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "voice",
+      "role": "contextual",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/HarnessApp.kt",
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "translation",
+      "role": "background",
+      "nativeState": "core-background",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "live-share",
+      "role": "contextual",
+      "nativeState": "not-connected",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "auto-review",
+      "role": "background",
+      "nativeState": "core-background",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "sdk",
+      "role": "background",
+      "nativeState": "core-background",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "hooks",
+      "role": "background",
+      "nativeState": "core-background",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "telemetry",
+      "role": "background",
+      "nativeState": "core-background",
+      "nativeSource": null,
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    },
+    {
+      "id": "capabilities",
+      "role": "root",
+      "nativeState": "native-partial",
+      "nativeSource": "android-app/app/src/main/java/ai/deepseek/harness/mobile/ui/LiveFeaturePages.kt",
+      "hostEndpoints": [],
+      "runtimeVerified": false
+    }
+  ]
+}
