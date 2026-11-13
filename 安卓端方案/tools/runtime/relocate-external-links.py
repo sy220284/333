@@ -151,6 +151,26 @@ def declared_missing_registry_dependency(
         current = current.parent
     return None
 
+def is_missing_development_only_dependency(link: Path, deployment: Path) -> bool:
+    """仅清理明确属于 devDependencies 且生产清单未声明的破损链接。"""
+    parent = link.parent
+    if not parent.resolve(strict=True).is_relative_to(deployment):
+        return False
+    name = parent.name + "/" + link.name if parent.name.startswith("@") else link.name
+    current = parent
+    while current != deployment:
+        manifest = current / "package.json"
+        if manifest.is_file():
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            declared_dev = name in data.get("devDependencies", {})
+            declared_prod = name in data.get("dependencies", {}) or name in data.get("optionalDependencies", {})
+            if declared_dev and not declared_prod:
+                print(f"PRUNE development-only link: {name} ({link})")
+                return True
+            return False
+        current = current.parent
+    return False
+
 def is_missing_platform_optional(link: Path, checkout: Path, optional_names: set[str]) -> bool:
     if "node_modules" not in link.parts:
         return False
@@ -206,7 +226,8 @@ def relocate(deployment: Path, checkout: Path) -> dict:
             try:
                 destination = path.resolve(strict=True)
             except FileNotFoundError as error:
-                if is_missing_platform_optional(path, checkout, allowed_optionals):
+                if (is_missing_platform_optional(path, checkout, allowed_optionals) or
+                        is_missing_development_only_dependency(path, deployment)):
                     omitted.append(path)
                     continue
                 source = declared_missing_workspace_dependency(path, deployment, packages)

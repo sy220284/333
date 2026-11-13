@@ -172,6 +172,35 @@ class RelocateExternalLinksTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"版本无法唯一校验"):
                 module.relocate(deploy,checkout)
 
+    def test_development_only_link_is_pruned_with_explicit_manifest(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy=self.workspace(Path(temp))
+            pkg=deploy/"node_modules"/"generator"
+            pkg.mkdir()
+            (pkg/"package.json").write_text(json.dumps({
+                "name":"generator", "dependencies":{"semver":"^7.0.0"},
+                "devDependencies":{"tsx":"^4.22.4"}
+            }))
+            link=pkg/"tsx"
+            link.symlink_to("missing-tsx")
+            result=module.relocate(deploy,checkout)
+            self.assertEqual(result["prunedPlatformOptionals"],1)
+            self.assertFalse(link.is_symlink())
+
+    def test_required_dependency_not_pruned_even_when_also_dev(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy=self.workspace(Path(temp))
+            pkg=deploy/"node_modules"/"generator"
+            pkg.mkdir()
+            (pkg/"package.json").write_text(json.dumps({
+                "name":"generator", "dependencies":{"tsx":"^4.22.4"},
+                "devDependencies":{"tsx":"^4.22.4"}
+            }))
+            link=pkg/"tsx"
+            link.symlink_to("missing-tsx")
+            with self.assertRaisesRegex(ValueError, "版本无法唯一校验|冻结依赖版本无法唯一校验"):
+                module.relocate(deploy,checkout)
+
     def test_checkout_as_deployment_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout,deploy=self.workspace(Path(temp))
