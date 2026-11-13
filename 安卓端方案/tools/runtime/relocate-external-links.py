@@ -368,6 +368,7 @@ def relocate(deployment: Path, checkout: Path) -> dict:
             pruned += 1
         if not externals and not restored:
             break
+        restored_links = {path for path, _ in restored}
         for link, resolved in [*externals, *restored]:
             if not link.is_symlink():
                 continue
@@ -378,7 +379,11 @@ def relocate(deployment: Path, checkout: Path) -> dict:
             if source.is_relative_to(deployment):
                 destination = source
             else:
-                if not any(source.is_relative_to(root) for root in trusted):
+                # checkout 的 pnpm 虚拟仓库只允许从已验证的缺失依赖恢复路径访问。
+                # 该路径已经由包清单和锁文件校验了包名、版本和生产声明。
+                from_verified_store = (link in restored_links and
+                                       source.is_relative_to(checkout / "node_modules" / ".pnpm"))
+                if not (any(source.is_relative_to(root) for root in trusted) or from_verified_store):
                     raise ValueError(f"依赖来源越过受信任源码目录: {source}")
                 destination = copied_sources.get(source)
                 if destination is None:
