@@ -133,7 +133,14 @@ fun HarnessApp(model: MainViewModel) {
         if (!state.connected && host is LocalHostState.Announced) model.connect(host.link)
     }
     var page by rememberSaveable { mutableStateOf("home") }
+    var navigationTrail by rememberSaveable { mutableStateOf(arrayListOf("home")) }
     var drawerSearch by rememberSaveable { mutableStateOf("") }
+    var conversationDraft by rememberSaveable { mutableStateOf("") }
+    var selectedMcp by rememberSaveable { mutableStateOf("") }
+    var selectedPlugin by rememberSaveable { mutableStateOf("") }
+    var selectedSession by rememberSaveable { mutableStateOf("") }
+    var approvalOpen by rememberSaveable { mutableStateOf(false) }
+    var questionsOpen by rememberSaveable { mutableStateOf(false) }
     var darkMode by rememberSaveable { mutableStateOf(false) }
     var modelSheet by remember { mutableStateOf(false) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -141,16 +148,38 @@ fun HarnessApp(model: MainViewModel) {
     val snackbar = remember { SnackbarHostState() }
     fun openFeature(id: String) {
         require(catalog.canOpen(id)) { "任务内操作和后台功能不得作为独立菜单页：$id" }
-        page = id
+        if (page != id) {
+            val route = catalog.get(id)
+            navigationTrail = if (route.role == "root") arrayListOf(id)
+                else ArrayList(navigationTrail + id)
+            page = id
+        }
         scope.launch { drawer.close() }
     }
     fun returnToParent() {
-        page = catalog.parentOf(page)?.id ?: "home"
+        val next = if (navigationTrail.size > 1) {
+            navigationTrail = ArrayList(navigationTrail.dropLast(1))
+            navigationTrail.last()
+        } else {
+            catalog.parentOf(page)?.id ?: "home"
+        }
+        page = next
+        if (navigationTrail.size == 1) navigationTrail = arrayListOf(next)
     }
     BackHandler(enabled = page != "home" &&
         drawer.currentValue == DrawerValue.Closed && !modelSheet &&
-        state.approvals.isEmpty() && state.questions.isEmpty()) {
+        !approvalOpen && !questionsOpen) {
         returnToParent()
+    }
+    LaunchedEffect(state.approvals.firstOrNull()?.eventId) {
+        approvalOpen = state.approvals.isNotEmpty()
+    }
+    LaunchedEffect(state.questions.firstOrNull()?.eventId) {
+        questionsOpen = state.questions.isNotEmpty()
+    }
+    LaunchedEffect(state.promptReceipt?.serial) {
+        val receipt = state.promptReceipt ?: return@LaunchedEffect
+        if (conversationDraft.trim() == receipt.text) conversationDraft = ""
     }
     LaunchedEffect(state.error) {
         val error = state.error ?: return@LaunchedEffect
@@ -190,6 +219,10 @@ fun HarnessApp(model: MainViewModel) {
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
                     }
+                }
+                TextButton(onClick = { drawerSearch = ""; openFeature("search") },
+                    modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Text("搜索会话与工作区")
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 catalog.roots.forEach { item ->
@@ -241,31 +274,69 @@ fun HarnessApp(model: MainViewModel) {
             ) { insets ->
                 Column(Modifier.fillMaxSize().padding(insets)) {
                     val route = catalog.get(page)
-                    if (route.role == "root" && state.connected) {
-                        SectionRouteActions(catalog.children(route.id), onOpen = ::openFeature)
-                    }
                     if (route.depth != 1) {
-                        TextButton(onClick = ::returnToParent,
-                            modifier = Modifier.padding(horizontal = 12.dp)) {
-                            Text("返回 ${catalog.parentOf(page)?.title ?: "开始"}")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = ::returnToParent) { Text("返回上一步") }
+                            TextButton(onClick = { openFeature("home") }) { Text("回到任务") }
+                        }
+                        Text(catalog.breadcrumb(page).joinToString(" / ") { it.title },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (state.approvals.isNotEmpty() && !approvalOpen) {
+                        TextButton(onClick = { approvalOpen = true }) {
+                            Text("${state.approvals.size} 项操作等待授权 · 查看")
+                        }
+                    }
+                    if (state.questions.isNotEmpty() && !questionsOpen &&
+                        state.approvals.isEmpty()) {
+                        TextButton(onClick = { questionsOpen = true }) {
+                            Text("${state.questions.size} 组问题等待回答 · 查看")
                         }
                     }
                     when {
                         page == "runtime" || page == "diagnostics" -> RuntimePage()
-                        page == "settings" || page == "appearance" ->
-                            SettingsPage(darkMode, onMode = { darkMode = it })
+                        page == "settings" -> SettingsOverview(state, ::openFeature)
+                        page == "appearance" -> AppearanceSettings(darkMode) { darkMode = it }
+                        page == "search" -> SearchScreen(catalog, state, ::openFeature) {
+                            model.openSession(it); openFeature("home")
+                        }
+                        page == "sessions" -> SessionListScreen(model, state,
+                            resume = { model.openSession(it); openFeature("home") },
+                            detail = { selectedSession = it; openFeature("session-detail") },
+                            search = { openFeature("search") })
+                        page == "session-detail" -> SessionInfoScreen(state, selectedSession,
+                            resume = { model.openSession(selectedSession); openFeature("home") },
+                            back = { openFeature("sessions") })
+                        page == "capabilities" -> CapabilityHome(state, ::openFeature)
                         !state.connected -> ConnectionPage(model, state,
                             onDiagnostics = { openFeature("diagnostics") }, modifier = Modifier.fillMaxSize())
                         else -> when (page) {
-                            "home", "chat" -> ConversationPage(model, state, Modifier.fillMaxSize())
-                            "sessions" -> SessionHistory(state, onOpen = {
-                                model.openSession(it); openFeature("home")
-                            })
+                            "home", "chat" -> ConversationPage(model, state,
+                                conversationDraft, onDraftChange = { conversationDraft = it },
+                                modifier = Modifier.fillMaxSize())
                             "projects" -> WorkspacePage(model, state, onOpenSession = {
                                 openFeature("home")
                             })
-                            "task-center", "jobs", "activity" -> JobsPage(model, state)
-                            "capabilities", "plugins", "mcp" -> ExtensionsPage(model, state)
+                            "task-center" -> RunOverview(state,
+                                approval = { approvalOpen = true },
+                                questions = { questionsOpen = true },
+                                jobs = { openFeature("jobs") },
+                                terminal = { openFeature("terminal") })
+                            "jobs", "activity" -> JobsPage(model, state)
+                            "mcp" -> McpServicesScreen(model, state) {
+                                selectedMcp = it; openFeature("mcp-detail")
+                            }
+                            "mcp-detail" -> McpServiceScreen(model, state, selectedMcp) {
+                                openFeature("mcp")
+                            }
+                            "plugins" -> PluginListScreen(model, state) {
+                                selectedPlugin = it; openFeature("plugin-detail")
+                            }
+                            "plugin-detail" -> PluginInfoScreen(state, selectedPlugin) {
+                                openFeature("plugins")
+                            }
                             "models" -> ModelSelectionPage(model, state)
                             else -> FeaturePendingPage(route, onBack = ::returnToParent)
                         }
@@ -273,16 +344,15 @@ fun HarnessApp(model: MainViewModel) {
                 }
             }
 
-            if (state.approvals.isNotEmpty()) {
+            if (state.approvals.isNotEmpty() && approvalOpen) {
                 val current = state.approvals.first()
-                ModalBottomSheet(onDismissRequest = {
-                    if (!state.approvalSubmitting) model.decideApproval(current.eventId, false)
-                }) {
+                ModalBottomSheet(onDismissRequest = { approvalOpen = false }) {
                     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("执行权限确认", style = MaterialTheme.typography.headlineSmall)
                         Text(current.toolName, fontWeight = FontWeight.SemiBold)
                         Text(current.reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("允许后仅授权这一次操作。", fontSize = 12.sp)
+                        current.callId?.let { Text("关联工具调用：$it", fontSize = 12.sp) }
+                        Text("允许后仅授权这一次操作。关闭弹层将保留等待决定状态。", fontSize = 12.sp)
                         Button(
                             onClick = { model.decideApproval(current.eventId, true) },
                             enabled = !state.approvalSubmitting, modifier = Modifier.fillMaxWidth().height(52.dp)
@@ -295,11 +365,9 @@ fun HarnessApp(model: MainViewModel) {
                     }
                 }
             }
-            if (state.approvals.isEmpty() && state.questions.isNotEmpty()) {
+            if (state.approvals.isEmpty() && state.questions.isNotEmpty() && questionsOpen) {
                 val pending = state.questions.first()
-                ModalBottomSheet(onDismissRequest = {
-                    if (!state.questionSubmitting) model.cancelQuestion(pending.eventId)
-                }) {
+                ModalBottomSheet(onDismissRequest = { questionsOpen = false }) {
                     QuestionReplySheet(pending, state.questionSubmitting,
                         onSubmit = { answers -> model.answerQuestions(pending.eventId, answers) },
                         onCancel = { model.cancelQuestion(pending.eventId) })
@@ -393,8 +461,8 @@ private fun ConnectionPage(model: MainViewModel, state: UiState,
 }
 
 @Composable
-private fun ConversationPage(model: MainViewModel, state: UiState, modifier: Modifier = Modifier) {
-    var draft by rememberSaveable { mutableStateOf("") }
+private fun ConversationPage(model: MainViewModel, state: UiState, draft: String,
+    onDraftChange: (String) -> Unit, modifier: Modifier = Modifier) {
     val list = rememberLazyListState()
     Column(modifier) {
         if (state.lines.isEmpty()) {
@@ -424,7 +492,7 @@ private fun ConversationPage(model: MainViewModel, state: UiState, modifier: Mod
                 Row(verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = draft, onValueChange = { draft = it }, modifier = Modifier.weight(1f),
+                        value = draft, onValueChange = onDraftChange, modifier = Modifier.weight(1f),
                         placeholder = { Text("描述你的需求…") },
                         minLines = 1, maxLines = 5, shape = RoundedCornerShape(20.dp)
                     )
