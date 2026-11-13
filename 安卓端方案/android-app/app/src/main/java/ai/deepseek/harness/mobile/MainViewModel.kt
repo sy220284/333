@@ -108,6 +108,29 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** 从 Host 重新获取会话快照，绝不把本地缓存当成服务端事实。 */
+    fun refreshSessions() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("session/list", buildJsonObject {
+                put("request", buildJsonObject {})
+            }).jsonObject
+            val items = result["items"]?.jsonArray?.mapNotNull { raw ->
+                val item = raw as? JsonObject ?: return@mapNotNull null
+                val id = item["sessionId"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                SessionRow(id,
+                    item["running"]?.jsonPrimitive?.content == "true",
+                    item["blank"]?.jsonPrimitive?.content == "true")
+            } ?: error("核心未返回有效会话目录")
+            if (remote === connection) {
+                mutable.value = mutable.value.copy(sessions = items, panelError = null)
+            }
+        } catch (e: Exception) {
+            mutable.value = mutable.value.copy(panelError = "会话列表刷新失败：" +
+                (e.message ?: "未知错误"))
+        }
+    }
+
     fun startSession() = viewModelScope.launch {
         val connection = remote ?: return@launch
         try {
@@ -131,6 +154,7 @@ class MainViewModel : ViewModel() {
             running = false, jobs = emptyList(), activeModelKey = null, error = null)
         subscribe(id)
         observeJobs()
+        refreshSessions()
     }
 
     private fun subscribe(id: String) {
