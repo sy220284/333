@@ -119,6 +119,43 @@ class RelocateExternalLinksTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "未声明的缺失"):
                 module.relocate(deploy, checkout)
 
+    def test_missing_registry_link_recovered_from_verified_deploy_package(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            archive = deploy/"node_modules"/".pnpm"/"@standard-schema+spec@1.1.0"/"node_modules"/"@standard-schema"/"spec"
+            archive.mkdir(parents=True)
+            (archive/"package.json").write_text(json.dumps({
+                "name":"@standard-schema/spec", "version":"1.1.0"
+            }))
+            (archive/"index.js").write_text("export const valid=true")
+            importing = deploy/"node_modules"/"@deepseek-ai"/"schemastery"
+            (importing/"node_modules"/"@standard-schema").mkdir(parents=True)
+            (importing/"package.json").write_text(json.dumps({
+                "name":"@deepseek-ai/schemastery",
+                "dependencies":{"@standard-schema/spec":"^1.1.0"}
+            }))
+            link=importing/"node_modules"/"@standard-schema"/"spec"
+            link.symlink_to("../../../missing-spec",target_is_directory=True)
+            result=module.relocate(deploy,checkout)
+            self.assertEqual(result["relocated"],1)
+            self.assertEqual((link/"index.js").read_text(),"export const valid=true")
+
+    def test_registry_version_conflict_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            archive = deploy/"node_modules"/".pnpm"/"spec@2.0.0"/"node_modules"/"spec"
+            archive.mkdir(parents=True)
+            (archive/"package.json").write_text('{"name":"spec","version":"2.0.0"}')
+            importer = deploy/"node_modules"/"my-package"
+            importer.mkdir()
+            (importer/"package.json").write_text(json.dumps({
+                "name":"my-package","dependencies":{"spec":"^1.0.0"}
+            }))
+            link=importer/"spec"
+            link.symlink_to("../missing")
+            with self.assertRaisesRegex(ValueError,"版本无法唯一校验"):
+                module.relocate(deploy,checkout)
+
     def test_checkout_as_deployment_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout,deploy=self.workspace(Path(temp))

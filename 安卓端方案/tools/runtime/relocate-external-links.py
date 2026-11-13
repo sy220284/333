@@ -78,6 +78,71 @@ def declared_missing_workspace_dependency(
         current = current.parent
     return None
 
+def installed_package_candidates(deployment: Path, name: str) -> list[Path]:
+    """从 pnpm 已部署的实体包查找来源，避免猜测 registry 包版本。"""
+    store = deployment / "node_modules" / ".pnpm"
+    candidates = []
+    for instance in store.iterdir():
+        if not instance.is_dir() or instance.is_symlink():
+            continue
+        target = instance / "node_modules" / name
+        manifest = target / "package.json"
+        if target.is_dir() and not target.is_symlink() and manifest.is_file():
+            metadata = json.loads(manifest.read_text(encoding="utf-8"))
+            if metadata.get("name") == name:
+                candidates.append(target)
+    return candidates
+
+def version_matches(request: str, version: str) -> bool:
+    """保守验证常见 registry 范围；复杂约束须由 lockfile 的部署结果提供唯一实体。"""
+    if request == "*":
+        return True
+    requested = request.lstrip("^~")
+    if re.fullmatch(r"\d+\.\d+\.\d+", requested) is None:
+        return False
+    if re.fullmatch(r"\d+\.\d+\.\d+(?:-[\w.-]+)?", version) is None:
+        return False
+    target = tuple(map(int, requested.split(".")))
+    actual = tuple(map(int, version.split("-")[0].split(".")))
+    if request.startswith("^"):
+        if target[0] > 0: return actual[0] == target[0] and actual >= target
+        if target[1] > 0: return actual[:2] == target[:2] and actual >= target
+        return actual == target
+    if request.startswith("~"):
+        return actual[:2] == target[:2] and actual >= target
+    return actual == target
+
+def declared_missing_registry_dependency(
+    link: Path, deployment: Path, packages: dict[str, tuple[Path, dict]]
+) -> Path | None:
+    """找回 pnpm --legacy deploy 的缺失镜像链接：只选择清单授权且版本匹配的实体。"""
+    if not link.parent.resolve(strict=True).is_relative_to(deployment):
+        return None
+    name = link.parent.name + "/" + link.name if link.parent.name.startswith("@") else link.name
+    current = link.parent
+    while current != deployment:
+        manifest = current / "package.json"
+        if manifest.is_file():
+            importer = json.loads(manifest.read_text(encoding="utf-8"))
+            spec = importer.get("dependencies", {}).get(name)
+            if spec is None:
+                spec = importer.get("optionalDependencies", {}).get(name)
+            if not isinstance(spec, str) or spec.startswith(("workspace:", "link:", "file:")):
+                return None
+            candidates = []
+            for candidate in installed_package_candidates(deployment, name):
+                details = json.loads((candidate / "package.json").read_text(encoding="utf-8"))
+                if version_matches(spec, details.get("version", "")):
+                    candidates.append(candidate)
+            unique = {p.resolve(strict=True) for p in candidates}
+            if len(unique) != 1:
+                raise ValueError(f"包 {name} 的已部署实体版本无法唯一校验: {spec} ({len(unique)} 个)")
+            selected = unique.pop()
+            print(f"MATERIALIZE verified registry dependency {name}@{spec} ({link})")
+            return selected
+        current = current.parent
+    return None
+
 def is_missing_platform_optional(link: Path, checkout: Path, optional_names: set[str]) -> bool:
     if "node_modules" not in link.parts:
         return False
@@ -137,6 +202,8 @@ def relocate(deployment: Path, checkout: Path) -> dict:
                     omitted.append(path)
                     continue
                 source = declared_missing_workspace_dependency(path, deployment, packages)
+                if source is None:
+                    source = declared_missing_registry_dependency(path, deployment, packages)
                 if source is not None:
                     restored.append((path, source))
                     continue
