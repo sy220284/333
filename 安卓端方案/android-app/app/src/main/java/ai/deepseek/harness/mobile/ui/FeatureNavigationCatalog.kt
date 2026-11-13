@@ -49,6 +49,18 @@ class FeatureNavigationCatalog private constructor(
 
     fun parentOf(id: String): FeatureRoute? = get(id).parent?.let(entries::get)
 
+    /** 直接打开三级详情时也能展示真实的一级→二级→三级路径。 */
+    fun breadcrumb(id: String): List<FeatureRoute> {
+        val path = mutableListOf<FeatureRoute>()
+        var current: FeatureRoute? = get(id)
+        while (current != null) {
+            path.add(current)
+            current = current.parent?.let(entries::get)
+        }
+        path.reverse()
+        return path
+    }
+
     companion object {
         private val ROLE_COUNTS = mapOf(
             "root" to 6, "section" to 27, "detail" to 18,

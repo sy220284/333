@@ -27,17 +27,26 @@ data class WorkspaceRow(val id: String, val title: String, val path: String, val
 data class JobRow(val id: String, val label: String, val status: String, val progress: String)
 data class McpRow(val name: String, val status: String)
 data class PluginRow(val name: String, val status: String)
-data class ApprovalRow(val clientId: String, val eventId: String, val toolName: String, val reason: String)
+data class ApprovalRow(
+    val clientId: String, val eventId: String, val toolName: String,
+    val reason: String, val callId: String? = null
+)
 data class QuestionChoice(val label: String, val description: String)
 data class QuestionPrompt(val id: String, val question: String, val detail: String, val choices: List<QuestionChoice>, val multiSelect: Boolean)
 data class PendingQuestion(val clientId: String, val eventId: String, val questions: List<QuestionPrompt>)
 data class QuestionAnswer(val id: String, val selected: List<String>, val custom: String? = null)
+
+/** 只在 session/prompt 收到 Host 成功回执后增加序号；用于安全清除输入草稿。 */
+data class PromptReceipt(val serial: Long, val text: String)
+
 data class UiState(
     val connecting: Boolean = false, val connected: Boolean = false,
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
     val sending: Boolean = false, val running: Boolean = false,
     val lines: List<ChatLine> = emptyList(), val sessions: List<SessionRow> = emptyList(),
     val models: List<ModelRow> = emptyList(), val error: String? = null,
+    val promptReceipt: PromptReceipt? = null,
+    val activeModelKey: String? = null,
     val workspaces: List<WorkspaceRow> = emptyList(),
     val jobs: List<JobRow> = emptyList(),
     val mcpServers: List<McpRow> = emptyList(),
@@ -68,6 +77,7 @@ class MainViewModel : ViewModel() {
     private var observedId: String? = null
     private var manualClose = false
     private val events = sortedMapOf<Long, ChatLine>()
+    private var acceptedPromptSerial = 0L
 
     fun connect(link: String) {
         if (mutable.value.connecting) return
@@ -117,7 +127,8 @@ class MainViewModel : ViewModel() {
         stream?.close()
         observedId = id
         events.clear()
-        mutable.value = mutable.value.copy(sessionId = id, lines = emptyList(), error = null)
+        mutable.value = mutable.value.copy(sessionId = id, lines = emptyList(),
+            running = false, jobs = emptyList(), activeModelKey = null, error = null)
         subscribe(id)
         observeJobs()
     }
@@ -235,7 +246,9 @@ class MainViewModel : ViewModel() {
                     })))
                 })
             })
-            mutable.value = mutable.value.copy(sending = false)
+            acceptedPromptSerial += 1
+            mutable.value = mutable.value.copy(sending = false,
+                promptReceipt = PromptReceipt(acceptedPromptSerial, clean))
         } catch (e: Exception) {
             mutable.value = mutable.value.copy(sending = false)
             showError(e)
@@ -280,6 +293,9 @@ class MainViewModel : ViewModel() {
                     put("model", JsonPrimitive(model))
                 })
             })
+            if (mutable.value.sessionId == id) {
+                mutable.value = mutable.value.copy(activeModelKey = "$provider/$model")
+            }
         } catch (e: Exception) { showError(e) }
     }
 
@@ -310,7 +326,8 @@ class MainViewModel : ViewModel() {
                             val request = item["request"] as? JsonObject ?: return@launch
                             val name = request["toolName"]?.jsonPrimitive?.content ?: "工具操作"
                             val reason = request["reason"]?.jsonPrimitive?.content ?: "核心请求执行此操作"
-                            val pending = ApprovalRow(clientId, eventId, name, reason)
+                            val pending = ApprovalRow(clientId, eventId, name, reason,
+                                request["callId"]?.jsonPrimitive?.content)
                             mutable.value = mutable.value.copy(approvals = mutable.value.approvals + pending)
                         } else if (event == "user-questions/request") {
                             val request = item["request"] as? JsonObject ?: return@launch
