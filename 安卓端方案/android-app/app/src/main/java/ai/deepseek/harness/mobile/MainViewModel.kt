@@ -52,6 +52,10 @@ data class UiState(
     val sending: Boolean = false, val running: Boolean = false,
     val lines: List<ChatLine> = emptyList(), val sessions: List<SessionRow> = emptyList(),
     val models: List<ModelRow> = emptyList(), val error: String? = null,
+    val settingsNamespaces: List<String> = emptyList(),
+    val settingsWritable: Boolean? = null,
+    val settingsLoading: Boolean = false,
+    val settingsError: String? = null,
     val promptReceipt: PromptReceipt? = null,
     val activeModelKey: String? = null,
     val directoryPath: String = ".",
@@ -338,6 +342,35 @@ class MainViewModel : ViewModel() {
                 put("request", buildJsonObject { put("sessionId", JsonPrimitive(id)) })
             })
         } catch (e: Exception) { showError(e) }
+    }
+
+    /** settings/describe 是官方只读、脱敏的配置视图。只展示命名空间和可写状态。 */
+    fun refreshSettingsSummary() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        mutable.value = mutable.value.copy(settingsLoading = true, settingsError = null)
+        try {
+            val result = connection.call("settings/describe", buildJsonObject {}).jsonObject
+            val list = (result["namespaces"] as? JsonArray)?.map { raw ->
+                val item = raw as? JsonObject ?: error("核心设置目录包含无效条目")
+                item["ns"]?.jsonPrimitive?.content ?: error("设置条目缺少命名空间")
+            } ?: error("核心未返回设置目录")
+            if (remote === connection) {
+                mutable.value = mutable.value.copy(
+                    settingsLoading = false,
+                    settingsNamespaces = list,
+                    settingsWritable = when (result["writable"]?.jsonPrimitive?.content) {
+                        "true" -> true
+                        "false" -> false
+                        else -> error("核心未返回设置写入能力")
+                    }
+                )
+            }
+        } catch (error: Exception) {
+            if (remote === connection) {
+                mutable.value = mutable.value.copy(settingsLoading = false,
+                    settingsError = "设置目录读取失败：" + (error.message ?: "未知错误"))
+            }
+        }
     }
 
     fun refreshModels() = viewModelScope.launch {
