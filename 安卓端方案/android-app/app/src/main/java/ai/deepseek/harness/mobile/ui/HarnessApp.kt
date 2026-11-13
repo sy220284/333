@@ -193,6 +193,11 @@ fun HarnessApp(model: MainViewModel) {
         snackbar.showSnackbar(error, withDismissAction = true)
         model.clearError()
     }
+    LaunchedEffect(state.actionFeedbackSerial) {
+        val response = state.actionFeedback ?: return@LaunchedEffect
+        snackbar.showSnackbar(response)
+        model.clearActionFeedback()
+    }
     MaterialTheme(colorScheme = if (darkMode) dark else light) {
         ModalNavigationDrawer(drawerState = drawer, drawerContent = {
             ModalDrawerSheet {

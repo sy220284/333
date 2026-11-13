@@ -56,6 +56,8 @@ data class UiState(
     val settingsWritable: Boolean? = null,
     val settingsLoading: Boolean = false,
     val settingsError: String? = null,
+    val actionFeedbackSerial: Long = 0L,
+    val actionFeedback: String? = null,
     val promptReceipt: PromptReceipt? = null,
     val activeModelKey: String? = null,
     val directoryPath: String = ".",
@@ -104,6 +106,7 @@ class MainViewModel : ViewModel() {
     private val events = sortedMapOf<Long, ChatLine>()
     private val commandsBySequence = sortedMapOf<Long, List<ExecutableToolCommand>>()
     private var acceptedPromptSerial = 0L
+    private var feedbackSerial = 0L
     private var directoryGeneration = 0L
     private var fileGeneration = 0L
     private var searchGeneration = 0L
@@ -515,6 +518,7 @@ class MainViewModel : ViewModel() {
                     approvals = mutable.value.approvals.filterNot { it.eventId == eventId },
                     approvalSubmitting = false
                 )
+                reportActionFeedback(if (allowed) "已授权本次操作" else "已拒绝这次操作")
             } catch (e: Exception) {
                 mutable.value = mutable.value.copy(approvalSubmitting = false)
                 showError(e)
@@ -549,6 +553,7 @@ class MainViewModel : ViewModel() {
                 })
                 mutable.value = mutable.value.copy(questionSubmitting = false,
                     questions = mutable.value.questions.filterNot { it.eventId == eventId })
+                reportActionFeedback("已向核心提交问题回答")
             } catch (error: Exception) {
                 mutable.value = mutable.value.copy(questionSubmitting = false)
                 showError(error)
@@ -574,6 +579,7 @@ class MainViewModel : ViewModel() {
                 })
                 mutable.value = mutable.value.copy(questionSubmitting = false,
                     questions = mutable.value.questions.filterNot { it.eventId == eventId })
+                reportActionFeedback("已取消问题回答")
             } catch (error: Exception) {
                 mutable.value = mutable.value.copy(questionSubmitting = false)
                 showError(error)
@@ -826,6 +832,17 @@ class MainViewModel : ViewModel() {
     }
 
     fun clearError() { mutable.value = mutable.value.copy(error = null) }
+    fun clearActionFeedback() {
+        mutable.value = mutable.value.copy(actionFeedback = null)
+    }
+
+    private fun reportActionFeedback(message: String) {
+        feedbackSerial += 1
+        mutable.value = mutable.value.copy(
+            actionFeedbackSerial = feedbackSerial, actionFeedback = message
+        )
+    }
+
     private fun showError(e: Throwable) {
         mutable.value = mutable.value.copy(error = e.message ?: "操作失败")
     }
