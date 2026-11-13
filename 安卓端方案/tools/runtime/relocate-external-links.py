@@ -81,6 +81,9 @@ def declared_missing_workspace_dependency(
 def installed_package_candidates(deployment: Path, name: str) -> list[Path]:
     """从 pnpm 已部署的实体包查找来源，避免猜测 registry 包版本。"""
     store = deployment / "node_modules" / ".pnpm"
+    # 测试与部分工作区部署可没有虚拟仓库；调用方仍会按依赖清单严格判定缺失。
+    if not store.is_dir():
+        return []
     candidates = []
     for instance in store.iterdir():
         if not instance.is_dir() or instance.is_symlink():
