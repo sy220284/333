@@ -3,6 +3,8 @@ package ai.deepseek.harness.mobile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ai.deepseek.harness.mobile.net.HarnessRemote
+import ai.deepseek.harness.mobile.ui.ExecutableToolCommand
+import ai.deepseek.harness.mobile.ui.approvalCommandsFromContent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,7 +31,8 @@ data class McpRow(val name: String, val status: String)
 data class PluginRow(val name: String, val status: String)
 data class ApprovalRow(
     val clientId: String, val eventId: String, val toolName: String,
-    val reason: String, val callId: String? = null
+    val reason: String, val callId: String? = null,
+    val command: String? = null
 )
 data class QuestionChoice(val label: String, val description: String)
 data class QuestionPrompt(val id: String, val question: String, val detail: String, val choices: List<QuestionChoice>, val multiSelect: Boolean)
@@ -95,6 +98,7 @@ class MainViewModel : ViewModel() {
     private var observedId: String? = null
     private var manualClose = false
     private val events = sortedMapOf<Long, ChatLine>()
+    private val commandsBySequence = sortedMapOf<Long, List<ExecutableToolCommand>>()
     private var acceptedPromptSerial = 0L
     private var directoryGeneration = 0L
     private var fileGeneration = 0L
@@ -171,6 +175,7 @@ class MainViewModel : ViewModel() {
         stream?.close()
         observedId = id
         events.clear()
+        commandsBySequence.clear()
         directoryGeneration += 1
         fileGeneration += 1
         searchGeneration += 1
@@ -221,6 +226,7 @@ class MainViewModel : ViewModel() {
         when (root["type"]?.jsonPrimitive?.content) {
             "snapshot" -> {
                 events.clear()
+                commandsBySequence.clear()
                 val entries = root["records"] as? JsonArray ?: JsonArray(emptyList())
                 entries.forEach { ingestEvent(it) }
                 publish()
@@ -246,6 +252,12 @@ class MainViewModel : ViewModel() {
             val start = surface["startSeq"]?.jsonPrimitive?.longOrNull ?: return
             val end = surface["endSeq"]?.jsonPrimitive?.longOrNull ?: return
             events.keys.filter { it in start..end }.forEach { events.remove(it) }
+            commandsBySequence.keys.filter { it in start..end }.forEach { commandsBySequence.remove(it) }
+        }
+        if (type == "assistant/message") {
+            val content = (data["message"] as? JsonObject)?.get("content")
+            val commands = approvalCommandsFromContent(content)
+            if (commands.isNotEmpty()) commandsBySequence[seq] = commands
         }
         val message = when (type) {
             "user/message" -> if ((data["source"] as? JsonObject)?.get("kind")?.jsonPrimitive?.content == "user")
@@ -267,8 +279,19 @@ class MainViewModel : ViewModel() {
         return text.takeIf { it.isNotBlank() }
     }
 
+    private fun commandForApproval(callId: String?): String? {
+        if (callId == null) return null
+        return commandsBySequence.values.asSequence().flatMap { it.asSequence() }
+            .firstOrNull { it.callId == callId }?.command
+    }
+
     private fun publish() {
-        mutable.value = mutable.value.copy(lines = events.values.toList())
+        mutable.value = mutable.value.copy(
+            lines = events.values.toList(),
+            approvals = mutable.value.approvals.map { row ->
+                row.copy(command = commandForApproval(row.callId))
+            }
+        )
     }
 
     fun send(text: String) = viewModelScope.launch {
@@ -378,8 +401,9 @@ class MainViewModel : ViewModel() {
                             val request = item["request"] as? JsonObject ?: return@launch
                             val name = request["toolName"]?.jsonPrimitive?.content ?: "工具操作"
                             val reason = request["reason"]?.jsonPrimitive?.content ?: "核心请求执行此操作"
+                            val id = request["callId"]?.jsonPrimitive?.content
                             val pending = ApprovalRow(clientId, eventId, name, reason,
-                                request["callId"]?.jsonPrimitive?.content)
+                                id, commandForApproval(id))
                             mutable.value = mutable.value.copy(approvals = mutable.value.approvals + pending)
                         } else if (event == "user-questions/request") {
                             val request = item["request"] as? JsonObject ?: return@launch

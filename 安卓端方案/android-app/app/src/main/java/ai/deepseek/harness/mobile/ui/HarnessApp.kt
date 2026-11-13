@@ -371,6 +371,13 @@ fun HarnessApp(model: MainViewModel) {
                         Text(current.toolName, fontWeight = FontWeight.SemiBold)
                         Text(current.reason, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         current.callId?.let { Text("关联工具调用：$it", fontSize = 12.sp) }
+                        current.command?.let { command ->
+                            Text("将要执行的命令", fontWeight = FontWeight.SemiBold)
+                            SelectionContainer {
+                                Text(command, fontSize = 13.sp,
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp))
+                            }
+                        }
                         Text("允许后仅授权这一次操作。关闭弹层将保留等待决定状态。", fontSize = 12.sp)
                         Button(
                             onClick = { model.decideApproval(current.eventId, true) },
