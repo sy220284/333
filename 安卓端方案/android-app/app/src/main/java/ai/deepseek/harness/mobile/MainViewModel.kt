@@ -29,7 +29,16 @@ data class ModelRow(val provider: String, val model: String, val name: String)
 data class WorkspaceRow(val id: String, val title: String, val path: String, val sessionIds: List<String>)
 data class JobRow(val id: String, val label: String, val status: String, val progress: String)
 data class McpRow(val name: String, val status: String)
-data class PluginRow(val name: String, val status: String)
+data class PluginRow(
+    val name: String, val status: String, val enabled: Boolean,
+    val installed: Boolean, val removable: Boolean, val description: String
+)
+data class SkillRow(val name: String, val description: String, val whenToUse: String?, val modelInvocable: Boolean)
+data class ScheduleRow(
+    val id: String, val title: String, val prompt: String, val kind: String,
+    val status: String, val scheduledAt: String, val updatedAt: String?
+)
+data class McpProbeRow(val name: String, val ok: Boolean, val tools: List<String>, val detail: String)
 data class ApprovalRow(
     val clientId: String, val eventId: String, val toolName: String,
     val reason: String, val callId: String? = null,
@@ -99,7 +108,15 @@ data class UiState(
     val workspaces: List<WorkspaceRow> = emptyList(),
     val jobs: List<JobRow> = emptyList(),
     val mcpServers: List<McpRow> = emptyList(),
+    val mcpProbe: McpProbeRow? = null,
+    val mcpProbing: Boolean = false,
     val plugins: List<PluginRow> = emptyList(),
+    val skills: List<SkillRow> = emptyList(),
+    val skillLoading: Boolean = false,
+    val skillError: String? = null,
+    val schedules: List<ScheduleRow> = emptyList(),
+    val scheduleLoading: Boolean = false,
+    val scheduleError: String? = null,
     val panelError: String? = null,
     val interactionReady: Boolean = false,
     val approvalSubmitting: Boolean = false,
@@ -259,6 +276,7 @@ class MainViewModel : ViewModel() {
             directoryPath = ".", directoryEntries = emptyList(), directoryTruncated = false,
             filePath = null, fileText = "", fileMatches = emptyList(),
             terminals = emptyList(), terminalLoading = false, terminalError = null,
+            skills = emptyList(), skillError = null, skillLoading = false,
             fileLoading = false, directoryLoading = false, fileSearching = false,
             fileError = null, error = null)
         subscribe(id)
@@ -922,7 +940,11 @@ class MainViewModel : ViewModel() {
             val items = bundles.mapNotNull { raw ->
                 val item = raw as? JsonObject ?: return@mapNotNull null
                 val name = item["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                PluginRow(name, item["version"]?.jsonPrimitive?.content ?: "可用")
+                PluginRow(name, item["version"]?.jsonPrimitive?.content ?: "未发布版本",
+                    enabled = item["enabled"]?.jsonPrimitive?.content == "true",
+                    installed = item["installed"]?.jsonPrimitive?.content == "true",
+                    removable = item["removable"]?.jsonPrimitive?.content == "true",
+                    description = item["description"]?.jsonPrimitive?.content ?: "")
             }
             mutable.value = mutable.value.copy(plugins = items, panelError = null)
         } catch (e: Exception) { mutable.value = mutable.value.copy(panelError = "插件清单失败：" + (e.message ?: "未知错误")) }
@@ -1033,6 +1055,237 @@ class MainViewModel : ViewModel() {
                 ?.map { it.jsonPrimitive.content } ?: error("核心未返回置顶结果")
             check((sessionId in ids) == pinned) { "核心未确认会话置顶状态" }
             reportActionFeedback(if (pinned) "会话已置顶" else "会话已取消置顶")
+        } catch (e: Exception) { showError(e) }
+    }
+
+    /** 正式 Host 技能目录只针对已选 Session 提供用户可调用技能。 */
+    fun refreshSkills() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        val session = mutable.value.sessionId ?: run {
+            mutable.value = mutable.value.copy(skills = emptyList(),
+                skillLoading = false, skillError = "先打开会话以读取当前项目可用的技能")
+            return@launch
+        }
+        mutable.value = mutable.value.copy(skillLoading = true, skillError = null)
+        try {
+            val result = connection.call("skills/list", buildJsonObject {
+                put("request", buildJsonObject { put("sessionId", JsonPrimitive(session)) })
+            }).jsonObject
+            val skills = (result["skills"] as? JsonArray)?.map { raw ->
+                val item = raw as? JsonObject ?: error("核心返回无效技能记录")
+                SkillRow(
+                    name = item["name"]?.jsonPrimitive?.content ?: error("技能缺少名称"),
+                    description = item["description"]?.jsonPrimitive?.content ?: "",
+                    whenToUse = item["whenToUse"]?.jsonPrimitive?.content,
+                    modelInvocable = item["modelInvocable"]?.jsonPrimitive?.content == "true"
+                )
+            } ?: error("核心未返回技能目录")
+            if (connection === remote && session == mutable.value.sessionId) {
+                mutable.value = mutable.value.copy(skills = skills,
+                    skillLoading = false, skillError = null)
+            }
+        } catch (e: Exception) {
+            if (connection === remote && session == mutable.value.sessionId) {
+                mutable.value = mutable.value.copy(skillLoading = false,
+                    skillError = "技能读取失败：" + (e.message ?: "未知错误"))
+            }
+        }
+    }
+
+    /** 读取 Host 全局任务目录。查看记录不会创建任何定时任务。 */
+    fun refreshSchedules() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        mutable.value = mutable.value.copy(scheduleLoading = true, scheduleError = null)
+        try {
+            val value = connection.call("schedule/catalog", buildJsonObject {}) as? JsonArray
+                ?: error("核心未返回计划目录")
+            val tasks = value.map { raw ->
+                val item = raw as? JsonObject ?: error("核心返回无效计划记录")
+                ScheduleRow(
+                    id = item["id"]?.jsonPrimitive?.content ?: error("计划缺少ID"),
+                    title = item["title"]?.jsonPrimitive?.content ?: error("计划缺少标题"),
+                    prompt = item["prompt"]?.jsonPrimitive?.content ?: "",
+                    kind = item["kind"]?.jsonPrimitive?.content ?: "unknown",
+                    status = item["status"]?.jsonPrimitive?.content ?: "unknown",
+                    scheduledAt = item["scheduledAt"]?.jsonPrimitive?.content ?: "",
+                    updatedAt = item["updatedAt"]?.jsonPrimitive?.content
+                )
+            }
+            if (connection === remote) mutable.value = mutable.value.copy(
+                schedules = tasks, scheduleLoading = false, scheduleError = null)
+        } catch (e: Exception) {
+            if (connection === remote) mutable.value = mutable.value.copy(
+                scheduleLoading = false, scheduleError = "计划读取失败：" + (e.message ?: "未知错误"))
+        }
+    }
+
+    /** 仅在用户确认创建后发送，后续的调度、持久化由 Host 负责。 */
+    fun createSchedule(title: String, prompt: String, seconds: Long, recurring: Boolean) =
+        viewModelScope.launch {
+            val name = title.trim()
+            val content = prompt.trim()
+            if (name.isBlank() || name.length > 120 || content.isBlank() || seconds < 60L) {
+                showError(IllegalArgumentException("请填写有效的任务名称、内容和执行间隔"))
+                return@launch
+            }
+            val connection = remote ?: return@launch
+            try {
+                val result = connection.call("schedule/create", buildJsonObject {
+                    put("request", buildJsonObject {
+                        put("title", JsonPrimitive(name))
+                        put("prompt", JsonPrimitive(content))
+                        put("timing", buildJsonObject {
+                            put("kind", JsonPrimitive(if (recurring) "every" else "after"))
+                            put(if (recurring) "every_seconds" else "after_seconds",
+                                JsonPrimitive(seconds))
+                        })
+                    })
+                }).jsonObject
+                check(result["id"]?.jsonPrimitive?.content?.isNotBlank() == true) {
+                    "核心未确认计划创建"
+                }
+                reportActionFeedback("计划已创建：$name")
+                refreshSchedules()
+            } catch (e: Exception) { showError(e) }
+        }
+
+    fun editSchedule(id: String, title: String, prompt: String, revision: String?) =
+        viewModelScope.launch {
+            val name = title.trim()
+            val content = prompt.trim()
+            if (name.isBlank() || name.length > 120 || content.isBlank()) {
+                showError(IllegalArgumentException("计划名称和执行内容不能为空"))
+                return@launch
+            }
+            val connection = remote ?: return@launch
+            try {
+                val result = connection.call("schedule/edit", buildJsonObject {
+                    put("request", buildJsonObject {
+                        put("id", JsonPrimitive(id))
+                        put("action", JsonPrimitive("update"))
+                        put("patch", buildJsonObject {
+                            put("title", JsonPrimitive(name))
+                            put("prompt", JsonPrimitive(content))
+                        })
+                        if (revision != null) put("expectedUpdatedAt", JsonPrimitive(revision))
+                    })
+                }).jsonObject
+                check(result["id"]?.jsonPrimitive?.content == id &&
+                    result["code"] == null) { "计划已发生变化，请刷新后重试" }
+                reportActionFeedback("计划已更新")
+                refreshSchedules()
+            } catch (e: Exception) { showError(e) }
+        }
+
+    fun setScheduleActive(task: ScheduleRow, active: Boolean) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("schedule/edit", buildJsonObject {
+                put("request", buildJsonObject {
+                    put("id", JsonPrimitive(task.id))
+                    put("action", JsonPrimitive("update"))
+                    put("patch", buildJsonObject { put("active", JsonPrimitive(active)) })
+                    task.updatedAt?.let { put("expectedUpdatedAt", JsonPrimitive(it)) }
+                })
+            }).jsonObject
+            check(result["id"]?.jsonPrimitive?.content == task.id &&
+                result["code"] == null) { "计划状态冲突，请刷新后重试" }
+            reportActionFeedback(if (active) "计划已恢复" else "计划已暂停")
+            refreshSchedules()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun deleteSchedule(task: ScheduleRow) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("schedule/edit", buildJsonObject {
+                put("request", buildJsonObject {
+                    put("id", JsonPrimitive(task.id))
+                    put("action", JsonPrimitive("delete"))
+                    task.updatedAt?.let { put("expectedUpdatedAt", JsonPrimitive(it)) }
+                })
+            }).jsonObject
+            check(result["deleted"]?.jsonPrimitive?.content == "true") {
+                "计划未删除：请刷新后确认状态"
+            }
+            reportActionFeedback("计划已删除")
+            refreshSchedules()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun runSchedule(task: ScheduleRow) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("schedule/run", buildJsonObject {
+                put("request", buildJsonObject { put("id", JsonPrimitive(task.id)) })
+            }).jsonObject
+            check(result["code"] == null && result["id"]?.jsonPrimitive?.content == task.id) {
+                "核心未接受执行请求，请刷新计划状态"
+            }
+            reportActionFeedback("已请求执行：${task.title}")
+            refreshSchedules()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun probeMcp(name: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        mutable.value = mutable.value.copy(mcpProbing = true, mcpProbe = null)
+        try {
+            val result = connection.call("mcpManager/probe", buildJsonObject {
+                put("name", JsonPrimitive(name))
+            }).jsonObject
+            val ok = result["ok"]?.jsonPrimitive?.content == "true"
+            val tools = (result["toolNames"] as? JsonArray)
+                ?.map { it.jsonPrimitive.content } ?: emptyList()
+            val stage = result["stage"]?.jsonPrimitive?.content
+            val message = result["message"]?.jsonPrimitive?.content
+            val clean = result["closeConfirmed"]?.jsonPrimitive?.content == "true"
+            val cleanup = result["cleanupError"]?.jsonPrimitive?.content
+            val detail = if (ok) {
+                "已发现${tools.size} 个工具" + if (clean) "，连接已安全关闭"
+                    else "，连接清理尚未确认"
+            } else "检查失败" + (stage?.let { "（$it）" } ?: "") +
+                (message?.let { "：$it" } ?: "")
+            if (connection === remote) mutable.value = mutable.value.copy(
+                mcpProbing = false, mcpProbe = McpProbeRow(name, ok && clean && cleanup == null,
+                    tools, detail + (cleanup?.let { "；清理异常：$it" } ?: "")))
+        } catch (e: Exception) {
+            if (connection === remote) mutable.value = mutable.value.copy(
+                mcpProbing = false, mcpProbe = McpProbeRow(name, false, emptyList(),
+                    "检测异常：" + (e.message ?: "未知错误")))
+        }
+    }
+
+    fun setPluginEnabled(name: String, enabled: Boolean) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("pluginManager/setBundleEnabled", buildJsonObject {
+                put("name", JsonPrimitive(name))
+                put("enabled", JsonPrimitive(enabled))
+            }).jsonObject
+            val application = result["application"]?.jsonPrimitive?.content
+            check(application in listOf("applied", "restart-required", "overridden")) {
+                "插件启停未成功：" + (result["error"] ?: application ?: "无返回结果")
+            }
+            reportActionFeedback(if (application == "restart-required") "插件状态将在重启核心后生效"
+                else if (application == "overridden") "插件配置受到其他规则控制"
+                else if (enabled) "插件已启用" else "插件已停用")
+            refreshBundles()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun removePlugin(name: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("pluginManager/removeBundle", buildJsonObject {
+                put("name", JsonPrimitive(name))
+            }).jsonObject
+            check(result["application"]?.jsonPrimitive?.content in
+                listOf("applied", "restart-required")) { "移除插件失败：" + (result["error"] ?: "未知错误") }
+            reportActionFeedback("插件已移除" +
+                if (result["application"]?.jsonPrimitive?.content == "restart-required")
+                    "，重启核心后完全生效" else "")
+            refreshBundles()
         } catch (e: Exception) { showError(e) }
     }
 

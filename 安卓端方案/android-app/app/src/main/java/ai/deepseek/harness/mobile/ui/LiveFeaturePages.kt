@@ -80,6 +80,16 @@ internal fun McpServiceScreen(model: MainViewModel, state: UiState, name: String
             Button(onClick = { model.restartMcp(server.name) }, enabled = state.connected) {
                 Text("请求重新连接")
             }
+            OutlinedButton(onClick = { model.probeMcp(server.name) },
+                enabled = state.connected && !state.mcpProbing) {
+                Text(if (state.mcpProbing) "检测中…" else "检查连接与可用工具")
+            }
+            val probe = state.mcpProbe?.takeIf { it.name == server.name }
+            if (probe != null) {
+                Text(probe.detail, color = if (probe.ok) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error)
+                probe.tools.forEach { tool -> Text("· " + tool) }
+            }
             Text("服务状态随后由核心订阅更新；资源与模板须由该服务的真实接口返回。",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -97,14 +107,27 @@ internal fun PluginListScreen(model: MainViewModel, state: UiState, detail: (Str
         }
         if (state.plugins.isEmpty()) item { Text("当前没有可显示的插件包。") }
         items(state.plugins, key = { it.name }) { item ->
-            Destination(item.name, "版本：${item.status}", item.name, detail)
+            Destination(item.name, "版本：${item.status} · " +
+                if (item.enabled) "已启用" else if (item.installed) "已停用" else "未安装",
+                item.name, detail)
         }
     }
 }
 
 @Composable
-internal fun PluginInfoScreen(state: UiState, name: String, back: () -> Unit) {
+internal fun PluginInfoScreen(model: MainViewModel, state: UiState, name: String, back: () -> Unit) {
     val item = state.plugins.firstOrNull { it.name == name }
+    var removalOpen by rememberSaveable(name) { mutableStateOf(false) }
+    if (removalOpen && item != null) {
+        AlertDialog(onDismissRequest = { removalOpen = false },
+            title = { Text("移除插件？") },
+            text = { Text("移除后该插件功能将停止使用。请确认是否继续。") },
+            confirmButton = { Button(onClick = {
+                model.removePlugin(item.name)
+                removalOpen = false
+            }) { Text("确认移除") } },
+            dismissButton = { TextButton(onClick = { removalOpen = false }) { Text("取消") } })
+    }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("插件详情", style = MaterialTheme.typography.headlineMedium)
         if (item == null) {
@@ -113,7 +136,21 @@ internal fun PluginInfoScreen(state: UiState, name: String, back: () -> Unit) {
         } else {
             Text(item.name, fontWeight = FontWeight.SemiBold)
             Text("当前版本：${item.status}")
-            Text("安装和启停需要核心确认。当前只展示真实安装信息。",
+            if (item.description.isNotBlank()) Text(item.description)
+            Text(if (item.installed) "已安装" else "尚未安装")
+            Text(if (item.enabled) "已启用" else "已停用")
+            if (item.installed) {
+                Button(onClick = { model.setPluginEnabled(item.name, !item.enabled) },
+                    enabled = state.connected) {
+                    Text(if (item.enabled) "停用插件" else "启用插件")
+                }
+            }
+            if (item.removable) {
+                OutlinedButton(onClick = { removalOpen = true }, enabled = state.connected) {
+                    Text("移除插件")
+                }
+            }
+            Text("插件管理操作由核心执行，并以实际配置状态确认。",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

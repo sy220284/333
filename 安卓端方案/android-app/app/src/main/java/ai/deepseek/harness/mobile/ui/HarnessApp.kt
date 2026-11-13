@@ -365,10 +365,15 @@ fun HarnessApp(model: MainViewModel) {
                             "plugins" -> PluginListScreen(model, state) {
                                 selectedPlugin = it; openFeature("plugin-detail")
                             }
-                            "plugin-detail" -> PluginInfoScreen(state, selectedPlugin) {
+                            "plugin-detail" -> PluginInfoScreen(model, state, selectedPlugin) {
                                 openFeature("plugins")
                             }
                             "models" -> ModelSelectionPage(model, state)
+                            "skills" -> SkillCatalogPage(model, state) { name ->
+                                conversationDraft = "/" + name + " "
+                                openFeature("home")
+                            }
+                            "schedule" -> ScheduleManagementPage(model, state)
                             else -> FeaturePendingPage(route, onBack = ::returnToParent)
                         }
                     }
