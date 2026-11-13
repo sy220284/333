@@ -102,6 +102,42 @@ class RelocateExternalLinksTests(unittest.TestCase):
             self.assertEqual(result["relocated"], 1)
             self.assertTrue((broken / "lib/index.js").is_file())
 
+    def test_required_workspace_peer_dependency_restored_from_manifest(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            peer = checkout / "vendor" / "timer"
+            peer.mkdir()
+            (peer / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/cordis-plugin-timer", "version": "1.2.0"
+            }))
+            (peer / "lib").mkdir()
+            (peer / "lib" / "index.js").write_text("export const timer = true")
+            importer = deploy / "node_modules" / "hmr"
+            (importer / "node_modules" / "@deepseek-ai").mkdir(parents=True)
+            (importer / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/cordis-plugin-hmr",
+                "peerDependencies": {"@deepseek-ai/cordis-plugin-timer": "workspace:~"}
+            }))
+            broken = importer / "node_modules" / "@deepseek-ai" / "cordis-plugin-timer"
+            broken.symlink_to("../../../missing-peer")
+            result = module.relocate(deploy, checkout)
+            self.assertEqual(result["relocated"], 1)
+            self.assertEqual((broken / "lib" / "index.js").read_text(), "export const timer = true")
+
+    def test_peer_dependency_also_dev_is_not_pruned(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            importer = deploy / "node_modules" / "consumer"
+            importer.mkdir()
+            (importer / "package.json").write_text(json.dumps({
+                "name": "consumer", "peerDependencies": {"picomatch": "^4.0.3"},
+                "devDependencies": {"picomatch": "^4.0.3"}
+            }))
+            missing = importer / "picomatch"
+            missing.symlink_to("missing")
+            with self.assertRaisesRegex(ValueError, "版本无法唯一校验"):
+                module.relocate(deploy, checkout)
+
     def test_broken_internal_link_not_declared_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout, deploy = self.workspace(Path(temp))

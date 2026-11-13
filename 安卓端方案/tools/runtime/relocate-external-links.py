@@ -71,6 +71,8 @@ def declared_missing_workspace_dependency(
             spec = importer.get("dependencies", {}).get(module_name)
             if spec is None:
                 spec = importer.get("optionalDependencies", {}).get(module_name)
+            if spec is None:
+                spec = importer.get("peerDependencies", {}).get(module_name)
             if isinstance(spec, str) and spec.startswith(("workspace:", "link:")):
                 print(f"MATERIALIZE declared workspace package: {module_name} ({link})")
                 return source[0]
@@ -173,6 +175,8 @@ def declared_missing_registry_dependency(
             spec = importer.get("dependencies", {}).get(name)
             if spec is None:
                 spec = importer.get("optionalDependencies", {}).get(name)
+            if spec is None:
+                spec = importer.get("peerDependencies", {}).get(name)
             if not isinstance(spec, str) or spec.startswith(("workspace:", "link:", "file:")):
                 return None
             candidates: dict[str, list[Path]] = {}
@@ -214,7 +218,9 @@ def is_missing_development_only_dependency(link: Path, deployment: Path) -> bool
         if manifest.is_file():
             data = json.loads(manifest.read_text(encoding="utf-8"))
             declared_dev = name in data.get("devDependencies", {})
-            declared_prod = name in data.get("dependencies", {}) or name in data.get("optionalDependencies", {})
+            declared_prod = (name in data.get("dependencies", {}) or
+                             name in data.get("optionalDependencies", {}) or
+                             name in data.get("peerDependencies", {}))
             if declared_dev and not declared_prod:
                 print(f"PRUNE development-only link: {name} ({link})")
                 return True
