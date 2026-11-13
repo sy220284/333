@@ -182,10 +182,10 @@ class RelocateExternalLinksTests(unittest.TestCase):
                 "dependencies": {"picomatch": "^4.0.3"}
             }))
             (checkout / "pnpm-lock.yaml").write_text(
-                "lockfileVersion: '9.0'\\nimporters:\\n"
-                "  vendor/hmr:\\n    dependencies:\\n"
-                "      picomatch:\\n        specifier: ^4.0.3\\n        version: 4.0.4\\n"
-                "packages:\\n  picomatch@4.0.4: {}\\n  picomatch@4.0.7: {}\\n")
+                "lockfileVersion: '9.0'\nimporters:\n"
+                "  vendor/hmr:\n    dependencies:\n"
+                "      picomatch:\n        specifier: ^4.0.3\n        version: 4.0.4\n"
+                "packages:\n  picomatch@4.0.4: {}\n  picomatch@4.0.7: {}\n")
             importing = deploy / "node_modules" / "hmr"
             importing.mkdir()
             (importing / "package.json").write_text((source / "package.json").read_text())
@@ -212,8 +212,8 @@ class RelocateExternalLinksTests(unittest.TestCase):
                 "dependencies": {"picomatch": "^4.0.3"}
             }))
             (checkout / "pnpm-lock.yaml").write_text(
-                "importers:\\n  vendor/hmr:\\n    dependencies:\\n"
-                "      picomatch:\\n        version: 4.0.4\\npackages:\\n")
+                "importers:\n  vendor/hmr:\n    dependencies:\n"
+                "      picomatch:\n        version: 4.0.4\npackages:\n")
             importer = deploy / "node_modules" / "hmr"
             importer.mkdir()
             (importer / "package.json").write_text((source / "package.json").read_text())
