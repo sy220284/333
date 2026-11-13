@@ -69,6 +69,7 @@ internal fun ModelSelectionPage(model: MainViewModel, state: UiState) {
     LaunchedEffect(state.connected) { if (state.connected) model.refreshModels() }
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("模型选择", style = MaterialTheme.typography.headlineMedium)
+        if (state.sessionId == null) Text("请先在开始页创建或恢复一个会话。")
         if (!state.connected) {
             Text("核心尚未连接，模型目录不可用。")
         } else if (state.models.isEmpty()) {
@@ -83,7 +84,11 @@ internal fun ModelSelectionPage(model: MainViewModel, state: UiState) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedButton(onClick = {
                             model.selectModel(item.provider, item.model)
-                        }) { Text("使用此模型") }
+                        }, enabled = state.sessionId != null &&
+                            state.activeModelKey != "${item.provider}/${item.model}") {
+                            Text(if (state.activeModelKey == "${item.provider}/${item.model}")
+                                "核心已确认选择" else "使用此模型")
+                        }
                     }
                 }
             }

@@ -1,6 +1,12 @@
 package ai.deepseek.harness.mobile.ui
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -392,11 +398,14 @@ fun HarnessApp(model: MainViewModel) {
                         Text("选择模型", style = MaterialTheme.typography.headlineSmall)
                         Spacer(Modifier.height(16.dp))
                         if (state.models.isEmpty()) Text("正在读取 Host 模型目录，或暂无可用模型")
+                        if (state.sessionId == null) {
+                            Text("请先创建或打开一个会话，再选择模型。")
+                        }
                         state.models.forEach { item ->
                             ListItem(
                                 headlineContent = { Text(item.name) },
                                 supportingContent = { Text(item.provider + " / " + item.model) },
-                                modifier = Modifier.clickable {
+                                modifier = Modifier.clickable(enabled = state.sessionId != null) {
                                     model.selectModel(item.provider, item.model)
                                     modelSheet = false
                                 }
@@ -477,6 +486,31 @@ private fun ConnectionPage(model: MainViewModel, state: UiState,
 private fun ConversationPage(model: MainViewModel, state: UiState, draft: String,
     onDraftChange: (String) -> Unit, modifier: Modifier = Modifier) {
     val list = rememberLazyListState()
+    var voiceError by remember { mutableStateOf<String?>(null) }
+    val recognizer = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val recognized = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()?.trim()
+            if (!recognized.isNullOrBlank()) {
+                onDraftChange(if (draft.isBlank()) recognized else draft.trimEnd() + " " + recognized)
+                voiceError = null
+            }
+        }
+    }
+    fun beginVoiceDraft() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_PROMPT, "语音输入任务草稿")
+        try {
+            recognizer.launch(intent)
+        } catch (error: ActivityNotFoundException) {
+            voiceError = "当前设备没有可用的语音识别服务，请使用文字输入。"
+        }
+    }
     Column(modifier) {
         if (state.lines.isEmpty()) {
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 28.dp),
@@ -502,6 +536,17 @@ private fun ConversationPage(model: MainViewModel, state: UiState, draft: String
         }
         Surface(shadowElevation = 8.dp) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = ::beginVoiceDraft) { Text("语音输入") }
+                    if (state.activeModelKey != null) {
+                        Text(state.activeModelKey, fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (voiceError != null) {
+                    Text(voiceError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
                 Row(verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(

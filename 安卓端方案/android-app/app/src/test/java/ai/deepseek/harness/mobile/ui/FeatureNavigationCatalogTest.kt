@@ -37,6 +37,13 @@ class FeatureNavigationCatalogTest {
         assertEquals("mcp", catalog.parentOf("mcp-detail")?.id)
     }
 
+    @Test fun detailPathHasExactlyThreeNavigationLevels() {
+        assertEquals(listOf("capabilities", "mcp", "mcp-detail"),
+            catalog.breadcrumb("mcp-detail").map { it.id })
+        assertEquals(listOf("sessions", "session-detail"),
+            catalog.breadcrumb("session-detail").map { it.id })
+    }
+
     @Test fun malformedOrMissingSourceIsRejected() {
         val content = File("src/main/assets/design/feature-navigation-v1.1.json").readText()
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
