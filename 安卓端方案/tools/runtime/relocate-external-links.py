@@ -288,6 +288,10 @@ def prune_unpublished_test_trees(deployment: Path) -> int:
     """pnpm legacy deploy 复制出的 tests 不属于 package.json 发布文件集。"""
     count = 0
     for manifest in sorted(deployment.rglob("package.json")):
+        # 扫描列表是快照；前一次清理可能已经删除嵌套测试包的父目录。
+        # 仅处理此刻依然实际存在的正式包清单。
+        if not manifest.is_file():
+            continue
         package = manifest.parent
         if package.is_symlink() or not package.resolve(strict=True).is_relative_to(deployment):
             continue

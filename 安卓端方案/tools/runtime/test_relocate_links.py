@@ -360,6 +360,23 @@ class RelocateExternalLinksTests(unittest.TestCase):
             self.assertEqual(result["prunedTestTrees"], 1)
             self.assertTrue((pkg / "lib" / "index.js").is_file())
 
+    def test_test_package_removed_before_stale_nested_manifest_is_skipped(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy=self.workspace(Path(temp))
+            pkg=deploy/"node_modules"/"bundle"
+            child=pkg/"tests"/"mock-package"
+            child.mkdir(parents=True)
+            (pkg/"package.json").write_text(json.dumps({
+                "name": "bundle", "files": ["lib"]
+            }))
+            (child/"package.json").write_text(json.dumps({
+                "name": "mock-package", "files": ["lib"]
+            }))
+            result=module.relocate(deploy,checkout)
+            self.assertEqual(result["prunedTestTrees"],1)
+            self.assertFalse((pkg/"tests").exists())
+            self.assertTrue((pkg/"package.json").is_file())
+
     def test_explicitly_published_test_fixture_remains_required(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout, deploy = self.workspace(Path(temp))
