@@ -355,6 +355,7 @@ fun HarnessApp(model: MainViewModel) {
                                 jobs = { openFeature("jobs") },
                                 terminal = { openFeature("terminal") })
                             "jobs", "activity" -> JobsPage(model, state)
+                            "terminal" -> TerminalInventoryPage(model, state)
                             "mcp" -> McpServicesScreen(model, state) {
                                 selectedMcp = it; openFeature("mcp-detail")
                             }
