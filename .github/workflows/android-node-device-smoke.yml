@@ -1,0 +1,77 @@
+name: 333 Android 真机协议与模拟器 Node 执行验收
+on:
+  pull_request:
+    paths:
+      - '安卓端方案/android-app/app/src/androidTest/**'
+      - '安卓端方案/android-app/app/src/main/java/**/runtime/**'
+      - '安卓端方案/android-app/app/build.gradle.kts'
+      - '安卓端方案/tools/runtime/**'
+      - '.github/workflows/android-node-device-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-node-device-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  node-x86-emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DSH_RUNTIME_ABIS: x86_64
+      DSH333_NODE_RUNTIME_DIR: ${{ github.workspace }}/.node333-x86
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: 构建经签名校验的 x86_64 Node 并缩减重复库
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s 安卓端方案/tools/runtime -p 'test_*.py' -v
+          bash 安卓端方案/tools/runtime/prepare-termux-node.sh "$DSH333_NODE_RUNTIME_DIR"
+          python3 安卓端方案/tools/runtime/verify-node-payload.py "$DSH333_NODE_RUNTIME_DIR" --abi x86_64
+          python3 安卓端方案/tools/runtime/verify-node-payload.py "$DSH333_NODE_RUNTIME_DIR" --abi x86_64 --check-only
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '27'
+      - uses: ./.github/actions/setup-android-333
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 platforms;android-36'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.8.1'
+      - name: 编译 x86_64 Node 版 APK 与 AndroidTest
+        run: |
+          set -euo pipefail
+          gradle -p 安卓端方案/android-app --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest
+          python3 - <<'PY'
+          import glob, zipfile
+          apk = glob.glob("安卓端方案/android-app/app/build/outputs/apk/debug/*.apk")
+          assert len(apk) == 1, apk
+          with zipfile.ZipFile(apk[0]) as z:
+              assert "lib/x86_64/libdsh_node.so" in z.namelist()
+          PY
+      - name: 启用宿主 KVM 权限
+        run: |
+          set -euo pipefail
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Android 16 x86_64 上真实运行 Node 26
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 900
+          script: gradle -p 安卓端方案/android-app --no-daemon :app:connectedDebugAndroidTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 333-node-device-smoke-report-${{ github.sha }}
+          path: |
+            安卓端方案/android-app/app/build/reports/androidTests/
+            安卓端方案/android-app/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 14
