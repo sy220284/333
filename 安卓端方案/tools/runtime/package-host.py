@@ -53,4 +53,7 @@ if __name__ == "__main__":
     parser.add_argument("source",type=Path)
     parser.add_argument("output",type=Path)
     args=parser.parse_args()
-    print(json.dumps(package_host(args.source,args.output)))
+    manifest=package_host(args.source,args.output)
+    print(json.dumps({key: manifest[key] for key in
+        ("format","version","entry","bytes","sha256","fileCount")},
+        ensure_ascii=False, sort_keys=True) + " links=" + str(len(manifest["links"])))

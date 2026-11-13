@@ -35,6 +35,7 @@ def verify(root: Path, source: Path | None = None, target: str = "android-arm64"
     with archive.open("rb") as f:
         assert sha256(f) == metadata["sha256"], "Host 归档摘要校验失败"
     native_files = []
+    native_incompatible = []
     names = set()
     total = 0
     with zipfile.ZipFile(archive) as pack:
@@ -56,12 +57,15 @@ def verify(root: Path, source: Path | None = None, target: str = "android-arm64"
                     native_files.append(name)
                     if target == "android-arm64":
                         if not data.startswith(b"\x7fELF") or len(data)<20:
-                            raise AssertionError(f"Android 不支持的动态库格式：{name}")
-                        machine=struct.unpack_from("<H",data,18)[0]
-                        if machine != 183:
-                            raise AssertionError(f"Host 动态库并非 Android ARM64：{name} (machine={machine})")
-                        if b"GLIBC_" in data or b"libc.so.6" in data or b"/lib/ld-linux" in data:
-                            raise AssertionError(f"Host 动态库依赖 GNU/Linux glibc，须改为 Android 构建：{name}")
+                            native_incompatible.append(f"Android 不支持的动态库格式：{name}")
+                        else:
+                            machine=struct.unpack_from("<H",data,18)[0]
+                            if machine != 183:
+                                native_incompatible.append(
+                                    f"Host 动态库并非 Android ARM64：{name} (machine={machine})")
+                            elif b"GLIBC_" in data or b"libc.so.6" in data or b"/lib/ld-linux" in data:
+                                native_incompatible.append(
+                                    f"Host 动态库依赖 GNU/Linux glibc，须改为 Android 构建：{name}")
                 elif source is not None:
                     with (source / name).open("rb") as original:
                         if sha256(stream) != sha256(original):
@@ -77,6 +81,12 @@ def verify(root: Path, source: Path | None = None, target: str = "android-arm64"
         resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
         assert resolved != ".." and not resolved.startswith("../") and not resolved.startswith("/"), f"链接越界：{name}"
         assert resolved in names or resolved in links or any(x.startswith(resolved + "/") for x in names), f"链接目标缺失：{name}"
+    if native_incompatible:
+        # 报告所有实际平台缺口；仍以失败结束，保持严格 Android 发布门禁。
+        details = "\n".join(native_incompatible[:80])
+        suffix = f"\n另有 {len(native_incompatible) - 80} 项" if len(native_incompatible) > 80 else ""
+        raise AssertionError(
+            f"Host 有 {len(native_incompatible)} 个 Android 不兼容原生模块：\n{details}{suffix}")
     if source is not None:
         source_names = {p.relative_to(source).as_posix() for p in source.rglob("*") if p.is_file() and not p.is_symlink()}
         source_links = {p.relative_to(source).as_posix() for p in source.rglob("*") if p.is_symlink()}

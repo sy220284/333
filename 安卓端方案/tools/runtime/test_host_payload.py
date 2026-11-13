@@ -54,6 +54,21 @@ class ArchiveVerificationTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError,"摘要"):
                 validator.verify(out,source)
 
+    def test_reports_every_incompatible_native_module_in_one_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            source,out=self.make_payload(root)
+            binary=source/"node_modules"/"mock"
+            (binary/"first.node").write_bytes(
+                b"\x7fELF\x02\x01"+b"\0"*12+b"\x3e\0"+b"\0"*64)
+            (binary/"second.node").write_bytes(
+                b"\x7fELF\x02\x01"+b"\0"*12+b"\x3e\0"+b"\0"*64)
+            packer.package_host(source,out)
+            with self.assertRaisesRegex(AssertionError,"2 个 Android 不兼容") as error:
+                validator.verify(out,source)
+            self.assertIn("first.node",str(error.exception))
+            self.assertIn("second.node",str(error.exception))
+
     def test_linux_native_module_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
