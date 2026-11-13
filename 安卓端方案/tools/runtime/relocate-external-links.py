@@ -153,7 +153,7 @@ def locked_workspace_dependency_version(
             dependency_name = line.strip()[:-1].strip("'\\\"")
         elif importer_key == key and dependency_name == name and line.startswith("        version:"):
             version = line.partition(":")[2].strip().strip("'\\\"").split("(")[0]
-            if not re.fullmatch(r"\\d+\\.\\d+\\.\\d+(?:-[\\w.-]+)?", version):
+            if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[\w.-]+)?", version):
                 raise ValueError(f"锁文件的依赖版本无效: {name}={version}")
             return version
     return None
