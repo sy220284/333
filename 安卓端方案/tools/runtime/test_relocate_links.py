@@ -27,8 +27,56 @@ class RelocateExternalLinksTests(unittest.TestCase):
             (deploy/"node_modules"/"cosmokit").symlink_to(vendor,target_is_directory=True)
             summary=module.relocate(deploy,checkout)
             self.assertEqual(summary["relocated"],1)
-            self.assertFalse((deploy/"node_modules"/"cosmokit").is_symlink())
-            self.assertTrue((deploy/"node_modules"/"cosmokit"/"index.js").is_file())
+            link=deploy/"node_modules"/"cosmokit"
+            self.assertTrue(link.is_symlink())
+            self.assertTrue(link.resolve(strict=True).is_relative_to(deploy))
+            self.assertTrue((link/"index.js").is_file())
+
+    def test_duplicate_refs_reuse_one_verified_package(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy=self.workspace(Path(temp))
+            source=checkout/"vendor"/"shared"
+            source.mkdir()
+            (source/"index.js").write_text("export const shared = true")
+            first=deploy/"node_modules"/"one"
+            second=deploy/"node_modules"/"two"
+            first.symlink_to(source, target_is_directory=True)
+            second.symlink_to(source, target_is_directory=True)
+            result=module.relocate(deploy,checkout)
+            self.assertEqual(result["relocated"],2)
+            self.assertEqual(result["uniqueSources"],1)
+            self.assertEqual(result["copiedBytes"],module.directory_bytes(source))
+            self.assertEqual(first.resolve(strict=True),second.resolve(strict=True))
+            for link in (first,second):
+                self.assertTrue(link.is_symlink())
+                self.assertFalse(Path(__import__("os").readlink(link)).is_absolute())
+                self.assertTrue(link.resolve(strict=True).is_relative_to(deploy))
+                self.assertEqual((link/"index.js").read_text(),"export const shared = true")
+
+    def test_nested_workspace_dependency_materialized_once(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy=self.workspace(Path(temp))
+            inner=checkout/"vendor"/"inner"
+            inner.mkdir()
+            (inner/"package.json").write_text(json.dumps({"name":"@deepseek-ai/inner"}))
+            (inner/"index.js").write_text("export const inner = true")
+            outer=checkout/"vendor"/"outer"
+            (outer/"node_modules"/"@deepseek-ai").mkdir(parents=True)
+            (outer/"package.json").write_text(json.dumps({
+                "name":"@deepseek-ai/outer",
+                "dependencies":{"@deepseek-ai/inner":"workspace:~"}
+            }))
+            (outer/"node_modules"/"@deepseek-ai"/"inner").symlink_to(
+                inner, target_is_directory=True)
+            link=deploy/"node_modules"/"outer"
+            link.symlink_to(outer,target_is_directory=True)
+            result=module.relocate(deploy,checkout)
+            self.assertEqual(result["uniqueSources"],2)
+            self.assertEqual(result["relocated"],2)
+            nested=link/"node_modules"/"@deepseek-ai"/"inner"
+            self.assertTrue(nested.is_symlink())
+            self.assertTrue(nested.resolve(strict=True).is_relative_to(deploy))
+            self.assertEqual((nested/"index.js").read_text(),"export const inner = true")
 
     def test_internal_pnpm_link_is_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
