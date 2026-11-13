@@ -113,7 +113,7 @@ def version_matches(request: str, version: str) -> bool:
     return actual == target
 
 def declared_missing_registry_dependency(
-    link: Path, deployment: Path, packages: dict[str, tuple[Path, dict]]
+    link: Path, deployment: Path, checkout: Path, packages: dict[str, tuple[Path, dict]]
 ) -> Path | None:
     """找回 pnpm --legacy deploy 的缺失镜像链接：只选择清单授权且版本匹配的实体。"""
     if not link.parent.resolve(strict=True).is_relative_to(deployment):
@@ -129,16 +129,21 @@ def declared_missing_registry_dependency(
                 spec = importer.get("optionalDependencies", {}).get(name)
             if not isinstance(spec, str) or spec.startswith(("workspace:", "link:", "file:")):
                 return None
-            candidates = []
-            for candidate in installed_package_candidates(deployment, name):
-                details = json.loads((candidate / "package.json").read_text(encoding="utf-8"))
-                if version_matches(spec, details.get("version", "")):
-                    candidates.append(candidate)
-            unique = {p.resolve(strict=True) for p in candidates}
-            if len(unique) != 1:
-                raise ValueError(f"包 {name} 的已部署实体版本无法唯一校验: {spec} ({len(unique)} 个)")
-            selected = unique.pop()
-            print(f"MATERIALIZE verified registry dependency {name}@{spec} ({link})")
+            candidates: dict[str, list[Path]] = {}
+            # pnpm --legacy deploy 可省略仓库锁定依赖的实体，但原 checkout 中
+            # 已经按同一 frozen-lockfile 安装，仍能作为可信且可核对的来源。
+            for store in (deployment, checkout):
+                for candidate in installed_package_candidates(store, name):
+                    details = json.loads((candidate / "package.json").read_text(encoding="utf-8"))
+                    version = details.get("version", "")
+                    if version_matches(spec, version):
+                        candidates.setdefault(version, []).append(candidate.resolve(strict=True))
+            if len(candidates) != 1:
+                raise ValueError(f"包 {name} 的冻结依赖版本无法唯一校验: {spec} ({len(candidates)} 个版本)")
+            selected = next(iter(candidates.values()))[0]
+            if not (selected.is_relative_to(deployment) or selected.is_relative_to(checkout)):
+                raise ValueError(f"npm 依赖实体越过本次构建目录: {selected}")
+            print(f"MATERIALIZE locked registry dependency {name}@{spec} ({link})")
             return selected
         current = current.parent
     return None
@@ -203,7 +208,7 @@ def relocate(deployment: Path, checkout: Path) -> dict:
                     continue
                 source = declared_missing_workspace_dependency(path, deployment, packages)
                 if source is None:
-                    source = declared_missing_registry_dependency(path, deployment, packages)
+                    source = declared_missing_registry_dependency(path, deployment, checkout, packages)
                 if source is not None:
                     restored.append((path, source))
                     continue

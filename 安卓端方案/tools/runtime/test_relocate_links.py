@@ -140,6 +140,22 @@ class RelocateExternalLinksTests(unittest.TestCase):
             self.assertEqual(result["relocated"],1)
             self.assertEqual((link/"index.js").read_text(),"export const valid=true")
 
+    def test_checkout_registry_dependency_restored_when_deploy_omits_package(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            real=checkout/"node_modules"/".pnpm"/"mime@4.1.1"/"node_modules"/"mime"
+            real.mkdir(parents=True)
+            (real/"package.json").write_text('{"name":"mime","version":"4.1.1"}')
+            (real/"index.js").write_text("export default true")
+            importer=deploy/"node_modules"/"reader"
+            importer.mkdir()
+            (importer/"package.json").write_text('{"name":"reader","dependencies":{"mime":"^4.1.1"}}')
+            missing=importer/"mime"
+            missing.symlink_to("../node_modules/mime")
+            result=module.relocate(deploy,checkout)
+            self.assertEqual(result["relocated"],1)
+            self.assertEqual((missing/"index.js").read_text(),"export default true")
+
     def test_registry_version_conflict_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout, deploy = self.workspace(Path(temp))
