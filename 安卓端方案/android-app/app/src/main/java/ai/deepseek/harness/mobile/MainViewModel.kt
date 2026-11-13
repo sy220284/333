@@ -46,6 +46,17 @@ data class PromptReceipt(val serial: Long, val text: String)
 data class WorkspaceFileEntry(val name: String, val type: String, val bytes: Long?)
 data class WorkspaceFileMatch(val path: String, val type: String)
 
+data class TerminalRow(
+    val id: String,
+    val title: String,
+    val shell: String,
+    val cwd: String,
+    val state: String,
+    val origin: String,
+    val control: String,
+    val exitCode: Int?
+)
+
 data class UiState(
     val connecting: Boolean = false, val connected: Boolean = false,
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
@@ -56,6 +67,9 @@ data class UiState(
     val settingsWritable: Boolean? = null,
     val settingsLoading: Boolean = false,
     val settingsError: String? = null,
+    val terminals: List<TerminalRow> = emptyList(),
+    val terminalLoading: Boolean = false,
+    val terminalError: String? = null,
     val actionFeedbackSerial: Long = 0L,
     val actionFeedback: String? = null,
     val promptReceipt: PromptReceipt? = null,
@@ -190,6 +204,7 @@ class MainViewModel : ViewModel() {
             running = false, jobs = emptyList(), activeModelKey = null,
             directoryPath = ".", directoryEntries = emptyList(), directoryTruncated = false,
             filePath = null, fileText = "", fileMatches = emptyList(),
+            terminals = emptyList(), terminalLoading = false, terminalError = null,
             fileLoading = false, directoryLoading = false, fileSearching = false,
             fileError = null, error = null)
         subscribe(id)
@@ -631,6 +646,47 @@ class MainViewModel : ViewModel() {
         val path = item["path"]?.jsonPrimitive?.content ?: ""
         val sessions = (item["sessionIds"] as? JsonArray)?.map { it.jsonPrimitive.content } ?: emptyList()
         return WorkspaceRow(id, title, path, sessions)
+    }
+
+    /** Host terminal/list 读取已保留的终端，不重新激活 Agent 或启动新 shell。 */
+    fun refreshTerminals() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        val sessionId = mutable.value.sessionId ?: run {
+            mutable.value = mutable.value.copy(
+                terminalError = "请选择会话后查看终端", terminals = emptyList()
+            )
+            return@launch
+        }
+        mutable.value = mutable.value.copy(terminalLoading = true, terminalError = null)
+        try {
+            val response = connection.call("terminal/list", buildJsonObject {
+                put("sessionId", JsonPrimitive(sessionId))
+            }) as? JsonArray ?: error("核心没有返回终端列表")
+            val items = response.map { raw ->
+                val item = raw as? JsonObject ?: error("无效终端记录")
+                val shell = item["shell"] as? JsonObject
+                TerminalRow(
+                    id = item["id"]?.jsonPrimitive?.content ?: error("终端缺少ID"),
+                    title = item["title"]?.jsonPrimitive?.content ?: "终端",
+                    shell = shell?.get("name")?.jsonPrimitive?.content ?: "未知 Shell",
+                    cwd = item["cwd"]?.jsonPrimitive?.content ?: "",
+                    state = item["state"]?.jsonPrimitive?.content ?: "unknown",
+                    origin = item["origin"]?.jsonPrimitive?.content ?: "unknown",
+                    control = item["control"]?.jsonPrimitive?.content ?: "unknown",
+                    exitCode = item["exitCode"]?.jsonPrimitive?.content?.toIntOrNull()
+                )
+            }
+            if (remote === connection && mutable.value.sessionId == sessionId) {
+                mutable.value = mutable.value.copy(
+                    terminals = items, terminalLoading = false, terminalError = null
+                )
+            }
+        } catch (error: Exception) {
+            if (remote === connection && mutable.value.sessionId == sessionId) {
+                mutable.value = mutable.value.copy(terminalLoading = false,
+                    terminalError = "终端清单读取失败：" + (error.message ?: "未知错误"))
+            }
+        }
     }
 
     fun observeJobs() {
