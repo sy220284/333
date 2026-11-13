@@ -27,11 +27,18 @@ import androidx.compose.ui.unit.sp
 
 /** 原生页面订阅 Host 的实时 Remote 数据；无静态演示内容。 */
 @Composable
-internal fun WorkspacePage(model: MainViewModel, state: UiState, onOpenSession: () -> Unit) {
+internal fun WorkspacePage(model: MainViewModel, state: UiState,
+    onOpenSession: () -> Unit, onFiles: () -> Unit
+) {
     LaunchedEffect(state.connected) { if (state.connected) model.observeWorkspaces() }
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { PanelHeader("我的项目", "工作区来自当前 Harness 核心", state.panelError) }
-        item { OutlinedButton(onClick = { model.observeWorkspaces() }) { Text("刷新项目") } }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { model.observeWorkspaces() }) { Text("刷新项目") }
+                OutlinedButton(onClick = onFiles) { Text("项目文件") }
+            }
+        }
         if (state.workspaces.isEmpty()) item {
             Text("当前核心没有可访问的工作区。可先在 Host 中创建或选择工作区。",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

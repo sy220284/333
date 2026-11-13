@@ -48,7 +48,10 @@ internal fun WorkspaceFilesScreen(model: MainViewModel, state: UiState,
     preview: (String) -> Unit, search: () -> Unit
 ) {
     LaunchedEffect(state.connected, state.sessionId) {
-        if (state.connected && state.sessionId != null) model.listWorkspaceFiles(".")
+        if (state.connected && state.sessionId != null &&
+            !state.directoryLoading && state.directoryEntries.isEmpty()) {
+            model.listWorkspaceFiles(state.directoryPath)
+        }
     }
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {

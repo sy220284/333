@@ -139,6 +139,7 @@ fun HarnessApp(model: MainViewModel) {
     var selectedMcp by rememberSaveable { mutableStateOf("") }
     var selectedPlugin by rememberSaveable { mutableStateOf("") }
     var selectedSession by rememberSaveable { mutableStateOf("") }
+    var selectedFile by rememberSaveable { mutableStateOf("") }
     var approvalOpen by rememberSaveable { mutableStateOf(false) }
     var questionsOpen by rememberSaveable { mutableStateOf(false) }
     var darkMode by rememberSaveable { mutableStateOf(false) }
@@ -316,9 +317,21 @@ fun HarnessApp(model: MainViewModel) {
                             "home", "chat" -> ConversationPage(model, state,
                                 conversationDraft, onDraftChange = { conversationDraft = it },
                                 modifier = Modifier.fillMaxSize())
-                            "projects" -> WorkspacePage(model, state, onOpenSession = {
-                                openFeature("home")
-                            })
+                            "projects" -> WorkspacePage(model, state,
+                                onOpenSession = { openFeature("home") },
+                                onFiles = { openFeature("files") })
+                            "files" -> WorkspaceFilesScreen(model, state,
+                                preview = { selectedFile = it; openFeature("file-preview") },
+                                search = { openFeature("file-search") })
+                            "file-preview" -> WorkspaceFilePreview(model, state, selectedFile) {
+                                openFeature("file-search")
+                            }
+                            "file-search" -> WorkspaceFileSearch(model, state,
+                                preview = { selectedFile = it; openFeature("file-preview") },
+                                openDirectory = {
+                                    model.listWorkspaceFiles(it)
+                                    openFeature("files")
+                                })
                             "task-center" -> RunOverview(state,
                                 approval = { approvalOpen = true },
                                 questions = { questionsOpen = true },
