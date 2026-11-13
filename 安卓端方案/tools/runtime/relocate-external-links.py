@@ -102,6 +102,9 @@ def version_matches(request: str, version: str) -> bool:
     """保守验证常见 registry 范围；复杂约束须由 lockfile 的部署结果提供唯一实体。"""
     if request == "*":
         return True
+    # 精确的预发布锁定版本必须按完整标识比较，不能去掉 -beta.*。
+    if re.fullmatch(r"\d+\.\d+\.\d+-[\w.-]+", request):
+        return version == request
     requested = request.lstrip("^~")
     if re.fullmatch(r"\d+\.\d+\.\d+", requested) is None:
         return False

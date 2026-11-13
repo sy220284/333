@@ -192,6 +192,11 @@ class RelocateExternalLinksTests(unittest.TestCase):
             self.assertEqual(result["relocated"],1)
             self.assertEqual((missing/"index.js").read_text(),"export default true")
 
+    def test_exact_prerelease_version_matches_only_its_locked_build(self):
+        self.assertTrue(module.version_matches("1.2.0-beta.15", "1.2.0-beta.15"))
+        self.assertFalse(module.version_matches("1.2.0-beta.15", "1.2.0-beta.14"))
+        self.assertFalse(module.version_matches("1.2.0-beta.15", "1.2.0"))
+
     def test_registry_version_conflict_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout, deploy = self.workspace(Path(temp))
