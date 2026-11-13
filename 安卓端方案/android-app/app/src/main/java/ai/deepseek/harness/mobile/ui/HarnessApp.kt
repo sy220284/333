@@ -305,6 +305,12 @@ fun HarnessApp(model: MainViewModel) {
                     when {
                         page == "runtime" || page == "diagnostics" -> RuntimePage()
                         page == "settings" -> SettingsOverview(state, ::openFeature)
+                        page == "account" -> AccountStatusPage(model, state) {
+                            openFeature("diagnostics")
+                        }
+                        page == "sandbox" -> PermissionStatusPage(state) {
+                            approvalOpen = true
+                        }
                         page == "appearance" -> AppearanceSettings(darkMode) { darkMode = it }
                         page == "search" -> SearchScreen(catalog, state, ::openFeature) {
                             model.openSession(it); openFeature("home")
