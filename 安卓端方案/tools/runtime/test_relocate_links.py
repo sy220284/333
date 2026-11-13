@@ -172,6 +172,58 @@ class RelocateExternalLinksTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"版本无法唯一校验"):
                 module.relocate(deploy,checkout)
 
+    def test_workspace_lockfile_selects_exact_version_from_two_compatible_candidates(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            source = checkout / "vendor" / "hmr"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/cordis-plugin-hmr",
+                "dependencies": {"picomatch": "^4.0.3"}
+            }))
+            (checkout / "pnpm-lock.yaml").write_text(
+                "lockfileVersion: '9.0'\\nimporters:\\n"
+                "  vendor/hmr:\\n    dependencies:\\n"
+                "      picomatch:\\n        specifier: ^4.0.3\\n        version: 4.0.4\\n"
+                "packages:\\n  picomatch@4.0.4: {}\\n  picomatch@4.0.7: {}\\n")
+            importing = deploy / "node_modules" / "hmr"
+            importing.mkdir()
+            (importing / "package.json").write_text((source / "package.json").read_text())
+            for version in ("4.0.4", "4.0.7"):
+                candidate = checkout / "node_modules" / ".pnpm" / f"picomatch@{version}" / "node_modules" / "picomatch"
+                candidate.mkdir(parents=True)
+                (candidate / "package.json").write_text(json.dumps({
+                    "name": "picomatch", "version": version
+                }))
+                (candidate / "index.js").write_text(version)
+            broken = importing / "picomatch"
+            broken.symlink_to("broken-picomatch")
+            result = module.relocate(deploy, checkout)
+            self.assertEqual(result["relocated"], 1)
+            self.assertEqual((broken / "index.js").read_text(), "4.0.4")
+
+    def test_workspace_lockfile_version_unavailable_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            checkout, deploy = self.workspace(Path(temp))
+            source = checkout / "vendor" / "hmr"
+            source.mkdir(parents=True)
+            (source / "package.json").write_text(json.dumps({
+                "name": "@deepseek-ai/cordis-plugin-hmr",
+                "dependencies": {"picomatch": "^4.0.3"}
+            }))
+            (checkout / "pnpm-lock.yaml").write_text(
+                "importers:\\n  vendor/hmr:\\n    dependencies:\\n"
+                "      picomatch:\\n        version: 4.0.4\\npackages:\\n")
+            importer = deploy / "node_modules" / "hmr"
+            importer.mkdir()
+            (importer / "package.json").write_text((source / "package.json").read_text())
+            candidate = checkout / "node_modules" / ".pnpm" / "picomatch@4.0.7" / "node_modules" / "picomatch"
+            candidate.mkdir(parents=True)
+            (candidate / "package.json").write_text('{"name":"picomatch","version":"4.0.7"}')
+            (importer / "picomatch").symlink_to("missing")
+            with self.assertRaisesRegex(ValueError, "锁文件=4.0.4"):
+                module.relocate(deploy, checkout)
+
     def test_development_only_link_is_pruned_with_explicit_manifest(self):
         with tempfile.TemporaryDirectory() as temp:
             checkout, deploy=self.workspace(Path(temp))

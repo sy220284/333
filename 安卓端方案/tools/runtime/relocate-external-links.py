@@ -115,6 +115,49 @@ def version_matches(request: str, version: str) -> bool:
         return actual[:2] == target[:2] and actual >= target
     return actual == target
 
+def locked_workspace_dependency_version(
+    checkout: Path, importer: dict, name: str, packages: dict[str, tuple[Path, dict]]
+) -> str | None:
+    """按同一 frozen pnpm-lock.yaml 的 importer 精确定位版本。
+
+    版本范围可能同时容纳多个实体，例如 ^4.0.3 同时匹配 4.0.4 和 4.0.7。
+    对工作区包按其真实源码路径查锁定版本，避免复制错误的生产依赖。
+    """
+    source = packages.get(importer.get("name"))
+    if source is None:
+        return None
+    lockfile = checkout / "pnpm-lock.yaml"
+    if not lockfile.is_file():
+        return None
+    key = source[0].relative_to(checkout).as_posix()
+    in_importers = False
+    importer_key = None
+    dependency_group = None
+    dependency_name = None
+    for line in lockfile.read_text(encoding="utf-8").splitlines():
+        if line == "importers:":
+            in_importers = True
+            continue
+        if not in_importers:
+            continue
+        if line in ("packages:", "snapshots:"):
+            break
+        if line.startswith("  ") and not line.startswith("    ") and line.endswith(":"):
+            importer_key = line.strip()[:-1].strip("'\\\"")
+            dependency_group = None
+            dependency_name = None
+        elif importer_key == key and line.startswith("    ") and not line.startswith("      ") and line.endswith(":"):
+            dependency_group = line.strip()[:-1]
+            dependency_name = None
+        elif importer_key == key and dependency_group in ("dependencies", "optionalDependencies") and line.startswith("      ") and not line.startswith("        ") and line.endswith(":"):
+            dependency_name = line.strip()[:-1].strip("'\\\"")
+        elif importer_key == key and dependency_name == name and line.startswith("        version:"):
+            version = line.partition(":")[2].strip().strip("'\\\"").split("(")[0]
+            if not re.fullmatch(r"\\d+\\.\\d+\\.\\d+(?:-[\\w.-]+)?", version):
+                raise ValueError(f"锁文件的依赖版本无效: {name}={version}")
+            return version
+    return None
+
 def declared_missing_registry_dependency(
     link: Path, deployment: Path, checkout: Path, packages: dict[str, tuple[Path, dict]]
 ) -> Path | None:
@@ -141,8 +184,16 @@ def declared_missing_registry_dependency(
                     version = details.get("version", "")
                     if version_matches(spec, version):
                         candidates.setdefault(version, []).append(candidate.resolve(strict=True))
+            locked_version = locked_workspace_dependency_version(checkout, importer, name, packages)
+            if locked_version is not None:
+                if not version_matches(spec, locked_version):
+                    raise ValueError(f"包 {name} 的锁文件版本与依赖声明不一致: {spec} / {locked_version}")
+                candidates = {version: paths for version, paths in candidates.items()
+                              if version == locked_version}
             if len(candidates) != 1:
-                raise ValueError(f"包 {name} 的冻结依赖版本无法唯一校验: {spec} ({len(candidates)} 个版本)")
+                raise ValueError(
+                    f"包 {name} 的冻结依赖版本无法唯一校验: {spec} "
+                    f"(锁文件={locked_version}, 候选版本={sorted(candidates)}, 链接={link})")
             selected = next(iter(candidates.values()))[0]
             if not (selected.is_relative_to(deployment) or selected.is_relative_to(checkout)):
                 raise ValueError(f"npm 依赖实体越过本次构建目录: {selected}")

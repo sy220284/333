@@ -5,7 +5,7 @@ name: 333 Android 完整离线 APK 集成构建
     paths:
       - '.github/workflows/android-full-apk.yml'
       - '安卓端方案/android-app/**'
-      - '安卓端方案/tools/runtime/package-host.py'
+      - '安卓端方案/tools/runtime/**'
       - '安卓端方案/tools/runtime/test_host_archive.py'
       - '安卓端方案/tools/runtime/verify-host-payload.py'
       - '安卓端方案/tools/runtime/prepare-termux-node.sh'
