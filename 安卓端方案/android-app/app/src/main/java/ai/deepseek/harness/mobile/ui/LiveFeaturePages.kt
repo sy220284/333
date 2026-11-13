@@ -152,7 +152,7 @@ internal fun SessionListScreen(model: MainViewModel, state: UiState,
 }
 
 @Composable
-internal fun SessionInfoScreen(state: UiState, id: String,
+internal fun SessionInfoScreen(model: MainViewModel, state: UiState, id: String,
     resume: () -> Unit, back: () -> Unit
 ) {
     val item = state.sessions.firstOrNull { it.id == id }
@@ -164,13 +164,29 @@ internal fun SessionInfoScreen(state: UiState, id: String,
         } else {
             Text(item.id, fontWeight = FontWeight.Medium)
             Text(if (item.running) "执行中" else if (item.blank) "尚未开始" else "可以继续")
-            Button(onClick = resume) { Text("继续此会话") }
+            if (id in state.archivedSessionIds) {
+                Text("已归档", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(onClick = { model.unarchiveSession(id) },
+                    enabled = state.connected) { Text("恢复到会话列表") }
+            } else {
+                Button(onClick = resume) { Text("继续此会话") }
+                OutlinedButton(onClick = { model.setSessionPinned(id, id !in state.pinnedSessionIds) },
+                    enabled = state.connected) {
+                    Text(if (id in state.pinnedSessionIds) "取消置顶" else "置顶会话")
+                }
+                if (item.running) {
+                    Text("当前会话运行中，结束执行后可以归档。")
+                } else {
+                    OutlinedButton(onClick = { model.archiveSession(id) },
+                        enabled = state.connected) { Text("归档会话") }
+                }
+            }
         }
     }
 }
 
 @Composable
-internal fun SearchScreen(catalog: FeatureNavigationCatalog, state: UiState,
+internal fun SearchScreen(model: MainViewModel, catalog: FeatureNavigationCatalog, state: UiState,
     open: (String) -> Unit, resume: (String) -> Unit
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -184,12 +200,35 @@ internal fun SearchScreen(catalog: FeatureNavigationCatalog, state: UiState,
         item {
             Text("全局查找", style = MaterialTheme.typography.headlineMedium)
             OutlinedTextField(value = query, onValueChange = { query = it },
-                placeholder = { Text("会话、工作区或功能") },
+                placeholder = { Text("会话内容、工作区或功能") },
                 modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Text("仅搜索核心当前已读取的会话、工作区和功能目录。",
+            Button(onClick = { model.searchSessions(query) },
+                enabled = state.connected && term.isNotEmpty() && !state.sessionSearching) {
+                Text(if (state.sessionSearching) "搜索中…" else "搜索历史消息")
+            }
+            if (!state.sessionSearchError.isNullOrEmpty()) {
+                Text(state.sessionSearchError, color = MaterialTheme.colorScheme.error)
+            }
+            Text("会话内容搜索由核心执行；功能入口与工作区在当前设备查找。",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (term.isNotEmpty()) {
+            if (state.sessionSearchQuery == term) {
+                item { Text("历史消息匹配", fontWeight = FontWeight.SemiBold) }
+                items(state.sessionMatches, key = { "match-" + it.id }) { match ->
+                    Card(onClick = { resume(match.id) }) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                            Text("会话 " + match.id.take(12), fontWeight = FontWeight.SemiBold)
+                            Text(match.snippet, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                if (state.sessionSearchHasMore) item {
+                    Text("搜索结果已达到核心上限，可缩小关键词。")
+                }
+                if (state.sessionMatches.isEmpty() && !state.sessionSearching &&
+                    state.sessionSearchError == null) item { Text("历史消息中没有找到匹配内容。") }
+            }
             item { Text("功能入口", fontWeight = FontWeight.SemiBold) }
             items(paths, key = { it.id }) { item ->
                 TextButton(onClick = { open(item.id) }) {

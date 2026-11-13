@@ -317,14 +317,14 @@ fun HarnessApp(model: MainViewModel) {
                             approvalOpen = true
                         }
                         page == "appearance" -> AppearanceSettings(darkMode) { darkMode = it }
-                        page == "search" -> SearchScreen(catalog, state, ::openFeature) {
+                        page == "search" -> SearchScreen(model, catalog, state, ::openFeature) {
                             model.openSession(it); openFeature("home")
                         }
                         page == "sessions" -> SessionListScreen(model, state,
                             resume = { model.openSession(it); openFeature("home") },
                             detail = { selectedSession = it; openFeature("session-detail") },
                             search = { openFeature("search") })
-                        page == "session-detail" -> SessionInfoScreen(state, selectedSession,
+                        page == "session-detail" -> SessionInfoScreen(model, state, selectedSession,
                             resume = { model.openSession(selectedSession); openFeature("home") },
                             back = { openFeature("sessions") })
                         page == "capabilities" -> CapabilityHome(state, ::openFeature)

@@ -24,6 +24,7 @@ import java.util.UUID
 
 data class ChatLine(val seq: Long, val actor: String, val text: String)
 data class SessionRow(val id: String, val running: Boolean, val blank: Boolean)
+data class SessionSearchRow(val id: String, val snippet: String)
 data class ModelRow(val provider: String, val model: String, val name: String)
 data class WorkspaceRow(val id: String, val title: String, val path: String, val sessionIds: List<String>)
 data class JobRow(val id: String, val label: String, val status: String, val progress: String)
@@ -62,6 +63,13 @@ data class UiState(
     val connectionStatus: String = "未连接核心", val sessionId: String? = null,
     val sending: Boolean = false, val running: Boolean = false,
     val lines: List<ChatLine> = emptyList(), val sessions: List<SessionRow> = emptyList(),
+    val archivedSessionIds: List<String> = emptyList(),
+    val pinnedSessionIds: List<String> = emptyList(),
+    val sessionMatches: List<SessionSearchRow> = emptyList(),
+    val sessionSearchQuery: String = "",
+    val sessionSearching: Boolean = false,
+    val sessionSearchHasMore: Boolean = false,
+    val sessionSearchError: String? = null,
     val models: List<ModelRow> = emptyList(), val error: String? = null,
     val settingsNamespaces: List<String> = emptyList(),
     val settingsWritable: Boolean? = null,
@@ -124,6 +132,7 @@ class MainViewModel : ViewModel() {
     private var directoryGeneration = 0L
     private var fileGeneration = 0L
     private var searchGeneration = 0L
+    private var sessionSearchGeneration = 0L
 
     fun connect(link: String) {
         if (mutable.value.connecting) return
@@ -141,8 +150,13 @@ class MainViewModel : ViewModel() {
                 remote?.close()
                 remote = connection
                 manualClose = false
+                sessionSearchGeneration += 1
                 mutable.value = mutable.value.copy(connecting = false, connected = true,
-                    connectionStatus = "核心 API 已连接", sessions = sessions, error = null)
+                    connectionStatus = "核心 API 已连接", sessions = sessions,
+                    sessionMatches = emptyList(), sessionSearchQuery = "",
+                    sessionSearching = false, sessionSearchError = null,
+                    archivedSessionIds = emptyList(), pinnedSessionIds = emptyList(),
+                    error = null)
                 observeRemoteEvents()
                 observeWorkspaces()
                 observeMcpServers()
@@ -174,6 +188,46 @@ class MainViewModel : ViewModel() {
         } catch (e: Exception) {
             mutable.value = mutable.value.copy(panelError = "会话列表刷新失败：" +
                 (e.message ?: "未知错误"))
+        }
+    }
+
+    /** 使用 Host 的全文历史搜索，结果携带真实会话编号与消息摘要。 */
+    fun searchSessions(query: String) = viewModelScope.launch {
+        val term = query.trim()
+        val connection = remote ?: return@launch
+        val generation = ++sessionSearchGeneration
+        if (term.isBlank()) {
+            mutable.value = mutable.value.copy(sessionMatches = emptyList(),
+                sessionSearchQuery = "", sessionSearchHasMore = false,
+                sessionSearching = false, sessionSearchError = null)
+            return@launch
+        }
+        mutable.value = mutable.value.copy(sessionMatches = emptyList(),
+            sessionSearchQuery = term, sessionSearchHasMore = false,
+            sessionSearching = true, sessionSearchError = null)
+        try {
+            val result = connection.call("session/search", buildJsonObject {
+                put("request", buildJsonObject { put("query", JsonPrimitive(term)) })
+            }).jsonObject
+            val rows = (result["items"] as? JsonArray)?.map { raw ->
+                val item = raw as? JsonObject ?: error("会话搜索记录格式无效")
+                SessionSearchRow(
+                    id = item["sessionId"]?.jsonPrimitive?.content
+                        ?: error("会话搜索结果缺少ID"),
+                    snippet = item["snippet"]?.jsonPrimitive?.content
+                        ?: error("会话搜索结果缺少内容摘要")
+                )
+            } ?: error("核心未返回会话搜索结果")
+            if (connection === remote && generation == sessionSearchGeneration) {
+                mutable.value = mutable.value.copy(sessionMatches = rows,
+                    sessionSearchHasMore = result["hasMore"]?.jsonPrimitive?.content == "true",
+                    sessionSearching = false, sessionSearchError = null)
+            }
+        } catch (e: Exception) {
+            if (connection === remote && generation == sessionSearchGeneration) {
+                mutable.value = mutable.value.copy(sessionSearching = false,
+                    sessionSearchError = "搜索失败：" + (e.message ?: "未知错误"))
+            }
         }
     }
 
@@ -620,6 +674,22 @@ class MainViewModel : ViewModel() {
                         val value = objectFrame["value"] as? JsonObject ?: return@launch
                         val items = value["items"] as? JsonArray ?: return@launch
                         for (item in items) parseWorkspace(item)?.let { workspaceMap[it.id] = it }
+                        val archived = (value["archivedSessionIds"] as? JsonArray)
+                            ?.map { it.jsonPrimitive.content } ?: error("项目状态缺少归档目录")
+                        val pinned = (value["pinnedSessionIds"] as? JsonArray)
+                            ?.map { it.jsonPrimitive.content } ?: error("项目状态缺少置顶目录")
+                        mutable.value = mutable.value.copy(archivedSessionIds = archived,
+                            pinnedSessionIds = pinned)
+                    }
+                    "archived" -> {
+                        val ids = (objectFrame["archivedSessionIds"] as? JsonArray)
+                            ?.map { it.jsonPrimitive.content } ?: return@launch
+                        mutable.value = mutable.value.copy(archivedSessionIds = ids)
+                    }
+                    "pinned" -> {
+                        val ids = (objectFrame["pinnedSessionIds"] as? JsonArray)
+                            ?.map { it.jsonPrimitive.content } ?: return@launch
+                        mutable.value = mutable.value.copy(pinnedSessionIds = ids)
                     }
                     "upsert" -> parseWorkspace(objectFrame["workspace"])?.let { workspaceMap[it.id] = it }
                     "remove" -> objectFrame["workspaceId"]?.jsonPrimitive?.content?.let(workspaceMap::remove)
@@ -856,6 +926,114 @@ class MainViewModel : ViewModel() {
             }
             mutable.value = mutable.value.copy(plugins = items, panelError = null)
         } catch (e: Exception) { mutable.value = mutable.value.copy(panelError = "插件清单失败：" + (e.message ?: "未知错误")) }
+    }
+
+    /** 创建与管理 Host 登记的工作区；以 RPC 成功回执和 workspace/follow 作为事实来源。 */
+    fun initializeDefaultWorkspace() = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("workspace/initializeDefault", buildJsonObject {})
+            if (result is JsonObject && result["workspace"] is JsonObject) {
+                reportActionFeedback("已检查并初始化默认项目")
+            } else {
+                reportActionFeedback("当前核心未提供可初始化的默认项目目录")
+            }
+            observeWorkspaces()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun createWorkspace(path: String) = viewModelScope.launch {
+        val directory = path.trim()
+        if (directory.isBlank()) {
+            showError(IllegalArgumentException("请输入核心可以访问的项目文件夹路径"))
+            return@launch
+        }
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("workspace/create", buildJsonObject {
+                put("request", buildJsonObject { put("path", JsonPrimitive(directory)) })
+            }).jsonObject
+            val workspace = result["workspace"] as? JsonObject ?: error("核心未返回项目对象")
+            val title = workspace["title"]?.jsonPrimitive?.content ?: error("核心未返回项目名称")
+            reportActionFeedback(if (result["created"]?.jsonPrimitive?.content == "true")
+                "已创建项目：$title" else "项目已存在：$title")
+            observeWorkspaces()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun renameWorkspace(workspaceId: String, title: String) = viewModelScope.launch {
+        val name = title.trim()
+        if (name.isBlank()) {
+            showError(IllegalArgumentException("项目名称不能为空"))
+            return@launch
+        }
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("workspace/rename", buildJsonObject {
+                put("request", buildJsonObject {
+                    put("workspaceId", JsonPrimitive(workspaceId))
+                    put("title", JsonPrimitive(name))
+                })
+            }).jsonObject
+            check(result["workspace"] is JsonObject) { "核心未确认项目重命名" }
+            reportActionFeedback("项目已重命名：$name")
+            observeWorkspaces()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun deleteWorkspace(workspaceId: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("workspace/delete", buildJsonObject {
+                put("request", buildJsonObject { put("workspaceId", JsonPrimitive(workspaceId)) })
+            }).jsonObject
+            check(result["deleted"]?.jsonPrimitive?.content == "true") {
+                "核心未确认删除项目登记"
+            }
+            reportActionFeedback("已移除项目登记，原有文件和会话仍保留")
+            observeWorkspaces()
+        } catch (e: Exception) { showError(e) }
+    }
+
+    /** 会话归档只更新列表归属；运行中的会话交由用户先行结束。 */
+    fun archiveSession(sessionId: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("workspace/archiveSession", buildJsonObject {
+                put("request", buildJsonObject { put("sessionId", JsonPrimitive(sessionId)) })
+            }).jsonObject
+            check((result["archivedSessionIds"] as? JsonArray)?.any {
+                it.jsonPrimitive.content == sessionId
+            } == true) { "核心未确认会话归档" }
+            reportActionFeedback("会话已归档")
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun unarchiveSession(sessionId: String) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        try {
+            val result = connection.call("workspace/unarchiveSession", buildJsonObject {
+                put("request", buildJsonObject { put("sessionId", JsonPrimitive(sessionId)) })
+            }).jsonObject
+            check((result["archivedSessionIds"] as? JsonArray)?.none {
+                it.jsonPrimitive.content == sessionId
+            } == true) { "核心未确认会话恢复" }
+            reportActionFeedback("会话已恢复")
+        } catch (e: Exception) { showError(e) }
+    }
+
+    fun setSessionPinned(sessionId: String, pinned: Boolean) = viewModelScope.launch {
+        val connection = remote ?: return@launch
+        val endpoint = if (pinned) "workspace/pinSession" else "workspace/unpinSession"
+        try {
+            val result = connection.call(endpoint, buildJsonObject {
+                put("request", buildJsonObject { put("sessionId", JsonPrimitive(sessionId)) })
+            }).jsonObject
+            val ids = (result["pinnedSessionIds"] as? JsonArray)
+                ?.map { it.jsonPrimitive.content } ?: error("核心未返回置顶结果")
+            check((sessionId in ids) == pinned) { "核心未确认会话置顶状态" }
+            reportActionFeedback(if (pinned) "会话已置顶" else "会话已取消置顶")
+        } catch (e: Exception) { showError(e) }
     }
 
     fun startWorkspaceSession(workspaceId: String) = viewModelScope.launch {
